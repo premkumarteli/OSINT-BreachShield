@@ -7,13 +7,16 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- OTPs table
-CREATE TABLE IF NOT EXISTS otps (
+-- Email OTPs table with verification and attempt tracking
+CREATE TABLE IF NOT EXISTS email_otps (
   id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(255) NOT NULL,
-  otp_hash VARCHAR(255) NOT NULL,
+  otp VARCHAR(255) NOT NULL,
   expires_at DATETIME NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  verified BOOLEAN DEFAULT FALSE,
+  attempts INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_email (email)
 );
 
 -- Search History & Exposure Audit Vault

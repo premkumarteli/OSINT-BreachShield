@@ -46,10 +46,10 @@ process.on('unhandledRejection', (reason) => { console.error('Unhandled rejectio
 try {
   const authRouter = require('./auth/routes/auth');
   app.use('/api/auth', authRouter);
+  app.use('/api', authRouter); // Also mount at /api for direct /api/send-otp, /api/verify-otp, /api/register
+  
   // convenience alias for GET /api/me
   app.get('/api/me', authMiddleware, async (req, res) => {
-    // delegate to auth router handler using a simple fetch to same process
-    // to avoid duplicating DB code, we reuse the auth router module
     try {
       const { query } = require('./auth/db');
       const rows = await query('SELECT id, username, email, created_at FROM users WHERE id = ?', [req.userId]);
@@ -62,6 +62,7 @@ try {
 } catch (e) {
   console.warn('Auth router not mounted:', e.message);
 }
+
 
 function authMiddleware(req, res, next) {
   try {

@@ -1,7 +1,11 @@
 const express = require('express');
-const axios = require('axios');
 const nodemailer = require('nodemailer');
-const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
+const fs = require('fs');
+const path = require('path');
+const { query } = require('../db');
+
 // Try native bcrypt; fallback to bcryptjs if native module is unavailable
 let bcrypt;
 try {
@@ -10,149 +14,105 @@ try {
   try { bcrypt = require('bcryptjs'); }
   catch (_) { bcrypt = null; }
 }
-const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
-const crypto = require('crypto');
-const { query } = require('../db');
-const fs = require('fs');
-const path = require('path');
 
 const router = express.Router();
 
-// middleware ensures cookie parsing on this router
 router.use(cookieParser());
 router.use(express.json());
 
-// utils
-const hash = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
-const isEmail = (s = '') => /.+@.+\..+/.test(String(s));
+// ---------------- Helpers & Constants ----------------
+const isEmail = (s = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
 const signJwt = (payload) => jwt.sign(payload, process.env.JWT_SECRET || 'dev_secret', { expiresIn: '7d' });
+const OTP_EXPIRY_MINUTES = Number(process.env.OTP_EXPIRY_MINUTES || 5);
+const MAX_VERIFY_ATTEMPTS = 5;
+const RESEND_COOLDOWN_MS = 30 * 1000; // 30 seconds
 
-// password helpers: prefer native bcrypt, fallback to bcryptjs if native fails
-async function hashPassword(password) {
-  try {
-    if (bcrypt && typeof bcrypt.hash === 'function') {
-      return await bcrypt.hash(String(password), 12);
-    }
-    const bcryptjs = require('bcryptjs');
-    return await bcryptjs.hash(String(password), 12);
-  } catch (e) {
-    throw e;
+// Password and OTP Hashing
+async function hashSecret(secret) {
+  if (bcrypt && typeof bcrypt.hash === 'function') {
+    return await bcrypt.hash(String(secret), 10);
   }
+  const bcryptjs = require('bcryptjs');
+  return await bcryptjs.hash(String(secret), 10);
 }
-async function comparePassword(password, password_hash) {
+
+async function compareSecret(plain, hashed) {
   try {
     if (bcrypt && typeof bcrypt.compare === 'function') {
-      return await bcrypt.compare(String(password), String(password_hash));
+      return await bcrypt.compare(String(plain), String(hashed));
     }
     const bcryptjs = require('bcryptjs');
-    return await bcryptjs.compare(String(password), String(password_hash));
-  } catch (e) {
+    return await bcryptjs.compare(String(plain), String(hashed));
+  } catch {
     return false;
   }
 }
 
-// Ephemeral in-memory OTP store for registration: email -> { username, otpHash, expiresAt }
-const regOtpStore = new Map();
-
-// JSON fallback storage (dev-only) when DB is down
-const USERS_JSON_DIR = path.join(__dirname, '../../instance');
-const USERS_JSON = path.join(USERS_JSON_DIR, 'users.json');
-// in-memory user fallback (last resort)
-const regUserStore = new Map(); // email -> user
-function readUsersFallback() {
-  try {
-    if (!fs.existsSync(USERS_JSON)) return [];
-    const buf = fs.readFileSync(USERS_JSON, 'utf8');
-    return JSON.parse(buf || '[]');
-  } catch { return []; }
-}
-function writeUsersFallback(users) {
-  try {
-    if (!fs.existsSync(USERS_JSON_DIR)) fs.mkdirSync(USERS_JSON_DIR, { recursive: true });
-    fs.writeFileSync(USERS_JSON, JSON.stringify(users, null, 2));
-    return true;
-  } catch { return false; }
-}
-function findUserByEmailFallback(email) {
-  const users = readUsersFallback();
-  return users.find(u => String(u.email).toLowerCase() === String(email).toLowerCase()) || null;
-}
-function findUserByIdFallback(id) {
-  const users = readUsersFallback();
-  return users.find(u => Number(u.id) === Number(id)) || null;
-}
-function findUserByIdInMem(id) {
-  for (const u of regUserStore.values()) {
-    if (Number(u.id) === Number(id)) return u;
-  }
-  return null;
-}
-function addUserFallback({ username, email, password_hash }) {
-  const users = readUsersFallback();
-  const nextId = users.length ? (Math.max(...users.map(u => Number(u.id) || 0)) + 1) : 1;
-  const user = { id: nextId, username, email, password_hash, created_at: new Date().toISOString() };
-  users.push(user);
-  if (!writeUsersFallback(users)) {
-    // store in memory if disk write fails
-    regUserStore.set(String(email).toLowerCase(), user);
-    return user;
-  }
-  return user;
-}
-
-// Rate limiter: 1 OTP per minute per email (enforced by keyGenerator)
-const otpLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 1,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    try { return String(req.body?.email || req.ip).toLowerCase(); } catch { return req.ip; }
-  },
-});
-
-// Brevo transactional email
-async function sendBrevoEmail({ toEmail, subject, htmlContent, textContent }) {
-  const apiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
-  if (!apiKey) throw new Error('Missing BREVO_API_KEY');
-  const fromEmail = process.env.MAIL_FROM_EMAIL || 'no-reply@example.com';
-  const fromName = process.env.MAIL_FROM_NAME || 'OSINT App';
-  const url = 'https://api.brevo.com/v3/smtp/email';
-  const payload = {
-    sender: { email: fromEmail, name: fromName },
-    to: [{ email: toEmail }],
-    subject,
-    htmlContent: htmlContent || `<p>${textContent || ''}</p>`,
-    textContent: textContent || undefined,
-  };
-  await axios.post(url, payload, {
-    headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
-    timeout: 10_000,
+// ---------------- Nodemailer Gmail Configuration ----------------
+function getEmailTransporter() {
+  const user = process.env.EMAIL_USER || process.env.GMAIL_USER || process.env.SMTP_USER;
+  const pass = process.env.EMAIL_PASS || process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+  if (!user || !pass) return null;
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass }
   });
 }
 
-// Prefer SMTP if available (Brevo SMTP like previous), else use Brevo HTTP API
-async function sendEmailSmart({ toEmail, subject, htmlContent, textContent }) {
-  if (process.env.SMTP_URL || (process.env.SMTP_HOST && process.env.SMTP_USER && (process.env.SMTP_PASS || process.env.SMTP_PASSWORD))) {
-    const transport = process.env.SMTP_URL
-      ? nodemailer.createTransport(process.env.SMTP_URL)
-      : nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: Number(process.env.SMTP_PORT || 587),
-          secure: false,
-          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD },
-        });
-    const fromEmail = process.env.MAIL_FROM_EMAIL || 'no-reply@example.com';
-    const fromName = process.env.MAIL_FROM_NAME || 'OSINT App';
-    const fromAddr = process.env.MAIL_FROM || `${fromName} <${fromEmail}>`;
-    await transport.sendMail({ from: fromAddr, to: toEmail, subject, html: htmlContent, text: textContent });
-    return;
+async function sendOtpEmail(toEmail, otpCode) {
+  const transporter = getEmailTransporter();
+  const htmlContent = `
+    <div style="background:#0b0f19;padding:32px;font-family:monospace;color:#e2e8f0;border:1px solid #00f3ff;border-radius:10px;max-width:520px;margin:0 auto;box-shadow:0 0 20px rgba(0,243,255,0.2);">
+      <h2 style="color:#00f3ff;margin-top:0;font-size:20px;">[ OSINT BREACHSHIELD SECURITY ]</h2>
+      <p style="font-size:14px;color:#cbd5e1;">Your single-use email verification code for OSINT-BreachShield is:</p>
+      <div style="background:#030712;padding:18px;border-radius:8px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:8px;color:#00ff66;border:1px solid rgba(0,243,255,0.3);margin:24px 0;">
+        ${otpCode}
+      </div>
+      <p style="font-size:12px;color:#94a3b8;line-height:1.5;">• Valid for <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.<br>• Never share this verification code with anyone.<br>• If you did not request this code, please disregard this message.</p>
+      <div style="margin-top:24px;border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;font-size:11px;color:#64748b;">OSINT BreachShield Security Operations</div>
+    </div>
+  `;
+
+  if (transporter) {
+    await transporter.sendMail({
+      from: `OSINT BreachShield <${process.env.EMAIL_USER || 'no-reply@breachshield.osint'}>`,
+      to: toEmail,
+      subject: `Your OSINT BreachShield Verification Code: ${otpCode}`,
+      html: htmlContent
+    });
+    return { sent: true, method: 'smtp' };
+  } else {
+    console.log(`\n======================================================`);
+    console.log(`[EMAIL OTP] To: ${toEmail} | Verification Code: ${otpCode}`);
+    console.log(`[EMAIL OTP] Note: Set EMAIL_USER & EMAIL_PASS in .env to send via live Gmail SMTP.`);
+    console.log(`======================================================\n`);
+    return { sent: true, method: 'console_dev' };
   }
-  return sendBrevoEmail({ toEmail, subject, htmlContent, textContent });
 }
 
-// Create tables if they don't exist (simple bootstrap). Safe to call repeatedly.
+// ---------------- Database Bootstrap & Resilient JSON Stores ----------------
+const INSTANCE_DIR = path.join(__dirname, '../../instance');
+const USERS_JSON = path.join(INSTANCE_DIR, 'users.json');
+const OTPS_JSON = path.join(INSTANCE_DIR, 'email_otps.json');
+
+function readJsonFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return [];
+    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
+  } catch { return []; }
+}
+
+function writeJsonFile(filePath, data) {
+  try {
+    if (!fs.existsSync(INSTANCE_DIR)) fs.mkdirSync(INSTANCE_DIR, { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    return true;
+  } catch { return false; }
+}
+
+// In-memory cooldown tracker: email -> timestamp
+const resendCooldowns = new Map();
+
 async function ensureTables() {
   await query(`CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -162,198 +122,294 @@ async function ensureTables() {
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  await query(`CREATE TABLE IF NOT EXISTS otps (
+  await query(`CREATE TABLE IF NOT EXISTS email_otps (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
-    otp_hash VARCHAR(255) NOT NULL,
+    otp VARCHAR(255) NOT NULL,
     expires_at DATETIME NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    verified BOOLEAN DEFAULT FALSE,
+    attempts INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email)
   )`);
 }
 
-// POST /api/auth/send-otp { username, email }
-router.post('/send-otp', otpLimiter, async (req, res) => {
+// ---------------- ROUTE 1: POST /api/auth/send-otp ----------------
+router.post('/send-otp', async (req, res) => {
   try {
-    const { username, email } = req.body || {};
-    if (!username || !isEmail(email)) return res.status(400).json({ error: 'Username and valid email required' });
-    // Best-effort: check if user exists; ignore DB errors to avoid blocking OTP send
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const username = String(req.body?.username || '').trim();
+
+    if (!isEmail(email)) {
+      return res.status(400).json({ success: false, error: 'Valid email address is required' });
+    }
+
+    // 1. Check Resend Cooldown (30 seconds)
+    const lastSent = resendCooldowns.get(email) || 0;
+    const now = Date.now();
+    if (now - lastSent < RESEND_COOLDOWN_MS) {
+      const waitSec = Math.ceil((RESEND_COOLDOWN_MS - (now - lastSent)) / 1000);
+      return res.status(429).json({ success: false, error: `Please wait ${waitSec}s before requesting a new OTP.` });
+    }
+
+    // 2. Check if user already exists
     try {
       await ensureTables();
       const existing = await query('SELECT id FROM users WHERE email = ?', [email]);
-      if (existing.length) return res.status(409).json({ error: 'User already exists' });
-    } catch (dbErr) {
-      console.warn('send-otp: skip user exists check due to DB error:', dbErr.message);
+      if (existing && existing.length > 0) {
+        return res.status(409).json({ success: false, error: 'An account with this email already exists' });
+      }
+    } catch (_) {
+      const fallbackUsers = readJsonFile(USERS_JSON);
+      if (fallbackUsers.some(u => String(u.email).toLowerCase() === email)) {
+        return res.status(409).json({ success: false, error: 'An account with this email already exists' });
+      }
     }
 
+    // 3. Generate 6-digit OTP & Expiry (5 minutes)
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    const otpHash = hash(code);
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
-    // Store in memory so we don't depend on DB just to send an email
-    regOtpStore.set(String(email).toLowerCase(), { username, otpHash, expiresAt });
+    const hashedOtp = await hashSecret(code);
+    const expiresAt = new Date(now + OTP_EXPIRY_MINUTES * 60 * 1000);
 
-    await sendEmailSmart({
-      toEmail: email,
-      subject: 'Your OSINT App OTP code',
-      htmlContent: `<p>Your verification code is <b style="font-size:18px">${code}</b>. It expires in 5 minutes.</p>`
+    // 4. Store in Database (Prevent duplicate active OTPs for same email)
+    try {
+      await ensureTables();
+      await query('DELETE FROM email_otps WHERE email = ?', [email]);
+      await query(
+        'INSERT INTO email_otps (email, otp, expires_at, verified, attempts) VALUES (?, ?, ?, FALSE, 0)',
+        [email, hashedOtp, expiresAt]
+      );
+    } catch (dbErr) {
+      // JSON storage fallback
+      const otps = readJsonFile(OTPS_JSON).filter(o => String(o.email).toLowerCase() !== email);
+      otps.push({
+        id: Date.now(),
+        email,
+        username,
+        otp: hashedOtp,
+        expires_at: expiresAt.toISOString(),
+        verified: false,
+        attempts: 0,
+        created_at: new Date().toISOString()
+      });
+      writeJsonFile(OTPS_JSON, otps);
+    }
+
+    // 5. Update Cooldown & Send Email
+    resendCooldowns.set(email, now);
+    await sendOtpEmail(email, code);
+
+    return res.json({
+      success: true,
+      message: 'OTP sent successfully',
+      expiresInMinutes: OTP_EXPIRY_MINUTES
     });
-
-    res.json({ success: true, expiresInSec: 300 });
-  } catch (e) {
-    console.error('send-otp error:', e.message);
-    const msg = /ECONNREFUSED.*3306|ENOTFOUND.*mysql|connect ECONNREFUSED/i.test(e.message)
-      ? 'Database connection failed. Check MySQL is running and DB_* in backend .env.'
-      : (/Missing BREVO_API_KEY/.test(e.message)
-        ? 'Email service not configured (set SMTP_* or BREVO_API_KEY)'
-        : (e.response?.data?.message || e.message || 'Failed to send OTP'));
-    res.status(500).json({ error: msg });
+  } catch (err) {
+    console.error('send-otp error:', err.message);
+    return res.status(500).json({ success: false, error: 'Failed to send OTP. Please try again.' });
   }
 });
 
-// POST /api/auth/verify-otp { email, otp, username }
-// Verifies OTP and issues a short-lived signup cookie so the client can set password next.
+// ---------------- ROUTE 2: POST /api/auth/verify-otp ----------------
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { email, otp, username } = req.body || {};
-    if (!isEmail(email) || !otp || !username) {
-      return res.status(400).json({ error: 'Email, username and OTP are required' });
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const otp = String(req.body?.otp || '').trim();
+
+    if (!isEmail(email) || !otp || otp.length !== 6) {
+      return res.status(400).json({ success: false, error: 'Email and 6-digit OTP are required' });
     }
-    // First, try in-memory OTP
-    const inMem = regOtpStore.get(String(email).toLowerCase());
-    if (inMem) {
-      if (inMem.expiresAt < Date.now()) {
-        regOtpStore.delete(String(email).toLowerCase());
-        return res.status(400).json({ error: 'OTP expired' });
+
+    let record = null;
+    let isDb = true;
+
+    try {
+      await ensureTables();
+      const rows = await query('SELECT * FROM email_otps WHERE email = ? ORDER BY id DESC LIMIT 1', [email]);
+      if (rows && rows.length > 0) record = rows[0];
+    } catch (_) {
+      isDb = false;
+      const otps = readJsonFile(OTPS_JSON);
+      record = otps.slice().reverse().find(o => String(o.email).toLowerCase() === email) || null;
+    }
+
+    if (!record) {
+      return res.status(400).json({ success: false, error: 'No OTP record found. Please request a new OTP.' });
+    }
+
+    // 1. Check Expiry
+    const expireTime = new Date(record.expires_at).getTime();
+    if (expireTime < Date.now()) {
+      return res.status(400).json({ success: false, error: 'OTP has expired. Please request a new one.' });
+    }
+
+    // 2. Check Verification Attempts (Max 5)
+    const attempts = Number(record.attempts || 0);
+    if (attempts >= MAX_VERIFY_ATTEMPTS) {
+      return res.status(429).json({
+        success: false,
+        error: 'Maximum verification attempts exceeded. Please request a fresh OTP.'
+      });
+    }
+
+    // 3. Compare Hash with bcrypt
+    const match = await compareSecret(otp, record.otp);
+    if (!match) {
+      const remaining = MAX_VERIFY_ATTEMPTS - (attempts + 1);
+      if (isDb) {
+        await query('UPDATE email_otps SET attempts = attempts + 1 WHERE id = ?', [record.id]);
+      } else {
+        const otps = readJsonFile(OTPS_JSON);
+        const item = otps.find(o => o.id === record.id);
+        if (item) { item.attempts = (item.attempts || 0) + 1; writeJsonFile(OTPS_JSON, otps); }
       }
-      if (hash(String(otp)) !== inMem.otpHash) return res.status(401).json({ error: 'Invalid OTP' });
-      // username consistency: prefer provided username, fallback to stored
+      return res.status(400).json({
+        success: false,
+        error: `Invalid OTP code. ${remaining > 0 ? `${remaining} attempts remaining.` : 'Please request a new OTP.'}`
+      });
+    }
+
+    // 4. Mark Verified
+    if (isDb) {
+      await query('UPDATE email_otps SET verified = TRUE WHERE id = ?', [record.id]);
     } else {
-      // Fallback to DB-based OTP if present (for future when DB is available)
-      try {
-        await ensureTables();
-        const rows = await query('SELECT * FROM otps WHERE email = ? ORDER BY id DESC LIMIT 1', [email]);
-        if (!rows.length) return res.status(400).json({ error: 'OTP not found' });
-        const rec = rows[0];
-        if (new Date(rec.expires_at).getTime() < Date.now()) {
-          await query('DELETE FROM otps WHERE email = ?', [email]);
-          return res.status(400).json({ error: 'OTP expired' });
-        }
-        if (hash(String(otp)) !== rec.otp_hash) return res.status(401).json({ error: 'Invalid OTP' });
-      } catch (dbErr) {
-        return res.status(500).json({ error: 'OTP storage unavailable. Please resend.' });
-      }
+      const otps = readJsonFile(OTPS_JSON);
+      const item = otps.find(o => o.id === record.id);
+      if (item) { item.verified = true; writeJsonFile(OTPS_JSON, otps); }
     }
 
-    // OTP is valid: clear stored OTP and issue a short-lived signup cookie with email+username
-    regOtpStore.delete(String(email).toLowerCase());
-    try { await query('DELETE FROM otps WHERE email = ?', [email]); } catch (_) {}
-
+    // 5. Issue short-lived signup cookie to authorize account creation
     const signupToken = jwt.sign(
-      { email, username, stage: 'signup' },
+      { email, verified: true },
       process.env.JWT_SECRET || 'dev_secret',
-      { expiresIn: '10m' }
+      { expiresIn: '15m' }
     );
     const prod = process.env.NODE_ENV === 'production';
     res.cookie('signup', signupToken, {
       httpOnly: true,
       secure: prod,
       sameSite: prod ? 'none' : 'lax',
-      maxAge: 10 * 60 * 1000,
+      maxAge: 15 * 60 * 1000,
     });
-    return res.json({ success: true });
-  } catch (e) {
-    console.error('verify-otp error:', e.message);
-    // handle duplicate email race
-    if (/duplicate/i.test(e.message)) return res.status(409).json({ error: 'User already exists' });
-    res.status(500).json({ error: 'Verification failed' });
+
+    return res.json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+  } catch (err) {
+    console.error('verify-otp error:', err.message);
+    return res.status(500).json({ success: false, error: 'Verification failed' });
   }
 });
 
-// POST /api/auth/set-password { password }
-// Requires the short-lived 'signup' cookie set by verify-otp. Creates the user and logs them in.
-router.post('/set-password', async (req, res) => {
+// ---------------- ROUTE 3: POST /api/auth/register (or set-password) ----------------
+router.post(['/register', '/set-password'], async (req, res) => {
   try {
-    const { password } = req.body || {};
-    if (!password || String(password).length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    const { username, email, password } = req.body || {};
+    const effectiveEmail = String(email || '').trim().toLowerCase();
+    const effectiveUsername = String(username || '').trim();
+
+    if (!effectiveUsername || !effectiveEmail || !password || String(password).length < 6) {
+      return res.status(400).json({ success: false, error: 'Username, valid email, and password (min 6 chars) required' });
     }
-    const signupToken = req.cookies?.signup;
-    if (!signupToken) return res.status(401).json({ error: 'Signup session expired. Please verify OTP again.' });
-    let payload;
+
+    // 1. Verify that email has verified OTP status
+    let isVerified = false;
     try {
-      payload = jwt.verify(signupToken, process.env.JWT_SECRET || 'dev_secret');
+      const rows = await query('SELECT * FROM email_otps WHERE email = ? AND verified = TRUE ORDER BY id DESC LIMIT 1', [effectiveEmail]);
+      if (rows && rows.length > 0) isVerified = true;
     } catch (_) {
-      return res.status(401).json({ error: 'Signup session expired. Please verify OTP again.' });
-    }
-    if (payload.stage !== 'signup' || !isEmail(payload.email) || !payload.username) {
-      return res.status(400).json({ error: 'Invalid signup session' });
+      const otps = readJsonFile(OTPS_JSON);
+      const rec = otps.slice().reverse().find(o => String(o.email).toLowerCase() === effectiveEmail && o.verified);
+      if (rec) isVerified = true;
     }
 
-    const email = payload.email;
-    const username = payload.username;
+    // Also check signup token cookie
+    if (!isVerified && req.cookies?.signup) {
+      try {
+        const decoded = jwt.verify(req.cookies.signup, process.env.JWT_SECRET || 'dev_secret');
+        if (decoded.email === effectiveEmail && decoded.verified) isVerified = true;
+      } catch (_) {}
+    }
 
-    // Create user (DB -> JSON -> memory)
-    let createdUserRow;
+    if (!isVerified) {
+      return res.status(403).json({ success: false, error: 'Please verify your email with OTP before registering.' });
+    }
+
+    // 2. Create User
+    const passwordHash = await hashSecret(password);
+    let createdUser;
+
     try {
       await ensureTables();
-      const password_hash = await hashPassword(String(password));
-      await query('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)', [username, email, password_hash]);
-      const rows = await query('SELECT id, username, email, created_at FROM users WHERE email = ?', [email]);
-      createdUserRow = rows[0];
-    } catch (dbCreateErr) {
-      if (/duplicate/i.test(dbCreateErr.message)) return res.status(409).json({ error: 'User already exists' });
-      try {
-        const password_hash = await hashPassword(String(password));
-        const fallbackUser = addUserFallback({ username, email, password_hash });
-        createdUserRow = { id: fallbackUser.id, username: fallbackUser.username, email: fallbackUser.email, created_at: fallbackUser.created_at };
-        console.warn('set-password: DB unavailable, created user in JSON/memory fallback for', email);
-      } catch (e) {
-        try {
-          const password_hash = await hashPassword(String(password));
-          const id = Date.now();
-          const memUser = { id, username, email, password_hash, created_at: new Date().toISOString() };
-          regUserStore.set(String(email).toLowerCase(), memUser);
-          createdUserRow = { id: memUser.id, username: memUser.username, email: memUser.email, created_at: memUser.created_at };
-          console.warn('set-password: using in-memory user fallback for', email);
-        } catch (err2) {
-          return res.status(500).json({ error: 'Failed to create user' });
-        }
+      const insertRes = await query('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)', [effectiveUsername, effectiveEmail, passwordHash]);
+      const id = insertRes.insertId;
+      createdUser = { id, username: effectiveUsername, email: effectiveEmail, created_at: new Date().toISOString() };
+      // Clean up used OTP
+      await query('DELETE FROM email_otps WHERE email = ?', [effectiveEmail]);
+    } catch (dbErr) {
+      if (/duplicate/i.test(dbErr.message)) {
+        return res.status(409).json({ success: false, error: 'User with this email already exists' });
       }
+      // Fallback JSON user storage
+      const users = readJsonFile(USERS_JSON);
+      if (users.some(u => String(u.email).toLowerCase() === effectiveEmail)) {
+        return res.status(409).json({ success: false, error: 'User with this email already exists' });
+      }
+      const nextId = users.length ? Math.max(...users.map(u => Number(u.id) || 0)) + 1 : 1;
+      createdUser = { id: nextId, username: effectiveUsername, email: effectiveEmail, password_hash: passwordHash, created_at: new Date().toISOString() };
+      users.push(createdUser);
+      writeJsonFile(USERS_JSON, users);
+      // Clean up JSON OTPs
+      const remainingOtps = readJsonFile(OTPS_JSON).filter(o => String(o.email).toLowerCase() !== effectiveEmail);
+      writeJsonFile(OTPS_JSON, remainingOtps);
     }
 
-    // Clear signup cookie and issue auth token cookie
+    // 3. Issue Authentication JWT Cookie
     const prod = process.env.NODE_ENV === 'production';
     res.clearCookie('signup', { httpOnly: true, secure: prod, sameSite: prod ? 'none' : 'lax' });
-    const token = signJwt({ uid: createdUserRow.id });
+    const token = signJwt({ uid: createdUser.id });
     res.cookie('token', token, {
       httpOnly: true,
       secure: prod,
       sameSite: prod ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    return res.json({ success: true, user: createdUserRow });
-  } catch (e) {
-    console.error('set-password error:', e.message);
-    return res.status(500).json({ error: 'Failed to set password' });
+
+    return res.json({
+      success: true,
+      message: 'Account created successfully',
+      user: { id: createdUser.id, username: createdUser.username, email: createdUser.email }
+    });
+  } catch (err) {
+    console.error('register error:', err.message);
+    return res.status(500).json({ success: false, error: 'Failed to create account' });
   }
 });
 
-// POST /api/auth/login { email, password }
+// ---------------- ROUTE 4: POST /api/auth/login ----------------
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body || {};
-    if (!isEmail(email) || !password) return res.status(400).json({ error: 'Email and password required' });
-    let user;
+    if (!isEmail(email) || !password) {
+      return res.status(400).json({ success: false, error: 'Valid email and password required' });
+    }
+
+    let user = null;
     try {
       await ensureTables();
-      const users = await query('SELECT * FROM users WHERE email = ?', [email]);
+      const users = await query('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
       if (users.length) user = users[0];
-    } catch (dbErr) {
-      // fallback to JSON
-      user = findUserByEmailFallback(email) || regUserStore.get(String(email).toLowerCase()) || null;
+    } catch (_) {
+      const users = readJsonFile(USERS_JSON);
+      user = users.find(u => String(u.email).toLowerCase() === email.toLowerCase()) || null;
     }
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-  const ok = await comparePassword(String(password), user.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+
+    if (!user) return res.status(401).json({ success: false, error: 'Invalid credentials' });
+
+    const ok = await compareSecret(String(password), user.password_hash);
+    if (!ok) return res.status(401).json({ success: false, error: 'Invalid credentials' });
+
     const token = signJwt({ uid: user.id });
     const prod = process.env.NODE_ENV === 'production';
     res.cookie('token', token, {
@@ -362,47 +418,42 @@ router.post('/login', async (req, res) => {
       sameSite: prod ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.json({
+
+    return res.json({
       success: true,
       user: { id: user.id, username: user.username, email: user.email, created_at: user.created_at }
     });
-  } catch (e) {
-    console.error('login error:', e.message);
-    res.status(500).json({ error: 'Login failed' });
+  } catch (err) {
+    console.error('login error:', err.message);
+    return res.status(500).json({ success: false, error: 'Login failed' });
   }
 });
 
-// auth middleware
-async function auth(req, res, next) {
+// ---------------- ROUTE 5: GET /api/auth/me ----------------
+router.get('/me', async (req, res) => {
   try {
     const token = req.cookies?.token || (req.headers.authorization?.split(' ')[1]);
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
-    req.userId = decoded.uid;
-    next();
-  } catch (e) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-}
 
-// GET /api/auth/me
-router.get('/me', auth, async (req, res) => {
-  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+    let user = null;
+
     try {
-      const rows = await query('SELECT id, username, email, created_at FROM users WHERE id = ?', [req.userId]);
-      if (rows.length) return res.json({ user: rows[0] });
-    } catch (dbErr) {
-      // ignore and fallback
+      const rows = await query('SELECT id, username, email, created_at FROM users WHERE id = ?', [decoded.uid]);
+      if (rows && rows.length) user = rows[0];
+    } catch (_) {
+      const users = readJsonFile(USERS_JSON);
+      user = users.find(u => Number(u.id) === Number(decoded.uid)) || null;
     }
-    const fu = findUserByIdFallback(req.userId) || findUserByIdInMem(req.userId);
-    if (!fu) return res.status(404).json({ error: 'Not found' });
-    res.json({ user: { id: fu.id, username: fu.username, email: fu.email, created_at: fu.created_at } });
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to fetch profile' });
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    return res.json({ success: true, user });
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 });
 
-// POST /api/auth/logout
+// ---------------- ROUTE 6: POST /api/auth/logout ----------------
 router.post('/logout', (req, res) => {
   const prod = process.env.NODE_ENV === 'production';
   res.clearCookie('token', { httpOnly: true, secure: prod, sameSite: prod ? 'none' : 'lax' });
