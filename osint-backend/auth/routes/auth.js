@@ -50,14 +50,16 @@ async function compareSecret(plain, hashed) {
 
 // ---------------- Nodemailer Gmail Configuration ----------------
 function getEmailTransporter() {
-  const user = process.env.EMAIL_USER || process.env.GMAIL_USER || process.env.SMTP_USER;
-  const pass = process.env.EMAIL_PASS || process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+  const user = String(process.env.EMAIL_USER || process.env.GMAIL_USER || process.env.SMTP_USER || '').trim();
+  const rawPass = String(process.env.EMAIL_PASS || process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || '');
+  const pass = rawPass.replace(/\s+/g, '');
   if (!user || !pass) return null;
   return nodemailer.createTransport({
     service: 'gmail',
     auth: { user, pass }
   });
 }
+
 
 async function sendOtpEmail(toEmail, otpCode) {
   const transporter = getEmailTransporter();
