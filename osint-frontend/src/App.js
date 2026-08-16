@@ -7,6 +7,7 @@ import bgVideo2 from './bg2.mp4';
 import bgVideo3 from './bg3.mp4';
 import UserMenu from './components/UserMenu';
 import DarkWebTicker from './components/DarkWebTicker';
+import BreachTimeline from './components/BreachTimeline';
 
 // Prefer env var, fallback to local backend for dev
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
@@ -290,11 +291,20 @@ function App() {
     if (visitedPagesRef.current) visitedPagesRef.current.clear();
   };
 
+  // View mode switcher: 'terminal' or 'timeline'
+  const [viewMode, setViewMode] = useState('terminal');
+
   // Trigger backend to click 'Download' and stream file back
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      const res = await fetch(`${API_BASE}/api/download`, { method: 'POST' });
+      const preferredPacket = (result?.packets && result.packets[1] !== undefined) ? result.packets[1] : result?.packets?.[0];
+      const content = terminalText || preferredPacket?.info || JSON.stringify(result || {});
+      const res = await fetch(`${API_BASE}/api/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, content })
+      });
       if (!res.ok) {
         const t = await res.text();
         setResult(prev => ({ ...prev, error: `❌ Download failed: ${t || res.status}` }));
@@ -303,7 +313,7 @@ function App() {
       // Derive filename from Content-Disposition header if available
       const cd = res.headers.get('Content-Disposition') || '';
       const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(cd);
-      const filename = decodeURIComponent(match?.[1] || match?.[2] || 'result.html');
+      const filename = decodeURIComponent(match?.[1] || match?.[2] || 'breach_report.html');
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -781,18 +791,83 @@ function App() {
                                (result && result.pagination && result.pagination.total > 1);
           return (
             <div className="packet" key={0}>
+              {/* Exposure Score & Risk Classification Header */}
+              {result && result.analytics && result.analytics.exposure && !isNoResult && (
+                <div className="exposure-meter-card">
+                  <div className="exposure-gauge-container">
+                    <div className="exposure-score-circle" style={{ borderColor: result.analytics.exposure.riskColor }}>
+                      <span className="score-num">{result.analytics.exposure.score}</span>
+                      <span className="score-label">/ 100</span>
+                    </div>
+                    <div className="exposure-meta">
+                      <div
+                        className="risk-badge"
+                        style={{
+                          backgroundColor: `${result.analytics.exposure.riskColor}22`,
+                          color: result.analytics.exposure.riskColor,
+                          borderColor: result.analytics.exposure.riskColor
+                        }}
+                      >
+                        THREAT LEVEL: {result.analytics.exposure.riskLevel}
+                      </div>
+                      <div className="exposure-summary">
+                        {result.analytics.exposure.entities.recordCount} records identified • {result.analytics.exposure.entities.phoneCount} phone numbers linked • {result.analytics.exposure.entities.hasDocument ? '⚠️ National Document / Aadhaar Exposed' : 'Digital Exposure Detected'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Factor Breakdown Chips */}
+                  {result.analytics.exposure.breakdown && result.analytics.exposure.breakdown.length > 0 && (
+                    <div className="breakdown-chips">
+                      {result.analytics.exposure.breakdown.map((b, idx) => (
+                        <span className="breakdown-chip" key={idx}>
+                          ⚡ {b.factor}: +{b.points} pts
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="packet-header">
                 <h2>[ Data Breach Information ]</h2>
+
+                {/* View Mode Switcher Toggle */}
+                {!isNoResult && (
+                  <div className="view-mode-toggle">
+                    <button
+                      className={`tab-toggle-btn ${viewMode === 'terminal' ? 'active' : ''}`}
+                      onClick={() => setViewMode('terminal')}
+                      aria-label="terminal-view"
+                    >
+                      [ Terminal View ]
+                    </button>
+                    <button
+                      className={`tab-toggle-btn ${viewMode === 'timeline' ? 'active' : ''}`}
+                      onClick={() => setViewMode('timeline')}
+                      aria-label="timeline-view"
+                    >
+                      [ Timeline View ⏱ ]
+                    </button>
+                  </div>
+                )}
+
                 <div className="header-buttons">
                   {!isNoResult && (
                     <button className="header-btn" onClick={handleDownload} aria-label="download-html" disabled={downloading}>
-                      {downloading ? 'Downloading…' : 'Download'}
+                      {downloading ? 'Exporting…' : 'Download Report'}
                     </button>
                   )}
                   <button className="header-btn" onClick={closeResults} aria-label="new-search">Try another query</button>
                 </div>
               </div>
-              <pre className="terminal">{terminalText}<span className="cursor" /></pre>
+
+              {/* Conditional View Rendering */}
+              {viewMode === 'terminal' ? (
+                <pre className="terminal">{terminalText}<span className="cursor" /></pre>
+              ) : (
+                <BreachTimeline events={result?.analytics?.timeline || []} />
+              )}
 
               {/* Optional: show raw packet info for debugging when content is missing */}
               {(!preferredPacket || Object.keys(preferredPacket).length === 0) && (

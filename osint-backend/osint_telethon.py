@@ -7,7 +7,7 @@ import os
 # Prefer environment variables for secrets; fall back to the values below if not set
 api_id = os.environ.get('TG_API_ID', '28444606')
 api_hash = os.environ.get('TG_API_HASH', '409411e66ccb00968523f446d30cded9')
-phone = os.environ.get('TG_PHONE', '+919380175597')
+phone = os.environ.get('TG_PHONE', '+917337771210')
 bot_username = os.environ.get('TG_BOT_USERNAME', 'The_Devil_OSINT_bot')
 
 # Normalize common phone formats: if user provided a 10-digit Indian number, prepend +91

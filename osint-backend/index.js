@@ -303,45 +303,178 @@ async function sendTelegramMessage(message) {
   });
 }
 
-// Example endpoint for OSINT search
+// ---------------- Intelligence & Analytics Layer ----------------
+const { analyzeExposure } = require('./analytics/riskEngine');
+const { parseBreachTimeline } = require('./analytics/timelineParser');
+
+// History file fallback
+const HISTORY_JSON = path.join(WATCH_JSON_DIR, 'history.json');
+function readHistoryFallback() {
+  try {
+    if (!fs.existsSync(HISTORY_JSON)) return [];
+    return JSON.parse(fs.readFileSync(HISTORY_JSON, 'utf8') || '[]');
+  } catch { return []; }
+}
+function writeHistoryFallback(list) {
+  try {
+    if (!fs.existsSync(WATCH_JSON_DIR)) fs.mkdirSync(WATCH_JSON_DIR, { recursive: true });
+    fs.writeFileSync(HISTORY_JSON, JSON.stringify(list, null, 2));
+    return true;
+  } catch { return false; }
+}
+
+async function saveSearchAudit({ userId, query, searchType, exposure, fullText }) {
+  const score = exposure?.score || 0;
+  const risk = exposure?.riskLevel || 'LOW';
+  const records = exposure?.entities?.recordCount || 1;
+  const createdAt = new Date().toISOString();
+
+  try {
+    const { query: dbQuery } = require('./auth/db');
+    await dbQuery(`CREATE TABLE IF NOT EXISTS search_history (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      query VARCHAR(255) NOT NULL,
+      search_type VARCHAR(50) NOT NULL DEFAULT 'Email',
+      exposure_score INT DEFAULT 0,
+      risk_level VARCHAR(20) DEFAULT 'LOW',
+      records_found INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await dbQuery(
+      `INSERT INTO search_history (user_id, query, search_type, exposure_score, risk_level, records_found)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [userId || 1, query, searchType || 'Email', score, risk, records]
+    );
+  } catch (dbErr) {
+    // Save to JSON fallback
+    const list = readHistoryFallback();
+    list.unshift({
+      id: Date.now(),
+      user_id: userId || 1,
+      query,
+      search_type: searchType || 'Email',
+      exposure_score: score,
+      risk_level: risk,
+      records_found: records,
+      created_at: createdAt
+    });
+    writeHistoryFallback(list.slice(0, 100));
+  }
+}
+
+// Endpoint for OSINT search with analytics
 app.post('/api/search', async (req, res) => {
-  const { exec } = require('child_process');
   const { query, searchType } = req.body || {};
   try {
-  // OTP requirement disabled: allow email searches without OTP verification
-  // Forward the query to the Python service that interacts with Telegram
-  const resp = await axios.post(PYTHON_SERVICE_URL, { query });
-  // Support both legacy 'response' and newer 'packets' payloads
-  const botText = resp.data.response || '';
-  const packets = resp.data.packets || (botText ? [{ query, info: botText }] : []);
-  const pagination = resp.data.pagination || null;
-  res.json({ success: true, data: { packets, pagination } });
+    const resp = await axios.post(PYTHON_SERVICE_URL, { query });
+    const botText = resp.data.response || '';
+    const packets = resp.data.packets || (botText ? [{ query, info: botText }] : []);
+    const pagination = resp.data.pagination || null;
+
+    // Run Analytics & Timeline Parsers
+    const fullText = packets.map(p => p.info || '').join('\n\n');
+    const exposure = analyzeExposure(fullText, query);
+    const timeline = parseBreachTimeline(fullText);
+
+    // Save Search Audit if logged in or fallback
+    let currentUid = 1;
+    try {
+      const token = req.cookies?.token || (req.headers.authorization?.split(' ')[1]);
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+        currentUid = decoded.uid;
+      }
+    } catch (_) {}
+
+    saveSearchAudit({
+      userId: currentUid,
+      query,
+      searchType,
+      exposure,
+      fullText
+    });
+
+    res.json({
+      success: true,
+      data: {
+        packets,
+        pagination,
+        analytics: {
+          exposure,
+          timeline
+        }
+      }
+    });
   } catch (err) {
     console.error('Search error:', err.message);
-    // Always send user-friendly message regardless of the technical error
-    const errorMessage = 'Server is down, try after sometime.';
-    res.status(500).json({ success: false, error: errorMessage });
+    res.status(500).json({ success: false, error: 'Server is down, try after sometime.' });
+  }
+});
+
+// GET /api/history - Retrieve user investigation history
+app.get('/api/history', async (req, res) => {
+  try {
+    let uid = 1;
+    try {
+      const token = req.cookies?.token || (req.headers.authorization?.split(' ')[1]);
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+        uid = decoded.uid;
+      }
+    } catch (_) {}
+
+    try {
+      const { query: dbQuery } = require('./auth/db');
+      const rows = await dbQuery(
+        `SELECT id, query, search_type, exposure_score, risk_level, records_found, created_at 
+         FROM search_history 
+         WHERE user_id = ? 
+         ORDER BY id DESC 
+         LIMIT 50`,
+        [uid]
+      );
+      if (rows && rows.length) return res.json({ success: true, history: rows });
+    } catch (dbErr) {}
+
+    // Fallback from JSON
+    const all = readHistoryFallback();
+    const userHistory = all.filter(h => Number(h.user_id) === Number(uid) || !h.user_id);
+    res.json({ success: true, history: userHistory.length ? userHistory : all });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to retrieve search history' });
+  }
+});
+
+// DELETE /api/history/:id - Remove history item
+app.delete('/api/history/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    try {
+      const { query: dbQuery } = require('./auth/db');
+      await dbQuery('DELETE FROM search_history WHERE id = ?', [id]);
+    } catch (_) {}
+
+    const list = readHistoryFallback().filter(h => String(h.id) !== String(id));
+    writeHistoryFallback(list);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
 
 // Endpoint for pagination - get next page from Telegram bot
 app.post('/api/telegram-page', async (req, res) => {
   try {
-    console.log('Requesting next page from Python service...');
-    // Forward the next page request to the Python service
     const resp = await axios.post(PYTHON_SERVICE_URL.replace('/query', '/next-page'), {}, { validateStatus: () => true });
-    if (resp.status === 204) {
-      // No more pages
-      return res.status(200).json({ success: true, data: null });
-    }
+    if (resp.status === 204) return res.status(200).json({ success: true, data: null });
     if (resp.status < 200 || resp.status >= 300) {
       return res.status(500).json({ success: false, error: `Python service status ${resp.status}` });
     }
-    console.log('Python service response:', resp.data);
-  const botText = (resp.data && resp.data.response) || '';
-  const packets = (resp.data && resp.data.packets) || (botText ? [{ info: botText }] : []);
-  const pagination = (resp.data && resp.data.pagination) || null;
-  res.json({ success: true, data: packets.length ? { packets, pagination } : null });
+    const botText = (resp.data && resp.data.response) || '';
+    const packets = (resp.data && resp.data.packets) || (botText ? [{ info: botText }] : []);
+    const pagination = (resp.data && resp.data.pagination) || null;
+    res.json({ success: true, data: packets.length ? { packets, pagination } : null });
   } catch (err) {
     console.error('Telegram page error:', err.message);
     res.status(500).json({ success: false, error: 'Server is down, try after sometime.' });
@@ -351,47 +484,75 @@ app.post('/api/telegram-page', async (req, res) => {
 // Endpoint for previous page - get previous page from Telegram bot
 app.post('/api/telegram-prev-page', async (req, res) => {
   try {
-    console.log('Requesting previous page from Python service...');
-    // Forward the previous page request to the Python service
     const resp = await axios.post(PYTHON_SERVICE_URL.replace('/query', '/prev-page'), {}, { validateStatus: () => true });
-    if (resp.status === 204) {
-      return res.status(200).json({ success: true, data: null });
-    }
+    if (resp.status === 204) return res.status(200).json({ success: true, data: null });
     if (resp.status < 200 || resp.status >= 300) {
       return res.status(500).json({ success: false, error: `Python service status ${resp.status}` });
     }
-    console.log('Python service response:', resp.data);
-  const botText = (resp.data && resp.data.response) || '';
-  const packets = (resp.data && resp.data.packets) || (botText ? [{ info: botText }] : []);
-  const pagination = (resp.data && resp.data.pagination) || null;
-  res.json({ success: true, data: packets.length ? { packets, pagination } : null });
+    const botText = (resp.data && resp.data.response) || '';
+    const packets = (resp.data && resp.data.packets) || (botText ? [{ info: botText }] : []);
+    const pagination = (resp.data && resp.data.pagination) || null;
+    res.json({ success: true, data: packets.length ? { packets, pagination } : null });
   } catch (err) {
     console.error('Telegram prev page error:', err.message);
     res.status(500).json({ success: false, error: 'Server is down, try after sometime.' });
   }
 });
 
-// Download endpoint: ask Python to click "Download" and stream the file back
+// Download endpoint: fetches file from Telegram or generates standalone HTML report
 app.post('/api/download', async (req, res) => {
   try {
     const url = `${PYTHON_BASE}/download`;
     const resp = await axios.post(url, {}, { responseType: 'arraybuffer', validateStatus: () => true });
-    if (resp.status < 200 || resp.status >= 300) {
-      return res.status(resp.status).json({ success: false, error: Buffer.from(resp.data || '').toString('utf8') || 'Download failed' });
+    if (resp.status >= 200 && resp.status < 300 && resp.data && resp.data.length > 0) {
+      if (resp.headers['content-disposition']) {
+        res.setHeader('Content-Disposition', resp.headers['content-disposition']);
+      } else {
+        res.setHeader('Content-Disposition', 'attachment; filename="breach_report.html"');
+      }
+      res.setHeader('Content-Type', resp.headers['content-type'] || 'text/html');
+      return res.send(Buffer.from(resp.data));
     }
-    // Propagate headers for filename and content-type
-    if (resp.headers['content-disposition']) {
-      res.setHeader('Content-Disposition', resp.headers['content-disposition']);
-    } else {
-      res.setHeader('Content-Disposition', 'attachment; filename="result.html"');
-    }
-    res.setHeader('Content-Type', resp.headers['content-type'] || 'application/octet-stream');
-    res.send(Buffer.from(resp.data));
+
+    // Fallback: Generate HTML report directly
+    const { query = 'Target Record', content = 'No breach text provided' } = req.body || {};
+    const htmlReport = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OSINT Breach Intelligence Report - ${query}</title>
+  <style>
+    body { background: #0b0f19; color: #e2e8f0; font-family: monospace; padding: 40px; margin: 0; }
+    .card { background: rgba(15, 23, 42, 0.9); border: 1px solid #00f3ff; border-radius: 8px; padding: 24px; max-width: 800px; margin: 0 auto; box-shadow: 0 0 20px rgba(0, 243, 255, 0.2); }
+    h1 { color: #00f3ff; margin-top: 0; }
+    .badge { display: inline-block; background: #ff003c; color: #fff; padding: 4px 10px; border-radius: 4px; font-weight: bold; }
+    pre { background: #000; padding: 16px; border-radius: 6px; color: #00ff66; white-space: pre-wrap; font-size: 14px; border: 1px solid rgba(255, 255, 255, 0.1); }
+    .footer { margin-top: 20px; font-size: 12px; color: #64748b; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>[ OSINT THREAT INTELLIGENCE REPORT ]</h1>
+    <p>Target: <strong>${query}</strong></p>
+    <p>Classification: <span class="badge">CONFIRMED EXPOSURE</span></p>
+    <p>Generated: ${new Date().toUTCString()}</p>
+    <hr style="border-color: rgba(0, 243, 255, 0.2); margin: 20px 0;" />
+    <h3>Extracted Intelligence Data:</h3>
+    <pre>${content}</pre>
+    <div class="footer">Generated by OSINT-BreachShield Intelligence Platform • Confidential</div>
+  </div>
+</body>
+</html>`;
+
+    res.setHeader('Content-Disposition', 'attachment; filename="breach_report.html"');
+    res.setHeader('Content-Type', 'text/html');
+    res.send(htmlReport);
   } catch (err) {
-    console.error('Download proxy error:', err.message);
+    console.error('Download error:', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
 const PORT = Number(process.env.PORT || 5000);
 app.listen(PORT, () => {
   console.log(`OSINT backend running on port ${PORT}`);

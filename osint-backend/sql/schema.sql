@@ -15,3 +15,17 @@ CREATE TABLE IF NOT EXISTS otps (
   expires_at DATETIME NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Search History & Exposure Audit Vault
+CREATE TABLE IF NOT EXISTS search_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  query VARCHAR(255) NOT NULL,
+  search_type VARCHAR(50) NOT NULL DEFAULT 'Email',
+  exposure_score INT DEFAULT 0,
+  risk_level VARCHAR(20) DEFAULT 'LOW',
+  records_found INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_id (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

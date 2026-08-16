@@ -40,7 +40,7 @@ echo.
 
 REM Start Python FastAPI service (osint_service.py) on port 8001
 echo Starting Python FastAPI service...
-start "OSINT Python Service" cmd /k "cd /d "%PROJECT_DIR%osint-backend" && echo Starting Python FastAPI service on port 8001... && python -m uvicorn osint_service:app --host 0.0.0.0 --port 8001 --reload"
+start "OSINT Python Service" cmd /k "cd /d "%PROJECT_DIR%osint-backend" && if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) && echo Starting Python FastAPI service on port 8001... && python -m uvicorn osint_service:app --host 0.0.0.0 --port 8001 --reload"
 
 REM Wait a moment for Python service to start
 timeout /t 3 /nobreak >nul

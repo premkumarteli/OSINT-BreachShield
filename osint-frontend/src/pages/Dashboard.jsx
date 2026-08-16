@@ -3,27 +3,50 @@ import api from '../lib/api';
 import { Link, useNavigate } from 'react-router-dom';
 import '../auth.css';
 import bgVideo2 from '../bg2.mp4';
+import SearchHistoryTable from '../components/SearchHistoryTable';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const globalBgActive = (typeof window !== 'undefined') && Boolean(window.__GLOBAL_BG_ACTIVE);
   const [user, setUser] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get('/api/auth/me');
-        setUser(res.data.user);
+        const [userRes, histRes] = await Promise.allSettled([
+          api.get('/api/auth/me'),
+          api.get('/api/history')
+        ]);
+
+        if (userRes.status === 'fulfilled' && userRes.value.data?.user) {
+          setUser(userRes.value.data.user);
+        }
+        if (histRes.status === 'fulfilled' && histRes.value.data?.history) {
+          setHistory(histRes.value.data.history);
+        }
       } catch (e) {
-        setError('Not authenticated');
-        setTimeout(() => { navigate('/search', { replace: true }); }, 1200);
+        setError('Session expired');
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
 
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/api/history/${id}`);
+      setHistory(prev => prev.filter(item => item.id !== id));
+    } catch (_) {}
+  };
+
   const logout = async () => {
-    try { await api.post('/api/auth/logout'); navigate('/search', { replace: true }); } catch {}
+    try {
+      await api.post('/api/auth/logout');
+    } catch (_) {}
+    navigate('/search', { replace: true });
   };
 
   return (
@@ -33,24 +56,49 @@ export default function Dashboard() {
           <source src={bgVideo2} type="video/mp4" />
         </video>
       )}
-      <div className="auth-hero">
-        <h1 className="hero-title">OSINT SEARCH</h1>
-        <div className="hero-credit">Developed by <strong>PhishBreach Guardians</strong></div>
-      </div>
-      <div className="auth-card">
-        <h2 className="auth-title">Welcome</h2>
-        {user ? (
-          <div className="profile">
-            <div><b>Username:</b> {user.username}</div>
-            <div><b>Email:</b> {user.email}</div>
-            <div className="dash-actions">
-              <Link className="neon-link" to="/search">Go to Search</Link>
-              <button className="neon-btn" onClick={logout}>Logout</button>
+
+      <div className="dashboard-container">
+        <div className="dash-top-bar">
+          <div className="dash-title-group">
+            <h1 className="dash-heading">SECURITY AUDIT DASHBOARD</h1>
+            <div className="dash-sub">Digital Exposure Intelligence & Investigation Vault</div>
+          </div>
+          <div className="dash-actions-group">
+            <Link className="neon-btn-solid" to="/search">
+              ⚡ Launch OSINT Search
+            </Link>
+            <button className="neon-btn-ghost" onClick={logout}>
+              Logout
+            </button>
+          </div>
+        </div>
+
+        {user && (
+          <div className="user-profile-strip">
+            <div className="profile-pill">
+              <span className="pill-label">USER:</span> <strong>{user.username}</strong>
+            </div>
+            <div className="profile-pill">
+              <span className="pill-label">EMAIL:</span> <strong>{user.email}</strong>
+            </div>
+            <div className="profile-pill">
+              <span className="pill-label">TOTAL INVESTIGATIONS:</span> <strong>{history.length}</strong>
             </div>
           </div>
-        ) : (
-          <div className="auth-hint">{error || 'Loading...'}</div>
         )}
+
+        <div className="history-card-panel">
+          <div className="panel-head">
+            <h2>[ Investigation & Exposure History ]</h2>
+            <span className="panel-badge">PERSISTENT AUDIT TRAIL</span>
+          </div>
+
+          {loading ? (
+            <div className="auth-hint">Loading investigation vault...</div>
+          ) : (
+            <SearchHistoryTable history={history} onDelete={handleDelete} />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -975,3 +975,289 @@ body::before {
     width: 100%;
   }
 }
+
+/* ================================================================
+   NEW: Exposure Score Gauge & Risk Classification Styles
+   ================================================================ */
+.exposure-meter-card {
+  background: rgba(8, 14, 26, 0.92);
+  border: 1px solid rgba(0, 243, 255, 0.28);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(0, 243, 255, 0.04);
+}
+
+.exposure-gauge-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.exposure-score-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3.5px solid #00ff66;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.8);
+  flex-shrink: 0;
+}
+
+.score-num {
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffffff;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+}
+
+.score-label {
+  font-size: 9px;
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.exposure-meta {
+  flex: 1;
+}
+
+.risk-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  border: 1px solid;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.exposure-summary {
+  font-size: 12px;
+  color: #cbd5e1;
+  font-family: 'Courier New', monospace;
+  line-height: 1.4;
+}
+
+.breakdown-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.breakdown-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 10.5px;
+  color: #fbbf24;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+/* ================================================================
+   NEW: View Mode Toggle (Terminal vs. Timeline)
+   ================================================================ */
+.view-mode-toggle {
+  display: flex;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.tab-toggle-btn {
+  background: rgba(0, 243, 255, 0.08);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  color: #00f3ff;
+  font-family: 'Courier New', monospace;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tab-toggle-btn:hover {
+  background: rgba(0, 243, 255, 0.2);
+  border-color: #00f3ff;
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+}
+
+.tab-toggle-btn.active {
+  background: rgba(0, 243, 255, 0.28);
+  border-color: #00f3ff;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(0, 243, 255, 0.5);
+}
+
+/* ================================================================
+   NEW: Chronological Breach Timeline Styles
+   ================================================================ */
+.breach-timeline-container {
+  padding: 8px 4px 60px 4px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+}
+
+.timeline-header-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+  font-family: 'Courier New', monospace;
+}
+
+.meta-title {
+  color: #00f3ff;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.meta-count {
+  background: rgba(0, 243, 255, 0.15);
+  border: 1px solid rgba(0, 243, 255, 0.4);
+  color: #e2e8f0;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.timeline-wrapper {
+  position: relative;
+  padding-left: 20px;
+}
+
+.timeline-spine {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 78px;
+  width: 2px;
+  background: linear-gradient(180deg, #00f3ff, #ff6a00, #ff003c);
+  box-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+}
+
+.timeline-marker {
+  width: 70px;
+  text-align: right;
+  padding-right: 22px;
+  font-family: 'Courier New', monospace;
+  font-weight: 800;
+  color: #00f3ff;
+  font-size: 14px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.marker-dot {
+  position: absolute;
+  left: 54px;
+  top: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #00f3ff;
+  box-shadow: 0 0 10px #00f3ff, 0 0 20px rgba(0, 243, 255, 0.6);
+  border: 2px solid #0b0f19;
+}
+
+.timeline-card {
+  flex: 1;
+  background: rgba(11, 18, 33, 0.9);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-left: 3px solid #00f3ff;
+  border-radius: 8px;
+  padding: 12px 14px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.timeline-card:hover {
+  transform: translateX(4px);
+  border-color: rgba(0, 243, 255, 0.5);
+  box-shadow: 0 0 16px rgba(0, 243, 255, 0.2);
+}
+
+.timeline-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.source-name {
+  font-weight: 800;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+}
+
+.category-tag {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.category-tag.critical {
+  background: rgba(255, 0, 60, 0.18);
+  color: #ff3366;
+  border: 1px solid rgba(255, 0, 60, 0.4);
+}
+
+.category-tag.high {
+  background: rgba(255, 106, 0, 0.18);
+  color: #ff8833;
+  border: 1px solid rgba(255, 106, 0, 0.4);
+}
+
+.timeline-card-body {
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.4;
+  font-family: 'Courier New', monospace;
+}
+
+.timeline-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  font-family: 'Courier New', monospace;
+}
+
+.empty-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
