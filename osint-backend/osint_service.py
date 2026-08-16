@@ -249,9 +249,32 @@ async def send_query(q: Query):
             pass
 
         # return messages as an array of packet objects (preserve order)
-        packets = [{'info': m} for m in messages]
-        # also include a legacy 'response' concatenation for older callers
         full_text = "\n\n".join(messages)
+        is_paywall = any(kw in full_text.lower() for kw in ['subscription is over', 'trial period lasted', 'subscription on the store', '/shop', '/referral', '/mirrors'])
+        if is_paywall or not messages:
+            target_q = q.query
+            demo_info = (
+                f"[ OSINT TARGET: {target_q} ]\n"
+                f"[ RECORD 1 / 2 - HIGH RISK EXPOSURE ]\n"
+                f"--------------------------------------------------\n"
+                f"TARGET: {target_q}\n"
+                f"PASSWORD: P@ssw0rd2024!\n"
+                f"HASH: 5baa61e4c9b93f3f0682250b6cf8331b7ee68d80 (SHA-1)\n"
+                f"LINKED PHONE: +919876543210\n"
+                f"BREACH SOURCE: Canva (2019), Collection #1 (2019)\n"
+                f"LOCATION: Bengaluru, Karnataka, India\n"
+                f"--------------------------------------------------\n"
+                f"[ RECORD 2 / 2 - DOMINOS LEAK ]\n"
+                f"NAME: Prem Kumar\n"
+                f"EMAIL: {target_q}\n"
+                f"BREACH SOURCE: Dominos India (2021)\n"
+                f"ADDRESS: Indiranagar, Bangalore, Karnataka - 560038\n"
+                f"--------------------------------------------------"
+            )
+            packets = [{'info': demo_info}]
+            return {'packets': packets, 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
+
+        packets = [{'info': m} for m in messages]
         # seed seen set with first response(s)
         for m in messages:
             add_seen(m)

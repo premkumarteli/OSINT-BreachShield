@@ -554,40 +554,41 @@ body::before {
 /* Packet header with CTA */
 .packet-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
-  position: relative;
-  padding: 12px 16px;
-  min-height: 50px;
+  padding: 8px 12px;
+  min-height: 44px;
+  flex-wrap: wrap;
 }
 .packet-header h2 { 
   margin: 0; 
-  flex: 1;
-  padding-right: 280px;
+  flex-shrink: 0;
   line-height: 1.2;
-  max-width: calc(100% - 280px);
+  font-size: 1.05rem;
+}
+
+.header-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
 /* Header buttons in right corner */
 .header-buttons {
   display: flex;
   gap: 8px;
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  z-index: 10;
-  flex-wrap: nowrap;
   align-items: center;
-  flex-direction: row;
 }
 
 .header-btn {
   background: rgba(0, 234, 255, 0.2);
   color: rgba(0, 234, 255, 0.9);
   border: 1px solid rgba(0, 234, 255, 0.4);
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -597,6 +598,7 @@ body::before {
   backdrop-filter: blur(6px);
   white-space: nowrap;
   text-align: center;
+  font-family: 'Courier New', monospace;
 }
 
 .header-btn:hover {
@@ -612,6 +614,7 @@ body::before {
   cursor: not-allowed;
   transform: none;
 }
+
 
 /* User menu (top-right) */
 .user-menu { position: fixed; top: 12px; right: 16px; z-index: 50; }

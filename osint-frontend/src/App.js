@@ -832,33 +832,35 @@ function App() {
               <div className="packet-header">
                 <h2>[ Data Breach Information ]</h2>
 
-                {/* View Mode Switcher Toggle */}
-                {!isNoResult && (
-                  <div className="view-mode-toggle">
-                    <button
-                      className={`tab-toggle-btn ${viewMode === 'terminal' ? 'active' : ''}`}
-                      onClick={() => setViewMode('terminal')}
-                      aria-label="terminal-view"
-                    >
-                      [ Terminal View ]
-                    </button>
-                    <button
-                      className={`tab-toggle-btn ${viewMode === 'timeline' ? 'active' : ''}`}
-                      onClick={() => setViewMode('timeline')}
-                      aria-label="timeline-view"
-                    >
-                      [ Timeline View ⏱ ]
-                    </button>
-                  </div>
-                )}
-
-                <div className="header-buttons">
+                <div className="header-actions-group">
+                  {/* View Mode Switcher Toggle */}
                   {!isNoResult && (
-                    <button className="header-btn" onClick={handleDownload} aria-label="download-html" disabled={downloading}>
-                      {downloading ? 'Exporting…' : 'Download Report'}
-                    </button>
+                    <div className="view-mode-toggle">
+                      <button
+                        className={`tab-toggle-btn ${viewMode === 'terminal' ? 'active' : ''}`}
+                        onClick={() => setViewMode('terminal')}
+                        aria-label="terminal-view"
+                      >
+                        [ Terminal View ]
+                      </button>
+                      <button
+                        className={`tab-toggle-btn ${viewMode === 'timeline' ? 'active' : ''}`}
+                        onClick={() => setViewMode('timeline')}
+                        aria-label="timeline-view"
+                      >
+                        [ Timeline View ⏱ ]
+                      </button>
+                    </div>
                   )}
-                  <button className="header-btn" onClick={closeResults} aria-label="new-search">Try another query</button>
+
+                  <div className="header-buttons">
+                    {!isNoResult && (
+                      <button className="header-btn" onClick={handleDownload} aria-label="download-html" disabled={downloading}>
+                        {downloading ? 'Exporting…' : 'Download Report'}
+                      </button>
+                    )}
+                    <button className="header-btn" onClick={closeResults} aria-label="new-search">Try another query</button>
+                  </div>
                 </div>
               </div>
 
