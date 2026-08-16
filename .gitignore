@@ -1,0 +1,47 @@
+# Root ignore
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+osint-backend/.env
+osint-backend/.env.*
+!osint-backend/.env.example
+osint-frontend/.env
+osint-frontend/.env.*
+!osint-frontend/.env.example
+
+# Telegram session and sensitive credential dumps
+*.session
+*.session-journal
+osint_service_session.session
+osint-backend/osint_service_session.session
+
+# Python virtual environment and cache
+.venv/
+venv/
+env/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Databases and runtime data
+*.db
+*.sqlite
+*.sqlite3
+instance/
+osint-backend/instance/
+osint-backend/flask_app/instance/
+
+# Build outputs
+osint-frontend/build/
+build/
+dist/
+

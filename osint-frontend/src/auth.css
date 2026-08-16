@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+
+.auth-screen { min-height: 100vh; position: relative; overflow: hidden; }
+.auth-screen::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.55); z-index: 0; }
+
+/* Background video styling (mirrors App.css) */
+.bg-video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+
+.auth-hero { position: absolute; top: 10vh; left: 50%; transform: translateX(-50%); text-align: center; z-index: 2; }
+.auth-hero .hero-title { font-family: 'Orbitron', system-ui; font-size: clamp(40px, 10vw, 120px); color: #eafaff; letter-spacing: 0.08em; text-shadow: 0 0 18px rgba(0,234,255,0.9), 0 0 34px rgba(0,180,255,0.45); margin: 0; white-space: nowrap; }
+.auth-hero .hero-credit { color: #eafaff; text-shadow: 0 0 8px rgba(0,234,255,0.35); }
+.auth-hero strong { color: #00eaff; text-shadow: 0 0 12px rgba(0,234,255,0.55); }
+
+.auth-card {
+  position: absolute; top:55vh; left: 50%; transform: translate(-50%, -50%);
+  width: 420px; max-width: 92%; padding: 22px; border-radius: 14px;
+  background: rgba(0, 20, 40, 0.6);
+  border: 1px solid rgba(0, 234, 255, 0.25);
+  box-shadow: 0 0 25px rgba(0, 234, 255, 0.2);
+  display: flex; flex-direction: column; gap: 12px; z-index: 2;
+}
+.auth-title { margin: 0 0 6px 0; color: #eafaff; text-shadow: 0 0 8px rgba(0, 234, 255, 0.25); }
+.glass-input { padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(0, 234, 255, 0.28); background: rgba(0, 20, 40, 0.5); color: #8eeaff; outline: none; box-shadow: 0 0 16px rgba(0,234,255,0.2); }
+.glass-input::placeholder { color: rgba(142,234,255,0.6); }
+.glass-input:focus { border-color: #00eaff; box-shadow: 0 0 25px rgba(0,234,255,0.45); }
+.neon-btn { background: linear-gradient(90deg,#00eaff,#007bff); color: #fff; border: none; border-radius: 10px; padding: 12px 16px; cursor: pointer; box-shadow: 0 0 16px rgba(0,234,255,0.28); font-weight: 700; letter-spacing: 1px; }
+.neon-btn:hover { box-shadow: 0 0 25px rgba(0,234,255,0.45); transform: translateY(-1px); }
+.neon-link { color: #8eeaff; text-decoration: none; border-bottom: 1px dashed rgba(0,234,255,0.5); }
+.neon-link:hover { color: #00eaff; }
+.auth-error { color: #ff6b81; text-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
+.auth-hint { color: #cfefff; }
+.auth-switch { color: #bfefff; font-size: 0.95rem; }
+.auth-switch a { color: #00eaff; }
+.link-btn { background: none; border: none; color: #00eaff; cursor: pointer; text-decoration: underline; padding: 0; }
+.profile { color: #eafaff; display: flex; flex-direction: column; gap: 8px; }
+.dash-actions { margin-top: 10px; display: flex; gap: 10px; }
+
+/* Page transition for auth screens (no movement, quick fade only) */
+.slide-in { animation: fadeInQuick 180ms ease-out; }
+@keyframes fadeInQuick {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Sheen sweep removed per request: no left-right movement */
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .slide-in { animation: none; }
+  .auth-card::after { display: none; }
+}
