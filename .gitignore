@@ -1,30 +1,37 @@
-# Root ignore
-node_modules/
+# ================================================================
+# OSINT BreachShield - Multi-Platform Monorepo .gitignore
+# ================================================================
+
+# OS & Editor Files
 .DS_Store
 Thumbs.db
 *.log
+.idea/
+.vscode/
+.artifacts/
+.agents/
+
+# Secrets & Environment Configurations
+.env
+.env.*
+!.env.example
+services/api-gateway/.env
+services/api-gateway/.env.*
+!services/api-gateway/.env.example
+apps/web-dashboard/.env
+apps/web-dashboard/.env.*
+!apps/web-dashboard/.env.example
+services/python-scraper/.env
+services/python-scraper/.env.*
+!services/python-scraper/.env.example
+
+# Node.js & Dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Secrets and environment files
-.env
-.env.*
-!.env.example
-osint-backend/.env
-osint-backend/.env.*
-!osint-backend/.env.example
-osint-frontend/.env
-osint-frontend/.env.*
-!osint-frontend/.env.example
-
-# Telegram session and sensitive credential dumps
-*.session
-*.session-journal
-osint_service_session.session
-osint-backend/osint_service_session.session
-
-# Python virtual environment and cache
+# Python & Virtual Environments
 .venv/
 venv/
 env/
@@ -32,18 +39,29 @@ env/
 **/*.pyc
 **/*.pyo
 
-# Databases and runtime data
+# Telegram Telethon Sessions & Sensitive Credentials
+*.session
+*.session-journal
+*.session.lock
+
+# Databases & Runtime Data Stores
 *.db
 *.sqlite
 *.sqlite3
 instance/
-osint-backend/instance/
-osint-backend/flask_app/instance/
+services/api-gateway/instance/
 
-# Build outputs
-osint-frontend/build/
+# Web App Build Outputs
+apps/web-dashboard/build/
 build/
 dist/
 
-# Agent metadata
-.agents/
+# Android Native Gateway Build & IDE Artifacts
+apps/android-gateway/.gradle/
+apps/android-gateway/build/
+apps/android-gateway/*/build/
+apps/android-gateway/local.properties
+apps/android-gateway/.kotlin/
+apps/android-gateway/.artifacts/
+*.apk
+*.aab

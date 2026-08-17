@@ -20,8 +20,9 @@ import subprocess
 import threading
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-BACKEND_DIR = os.path.join(BASE_DIR, 'osint-backend')
-FRONTEND_DIR = os.path.join(BASE_DIR, 'osint-frontend')
+PYTHON_DIR = os.path.join(BASE_DIR, 'services', 'python-scraper')
+BACKEND_DIR = os.path.join(BASE_DIR, 'services', 'api-gateway')
+FRONTEND_DIR = os.path.join(BASE_DIR, 'apps', 'web-dashboard')
 
 # Colors for terminal output
 CYAN = '\033[96m'
@@ -53,9 +54,14 @@ def print_banner():
     print(banner)
 
 def find_python():
-    venv_py = os.path.join(BACKEND_DIR, '.venv', 'Scripts', 'python.exe')
-    if os.path.exists(venv_py):
-        return venv_py
+    candidates = [
+        os.path.join(PYTHON_DIR, '.venv', 'Scripts', 'python.exe'),
+        os.path.join(BACKEND_DIR, '.venv', 'Scripts', 'python.exe'),
+        os.path.join(PYTHON_DIR, 'venv', 'Scripts', 'python.exe'),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
     return sys.executable
 
 def find_npm():
@@ -134,7 +140,7 @@ def main():
     print(f"{MAGENTA}[1/3] Starting Python FastAPI Service on port 8001...{RESET}")
     p_fastapi = subprocess.Popen(
         fastapi_cmd,
-        cwd=BACKEND_DIR,
+        cwd=PYTHON_DIR,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

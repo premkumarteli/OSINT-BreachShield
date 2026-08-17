@@ -1,8 +1,12 @@
 {
+  "name": "osint-breachshield",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
-    "test": "npm --prefix osint-backend test && npm --prefix osint-frontend test -- --watchAll=false",
-    "postinstall": "npm --prefix osint-backend ci || npm --prefix osint-backend install && npm --prefix osint-frontend ci || npm --prefix osint-frontend install"
+    "dev": "python run_servers.py",
+    "test": "npm --prefix services/api-gateway test && npm --prefix apps/web-dashboard test -- --watchAll=false",
+    "install:all": "npm --prefix services/api-gateway install && npm --prefix apps/web-dashboard install",
+    "postinstall": "npm --prefix services/api-gateway install && npm --prefix apps/web-dashboard install"
   },
   "dependencies": {
     "body-parser": "^2.2.0",
