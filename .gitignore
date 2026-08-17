@@ -45,3 +45,5 @@ osint-frontend/build/
 build/
 dist/
 
+# Agent metadata
+.agents/

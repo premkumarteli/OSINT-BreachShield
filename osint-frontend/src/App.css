@@ -126,96 +126,91 @@ body::before {
   z-index: 2; /* sit above videos but below main content */
 }
 
+/* Centered Full-Screen Dashboard */
+.dashboard {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 24px;
+}
+
+/* Centered Hero Header */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 24px;
+  z-index: 3;
+  width: 100%;
+}
+
+.hero-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2.4rem, 5vw, 3.8rem);
+  font-weight: 900;
+  color: var(--accent);
+  margin: 0 0 10px 0;
+  text-shadow: 0 0 25px rgba(0, 234, 255, 0.8), 0 0 50px rgba(0, 234, 255, 0.4);
+  letter-spacing: 4px;
+  text-align: center;
+}
+
+.hero-credit {
+  font-family: 'Rajdhani', monospace;
+  font-size: 1.15rem;
+  color: #8eeaff;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 10px rgba(0, 234, 255, 0.4);
+  text-align: center;
+}
+
+.hero-credit strong {
+  color: #fff;
+  font-weight: 700;
+}
+
 .inline-disclaimer {
-  margin-top: 150px;
+  margin-top: 16px;
   background: rgba(0, 20, 40, 0.6);
   border: 1px solid rgba(0, 234, 255, 0.25);
   color: #c6f7ff;
-  padding: 8px 12px;
+  padding: 8px 14px;
   border-radius: 10px;
   box-shadow: 0 0 12px rgba(0, 234, 255, 0.18);
   backdrop-filter: blur(4px) saturate(120%);
   -webkit-backdrop-filter: blur(4px) saturate(120%);
-  font-size: clamp(0.8rem, 1.8vw, 0.95rem);
+  font-size: clamp(0.78rem, 1.6vw, 0.88rem);
   text-align: center;
-  max-width: 780px;
-  white-space: normal; /* allow wrapping */
-  overflow: visible;
-  text-overflow: clip;
-  line-height: 1.35;
+  max-width: 720px;
+  white-space: normal;
+  line-height: 1.4;
   width: 100%;
-}
-/* Hero heading and credit */
-.hero {
-  position: absolute;
-  top: 8vh;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 95%;
-  text-align: center;
-  z-index: 3;
-  pointer-events: none; /* don’t block the search inputs */
-}
-.hero-title {
-  margin: 0 0 6px 0;
-  font-size: clamp(40px, 10vw, 120px);
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  color: #eafaff;
-  text-shadow: 0 0 10px rgba(0, 234, 255, 0.75), 0 0 24px rgba(0, 180, 255, 0.32);
-  font-family: 'Orbitron', 'Rajdhani', system-ui, sans-serif;
-  text-transform: uppercase;
-}
-.hero-credit {
-  margin-top: 2px;
-  color: var(--text-strong);
-  opacity: 0.95;
-  font-size: clamp(12px, 2.4vw, 18px);
-  text-shadow: 0 0 8px rgba(0, 234, 255, 0.35);
-}
-.hero-credit strong { color: var(--accent); text-shadow: 0 0 12px rgba(0, 234, 255, 0.55); }
-
-/* Top disclaimer banner */
-/* Inline disclaimer under the search card */
-/* .inline-disclaimer removed */
-
-.dashboard {
-  position: relative;
-  z-index: 1; /* make sure your content is above overlay */
-  display: flex; /* layout sidebar + results */
-  height: 100vh;
-}
-
-.app-container {
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column; /* stack title and search bar */
-  justify-content: center; /* vertical center */
-  align-items: center;     /* horizontal center */
-  gap: 24px;
-  margin: 0;
-  padding: 0;
-  position: relative;
-  z-index: 2;
+  box-sizing: border-box;
 }
 
 /* centered search card */
 .search-card {
-  position: absolute;
-  top: 48vh;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 640px;
-  max-width: 92%;
-  padding: 12px 20px;
+  position: relative;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 18px 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
+  justify-content: center;
   z-index: 3;
+  box-sizing: border-box;
 }
-
 
 .results {
   position: fixed;
@@ -236,7 +231,7 @@ body::before {
   gap: 14px;
   margin: 0 auto;
   width: 100%;
-  max-width: 750px; /* increased to accommodate dropdown */
+  max-width: 780px;
   position: relative;
   z-index: 2;
 }
@@ -885,7 +880,6 @@ body::before {
   }
   .terminal::-webkit-scrollbar { display: none; }
   .search-card {
-    top: 26vh; /* center-ish vertically on phones */
     width: 92%;
     max-width: 92%;
     padding: 10px 14px;

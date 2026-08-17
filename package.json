@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "test": "npm --prefix osint-backend test && npm --prefix osint-frontend test -- --watchAll=false",
     "postinstall": "npm --prefix osint-backend ci || npm --prefix osint-backend install && npm --prefix osint-frontend ci || npm --prefix osint-frontend install"
   },
   "dependencies": {

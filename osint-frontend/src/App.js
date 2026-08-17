@@ -5,8 +5,6 @@ import './App.css';
 import bgVideo1 from './bg1.mp4';
 import bgVideo2 from './bg2.mp4';
 import bgVideo3 from './bg3.mp4';
-import UserMenu from './components/UserMenu';
-import DarkWebTicker from './components/DarkWebTicker';
 import BreachTimeline from './components/BreachTimeline';
 
 // Prefer env var, fallback to local backend for dev
@@ -26,12 +24,20 @@ function App() {
   const [showSearch, setShowSearch] = useState(true);
   const [terminalText, setTerminalText] = useState('');
   
-  // New states for dropdown and validation
+  // Search & OTP state
   const [searchType, setSearchType] = useState('Email');
   const [validationError, setValidationError] = useState('');
   const [isValidInput, setIsValidInput] = useState(false);
   const [showSearchingAnimation, setShowSearchingAnimation] = useState(false);
-  // OTP removed: no OTP flow required for Email
+  
+  // In-place OTP Verification state
+  const [step, setStep] = useState('input'); // 'input' | 'otp' | 'results'
+  const [otp, setOtp] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [timeLeft, setTimeLeft] = useState(300); // 5 mins
+  const [cooldown, setCooldown] = useState(30);   // 30s resend
+  const [token, setToken] = useState(() => sessionStorage.getItem('osint_token') || '');
   
   // Pagination state
   const [breaches, setBreaches] = useState([]); // Array to store all fetched pages
@@ -199,18 +205,38 @@ function App() {
   const startTyping = (fullText, onComplete) => {
     stopTyping();
     if (!fullText) return;
-    const chars = Array.from(fullText);
     setTerminalText('');
-    let i = 0;
+    const totalLen = fullText.length;
+    const chunkSize = Math.max(12, Math.ceil(totalLen / 30));
+    let index = 0;
     typingRef.current = setInterval(() => {
-      setTerminalText(prev => prev + (chars[i] || ''));
-      i += 1;
-      if (i >= chars.length) {
+      index += chunkSize;
+      if (index >= totalLen) {
+        setTerminalText(fullText);
         stopTyping();
         if (typeof onComplete === 'function') onComplete();
+      } else {
+        setTerminalText(fullText.slice(0, index));
       }
-    }, 8); // slightly faster typing
+    }, 12);
   };
+
+  // OTP Countdown Timers
+  useEffect(() => {
+    if (step !== 'otp' || timeLeft <= 0) return undefined;
+    const timer = setInterval(() => {
+      setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [step, timeLeft]);
+
+  useEffect(() => {
+    if (step !== 'otp' || cooldown <= 0) return undefined;
+    const timer = setInterval(() => {
+      setCooldown(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [step, cooldown]);
 
   useEffect(() => {
     if (!result) return undefined;
@@ -228,7 +254,7 @@ function App() {
       }
       // First visit to this page: type once, and mark as visited immediately
       visitedPagesRef.current.add(currentPage);
-      const startDelay = setTimeout(() => startTyping(text), 350);
+      const startDelay = setTimeout(() => startTyping(text), 250);
       return () => { clearTimeout(startDelay); stopTyping(); };
     } catch (e) { /* ignore */ }
     return undefined;
@@ -264,13 +290,12 @@ function App() {
     setResult(null);
     setTerminalText('');
     setShowSearch(true);
-    setLoading(false); // Reset loading state
-    setShowSearchingAnimation(false); // Hide searching animation
+    setLoading(false);
+    setShowSearchingAnimation(false);
     setUseBg2(false);
     setBg2Failed(false);
-    setUseBg3(false); // Hide the searching video
+    setUseBg3(false);
     setBg3Failed(false);
-    // clear any pending fallback timer
     searchingRef.current = false;
     if (fallbackTimerRef.current) {
       clearTimeout(fallbackTimerRef.current);
@@ -281,12 +306,13 @@ function App() {
       waitHintTimerRef.current = null;
     }
     setShowWaitHint(false);
-    // Reset pagination state
+    setStep('input');
+    setOtp('');
+    setOtpError('');
     setBreaches([]);
     setCurrentPage(0);
     setLoadingNextPage(false);
     setLoadingPrevPage(false);
-    // Clear typed cache when closing results
     if (typedKeysRef.current) typedKeysRef.current.clear();
     if (visitedPagesRef.current) visitedPagesRef.current.clear();
   };
@@ -310,7 +336,6 @@ function App() {
         setResult(prev => ({ ...prev, error: `❌ Download failed: ${t || res.status}` }));
         return;
       }
-      // Derive filename from Content-Disposition header if available
       const cd = res.headers.get('Content-Disposition') || '';
       const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(cd);
       const filename = decodeURIComponent(match?.[1] || match?.[2] || 'breach_report.html');
@@ -328,137 +353,160 @@ function App() {
     } finally { setDownloading(false); }
   };
 
-  // No OTP auto-verify
-
-  const handleSearch = async () => {
-    // Check validation before proceeding
-    if (!isValidInput) {
-      return;
+  // Step 1: Dispatch OTP to Target Email or Phone
+  const handleGenerateOtp = async (e) => {
+    if (e) e.preventDefault();
+    if (!isValidInput) return;
+    setOtpLoading(true);
+    setOtpError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: query.trim(),
+          email: query.trim().toLowerCase(),
+          phone: query.trim(),
+          searchType: searchType.toLowerCase()
+        })
+      });
+      const data = await res.json();
+      if (data && data.success !== false) {
+        setStep('otp');
+        setTimeLeft(300);
+        setCooldown(30);
+        setOtp('');
+      } else {
+        setOtpError(data?.error || 'Failed to send OTP.');
+      }
+    } catch (err) {
+      setOtpError('Failed to dispatch verification code. Please try again.');
+    } finally {
+      setOtpLoading(false);
     }
-    // No OTP gating for Email
-    // New search: clear any previously typed cache
+  };
+
+  // Step 2: Verify OTP and Immediately Execute Breach Search
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    if (!otp || otp.length !== 6 || otpLoading || timeLeft <= 0) return;
+    setOtpLoading(true);
+    setOtpError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: query.trim(),
+          email: query.trim().toLowerCase(),
+          phone: query.trim(),
+          otp: otp.trim()
+        })
+      });
+      const data = await res.json();
+      if (data && data.success !== false) {
+        const receivedToken = data.token;
+        setToken(receivedToken);
+        sessionStorage.setItem('osint_token', receivedToken);
+        sessionStorage.setItem('osint_verified_email', query.trim().toLowerCase());
+        setStep('results');
+        executeSearchWithToken(receivedToken);
+      } else {
+        setOtpError(data?.error || 'Invalid or expired verification code.');
+      }
+    } catch (err) {
+      setOtpError('Verification failed. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // Step 3: Execute Breach Scan with Verified JWT Token
+  const executeSearchWithToken = async (activeToken) => {
+    const searchToken = activeToken || token || sessionStorage.getItem('osint_token') || '';
     if (typedKeysRef.current) typedKeysRef.current.clear();
     if (visitedPagesRef.current) visitedPagesRef.current.clear();
     
     setLoading(true);
-  setShowSearchingAnimation(true);
-  setShowWaitHint(false);
-    // During search phase, show bg3 with a zoom animation; hide bg2 until results arrive
+    setShowSearchingAnimation(true);
+    setShowWaitHint(false);
     setUseBg2(false);
     setBg2Failed(false);
     setUseBg3(true);
     setBg3Failed(false);
-    // Keep the search bar visible during search
-    // mark that a search is in progress but remove the fallback timer
     searchingRef.current = true;
+    
     if (fallbackTimerRef.current) { clearTimeout(fallbackTimerRef.current); fallbackTimerRef.current = null; }
-    // Remove the 20-second fallback timer completely
-    // Start a 10s timer to show a wait hint if still searching
     if (waitHintTimerRef.current) { clearTimeout(waitHintTimerRef.current); waitHintTimerRef.current = null; }
     waitHintTimerRef.current = setTimeout(() => {
       if (searchingRef.current) setShowWaitHint(true);
-    }, 10000);
+    }, 8000);
     
-    // Start the searching background video with zoom
     if (bg3Ref.current) {
       try {
         bg3Ref.current.currentTime = 0;
         bg3Ref.current.muted = true;
-        bg3Ref.current.play().then(() => setBg3Failed(false)).catch((e) => { console.warn('bg3 play failed', e); setBg3Failed(true); });
-      } catch (e) { console.warn('bg3 play error', e); setBg3Failed(true); }
+        bg3Ref.current.play().then(() => setBg3Failed(false)).catch(() => setBg3Failed(true));
+      } catch (e) { setBg3Failed(true); }
     }
-
-    // Ensure primary background keeps playing (defensive) so the page doesn't appear frozen
-    if (bg1Ref.current && typeof bg1Ref.current.play === 'function') {
-      try { bg1Ref.current.play().catch(()=>{}); } catch(e){}
-    }
-
-    // Small helper: retry transient failures (network/5xx) a few times before giving up
-    const requestWithRetry = async (url, options, retries = 2, backoffMs = 1200) => {
-      let lastErr;
-      for (let attempt = 0; attempt <= retries; attempt += 1) {
-        try {
-          const r = await fetch(url, options);
-          // if 5xx, treat as retryable
-          if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
-          return r;
-        } catch (e) {
-          lastErr = e;
-          if (attempt < retries) {
-            await new Promise(res => setTimeout(res, backoffMs * (attempt + 1)));
-            continue;
-          }
-          throw lastErr;
-        }
-      }
-    };
 
     try {
-  const headers = { 'Content-Type': 'application/json' };
-      const res = await requestWithRetry(`${API_BASE}/api/search`, {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(searchToken ? { 'Authorization': `Bearer ${searchToken}` } : {})
+      };
+      const res = await fetch(`${API_BASE}/api/search`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ query, osintType, searchType })
-      }, 2, 1000);
+        body: JSON.stringify({ query: query.trim(), osintType, searchType })
+      });
 
       const data = await res.json();
       
-      // Check if the response indicates a server error or failure
       if (!res.ok || (data && !data.success)) {
-        throw new Error(data?.error || `Server error: ${res.status} ${res.statusText}`);
+        if (res.status === 403) {
+          setStep('otp');
+          setOtpError('Email verification required. Please enter your OTP.');
+          setShowSearchingAnimation(false);
+          setLoading(false);
+          setUseBg3(false);
+          return;
+        }
+        throw new Error(data?.error || `Server error: ${res.status}`);
       }
       
-      const resultDataRaw = data && data.data ? data.data : { packets: [{}, { info: 'Try another query.' }] };
+      const resultDataRaw = data && data.data ? data.data : { packets: [{}, { info: 'No records found.' }] };
       const resultData = normalizeResultData(resultDataRaw);
       if (data && data.data && data.data.pagination) {
-        const { current, total } = data.data.pagination;
+        const { total } = data.data.pagination;
         if (total && total > 1) setTotalPages(total);
         else setTotalPages(null);
       } else { setTotalPages(null); }
-  // clear fallback timer since we have a real result
+
       searchingRef.current = false;
       if (fallbackTimerRef.current) { clearTimeout(fallbackTimerRef.current); fallbackTimerRef.current = null; }
-  if (waitHintTimerRef.current) { clearTimeout(waitHintTimerRef.current); waitHintTimerRef.current = null; }
-  setShowWaitHint(false);
+      if (waitHintTimerRef.current) { clearTimeout(waitHintTimerRef.current); waitHintTimerRef.current = null; }
+      setShowWaitHint(false);
       
-  // Store first page in breaches array and set current result
       setBreaches([resultData]);
       setCurrentPage(0);
       setResult(resultData);
-  // No OTP state to clear
-      // Keep search interface visible and hide searching animation
       setShowSearchingAnimation(false);
-      // Switch from searching background (bg3) to results background (bg2)
       setUseBg3(false);
       setUseBg2(true);
       try { if (bg2Ref.current) { bg2Ref.current.currentTime = 0; bg2Ref.current.play().catch(()=>{}); } } catch(e){}
-  // Start background prefetch for next pages (non-blocking)
-  prefetchNextPages(1);
+      
+      prefetchNextPages(1, searchToken);
     } catch (err) {
-      // clear fallback timer on error as well
       searchingRef.current = false;
       if (fallbackTimerRef.current) { clearTimeout(fallbackTimerRef.current); fallbackTimerRef.current = null; }
       if (waitHintTimerRef.current) { clearTimeout(waitHintTimerRef.current); waitHintTimerRef.current = null; }
       setShowWaitHint(false);
 
-      // Friendly message: if the error looks like HTML or JSON-parse, replace with safe text
-      let errorMessage = '❌ Server is down, please try after sometime.';
-      try {
-        const sanitized = await (async () => {
-          const m = err && err.message ? String(err.message) : '';
-          if (/^\s*</.test(m) || m.toLowerCase().includes('unexpected token') || m.toLowerCase().includes('<!doctype')) {
-            return 'Server returned an unexpected response (HTML). Please try again later.';
-          }
-          return m || errorMessage;
-        })();
-        if (sanitized) errorMessage = sanitized;
-      } catch (e) { /* ignore */ }
-
-      const errorResult = { error: errorMessage };
+      const errorResult = { error: `❌ ${err.message || 'Server error occurred while scanning.'}` };
       setBreaches([errorResult]);
       setCurrentPage(0);
       setResult(errorResult);
-      // Keep searching video onscreen to avoid abrupt UX; don't flip to bg2 on transient failures
       setShowSearchingAnimation(false);
       setUseBg3(true);
     }
@@ -643,8 +691,6 @@ function App() {
 
   return (
     <div className="dashboard">
-      {/* User menu with avatar + dropdown (top-right); hidden while searching */}
-      {!isSearchingUI && <UserMenu />}
   {!shouldHideLocalBackground && (
       <video
         ref={bg1Ref}
@@ -713,50 +759,104 @@ function App() {
         </div>
       )}
 
-      {showSearch && !loading && !result && (
+      {showSearch && !loading && !result && step === 'input' && (
         <div className="search-card" role="search">
           <div className={`search-row centered ${loading ? 'search-anim' : ''}`}>
             <select 
               className="search-type-select"
               value={searchType}
               onChange={e => handleSearchTypeChange(e.target.value)}
-              disabled={loading}
+              disabled={loading || otpLoading}
               aria-label="search-type-select"
             >
               <option value="Email">Email</option>
-              <option value="Mobile">Mobile</option>
-              <option value="Other">Other</option>
+              <option value="Mobile">Phone Number</option>
             </select>
-            {
-              <input
-                className="search-input"
-                type="text"
-                placeholder={searchType === 'Email' ? "Enter email (e.g. test@example.com)" :
-                  searchType === 'Mobile' ? "Enter mobile (e.g. +919876543210)" :
-                  "Enter any query (e.g. name, account)"}
-                value={query}
-                onChange={e => handleInputChange(e.target.value)}
-                onFocus={() => setOverlayActive(true)}
-                onBlur={() => setOverlayActive(false)}
-                aria-label="search-input"
-                aria-busy={loading}
-                disabled={loading}
-              />
-            }
-              <button 
-                className="search-btn" 
-                onClick={handleSearch} 
-                disabled={loading || !isValidInput} 
-                aria-label="search-button"
-              >
-                [ SEARCH 🔍 ]
-              </button>
+            <input
+              className="search-input"
+              type="text"
+              placeholder={searchType === 'Email' ? "Enter email to check breaches (e.g. user@example.com)" : "Enter phone number with country code (e.g. +918722611983)"}
+              value={query}
+              onChange={e => handleInputChange(e.target.value)}
+              onFocus={() => setOverlayActive(true)}
+              onBlur={() => setOverlayActive(false)}
+              aria-label="search-input"
+              aria-busy={loading}
+              disabled={loading || otpLoading}
+              autoFocus
+            />
+            <button 
+              className="search-btn" 
+              onClick={handleGenerateOtp} 
+              disabled={loading || otpLoading || !isValidInput} 
+              aria-label="generate-otp-button"
+            >
+              {otpLoading ? '[ SENDING… ]' : '[ GENERATE OTP ⚡ ]'}
+            </button>
           </div>
           {validationError && (
             <div className="validation-error">{validationError}</div>
           )}
+          {otpError && (
+            <div className="validation-error">{otpError}</div>
+          )}
           <div className="inline-disclaimer" role="note">
-            🔒 Disclaimer: Prototype link is for evaluation purpose only. Please do not share, project is under active development.
+            {searchType === 'Email' 
+              ? '🔒 Enter target email address to receive a secure 6-digit verification code before retrieving breach intelligence.' 
+              : '📱 Enter target phone number to receive a secure 6-digit SMS OTP via Android Gateway before retrieving breach intelligence.'}
+          </div>
+        </div>
+      )}
+
+      {showSearch && !loading && !result && step === 'otp' && (
+        <div className="search-card" role="region" aria-label="otp-verification">
+          <div className="otp-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, color: '#00eaff', fontFamily: 'Orbitron, monospace', fontSize: '0.85rem' }}>
+            <span>VERIFICATION CODE SENT TO: <strong style={{ color: '#fff' }}>{query}</strong></span>
+            <span style={{ color: timeLeft <= 60 ? '#ff3366' : '#00eaff' }}>⏱ {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+          </div>
+
+          <div className="search-row centered">
+            <input
+              className="search-input"
+              type="text"
+              maxLength={6}
+              placeholder="Enter 6-digit OTP"
+              value={otp}
+              onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              aria-label="otp-input"
+              autoFocus
+              style={{ letterSpacing: '6px', fontSize: '1.25rem', textAlign: 'center' }}
+            />
+            <button 
+              className="search-btn" 
+              onClick={handleVerifyOtp} 
+              disabled={otpLoading || otp.length !== 6 || timeLeft <= 0} 
+              aria-label="verify-otp-button"
+            >
+              {otpLoading ? '[ SCANNING… ]' : '[ VERIFY & SCAN 🔍 ]'}
+            </button>
+          </div>
+
+          {otpError && (
+            <div className="validation-error">{otpError}</div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: '0.85rem' }}>
+            <button
+              type="button"
+              onClick={handleGenerateOtp}
+              disabled={cooldown > 0 || otpLoading}
+              style={{ background: 'transparent', border: 'none', color: cooldown > 0 ? '#666' : '#00eaff', cursor: cooldown > 0 ? 'not-allowed' : 'pointer', textDecoration: 'underline' }}
+            >
+              {cooldown > 0 ? `Resend Code in ${cooldown}s` : 'Resend Code'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setStep('input'); setOtp(''); setOtpError(''); }}
+              style={{ background: 'transparent', border: 'none', color: '#999', cursor: 'pointer' }}
+            >
+              ← Change {searchType === 'Email' ? 'Email' : 'Number'}
+            </button>
           </div>
         </div>
       )}
@@ -795,33 +895,33 @@ function App() {
               {result && result.analytics && result.analytics.exposure && !isNoResult && (
                 <div className="exposure-meter-card">
                   <div className="exposure-gauge-container">
-                    <div className="exposure-score-circle" style={{ borderColor: result.analytics.exposure.riskColor }}>
-                      <span className="score-num">{result.analytics.exposure.score}</span>
+                    <div className="exposure-score-circle" style={{ borderColor: result.analytics.exposure.riskColor || '#00ff66' }}>
+                      <span className="score-num">{result.analytics.exposure.score ?? 0}</span>
                       <span className="score-label">/ 100</span>
                     </div>
                     <div className="exposure-meta">
                       <div
                         className="risk-badge"
                         style={{
-                          backgroundColor: `${result.analytics.exposure.riskColor}22`,
-                          color: result.analytics.exposure.riskColor,
-                          borderColor: result.analytics.exposure.riskColor
+                          backgroundColor: `${result.analytics.exposure.riskColor || '#00ff66'}22`,
+                          color: result.analytics.exposure.riskColor || '#00ff66',
+                          borderColor: result.analytics.exposure.riskColor || '#00ff66'
                         }}
                       >
-                        THREAT LEVEL: {result.analytics.exposure.riskLevel}
+                        THREAT LEVEL: {result.analytics.exposure.riskLevel || 'LOW'}
                       </div>
                       <div className="exposure-summary">
-                        {result.analytics.exposure.entities.recordCount} records identified • {result.analytics.exposure.entities.phoneCount} phone numbers linked • {result.analytics.exposure.entities.hasDocument ? '⚠️ National Document / Aadhaar Exposed' : 'Digital Exposure Detected'}
+                        {result.analytics.exposure.entities?.recordCount ?? 1} records identified • {result.analytics.exposure.entities?.phoneCount ?? 0} phone numbers linked • {result.analytics.exposure.entities?.hasDocument ? '⚠️ National Document / Aadhaar Exposed' : 'Digital Exposure Detected'}
                       </div>
                     </div>
                   </div>
 
                   {/* Factor Breakdown Chips */}
-                  {result.analytics.exposure.breakdown && result.analytics.exposure.breakdown.length > 0 && (
+                  {Array.isArray(result.analytics.exposure.breakdown) && result.analytics.exposure.breakdown.length > 0 && (
                     <div className="breakdown-chips">
                       {result.analytics.exposure.breakdown.map((b, idx) => (
                         <span className="breakdown-chip" key={idx}>
-                          ⚡ {b.factor}: +{b.points} pts
+                          ⚡ {b?.factor || 'Threat factor'}: +{b?.points || 0} pts
                         </span>
                       ))}
                     </div>
@@ -906,8 +1006,6 @@ function App() {
         {result && result.error && <div className="error">{result.error}</div>}
       </div>
       )}
-      {/* Dark web monitor ticker */}
-      {!isSearchingUI && <DarkWebTicker />}
     </div>
   );
 }

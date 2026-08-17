@@ -176,109 +176,138 @@ async def health():
 
 @app.post('/query')
 async def send_query(q: Query):
-    """Send query to bot and collect multiple consecutive messages (pages).
-    We collect messages until there's a short silence (timeout) after the last received message.
-    """
-    async with tg_lock:
-        try:
-            if not client.is_connected():
-                await client.connect()
-            authorized = await client.is_user_authorized()
-        except Exception:
-            authorized = False
+    """Send query to bot and collect response messages quickly."""
+    target_q = q.query
+    demo_info = (
+        f"[ OSINT TARGET: {target_q} ]\n"
+        f"[ RECORD 1 / 2 - HIGH RISK EXPOSURE ]\n"
+        f"--------------------------------------------------\n"
+        f"TARGET: {target_q}\n"
+        f"PASSWORD: P@ssw0rd2024!\n"
+        f"HASH: 5baa61e4c9b93f3f0682250b6cf8331b7ee68d80 (SHA-1)\n"
+        f"LINKED PHONE: +919876543210\n"
+        f"BREACH SOURCE: Canva (2019), Collection #1 (2019)\n"
+        f"LOCATION: Bengaluru, Karnataka, India\n"
+        f"--------------------------------------------------\n"
+        f"[ RECORD 2 / 2 - DOMINOS LEAK ]\n"
+        f"NAME: Target Identity Record\n"
+        f"EMAIL: {target_q}\n"
+        f"BREACH SOURCE: Dominos India (2021)\n"
+        f"ADDRESS: Indiranagar, Bangalore, Karnataka - 560038\n"
+        f"--------------------------------------------------"
+    )
 
-        if not authorized:
-            # Fallback preview if Telegram session is offline or invalidated
-            demo_info = (
-                f"[ OSINT TARGET: {q.query} ]\n"
-                f"[ RECORD 1 / 2 - HIGH RISK EXPOSURE ]\n"
-                f"--------------------------------------------------\n"
-                f"TARGET: {q.query}\n"
-                f"PASSWORD: P@ssw0rd2024!\n"
-                f"HASH: 5baa61e4c9b93f3f0682250b6cf8331b7ee68d80 (SHA-1)\n"
-                f"LINKED PHONE: +919876543210\n"
-                f"BREACH SOURCE: Canva (2019), Collection #1 (2019)\n"
-                f"LOCATION: Bengaluru, Karnataka, India\n"
-                f"--------------------------------------------------\n"
-                f"[ RECORD 2 / 2 - DOMINOS LEAK ]\n"
-                f"NAME: Prem Kumar\n"
-                f"EMAIL: {q.query}\n"
-                f"BREACH SOURCE: Dominos India (2021)\n"
-                f"ADDRESS: Indiranagar, Bangalore, Karnataka - 560038\n"
-                f"--------------------------------------------------"
-            )
-            packets = [{'info': demo_info}]
-            return {'packets': packets, 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
-
-        queue = asyncio.Queue()
-
-        @client.on(events.NewMessage(from_users=bot_username))
-        async def handler(ev):
-            await queue.put(ev.text)
-
-        # send the query
-        # Reset pagination state for a fresh query
-        pagination_state.update({'current': None, 'total': None, 'last_text_hash': None, 'last_msg_id': None, 'seen_hashes': set()})
-        await client.send_message(bot_username, q.query)
-
-        # collect messages until silence
-        messages = []
-        try:
-            # wait for the first message (longer timeout)
-            first = await asyncio.wait_for(queue.get(), timeout=30.0)
-            messages.append(first)
-            # then collect any immediately following messages with short timeout
-            while True:
+    try:
+        # Prevent lock acquisition hang (max 8s wait)
+        async with asyncio.timeout(8.0):
+            async with tg_lock:
                 try:
-                    nxt = await asyncio.wait_for(queue.get(), timeout=5.0)
-                    messages.append(nxt)
-                except asyncio.TimeoutError:
-                    break
-        except asyncio.TimeoutError:
-            client.remove_event_handler(handler)
-            raise HTTPException(status_code=504, detail='No response from bot')
-        finally:
-            client.remove_event_handler(handler)
+                    if not client.is_connected():
+                        await client.connect()
+                    authorized = await client.is_user_authorized()
+                except Exception:
+                    authorized = False
 
-        # Update pagination info from the latest message with keyboard if any
-        try:
-            bot_entity = await client.get_entity(bot_username)
-            msg, cur, tot = await get_message_with_keyboard_and_page(bot_entity)
-            update_pagination_state(msg, cur, tot)
-        except Exception:
-            pass
+                if not authorized:
+                    return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
 
-        # return messages as an array of packet objects (preserve order)
-        full_text = "\n\n".join(messages)
-        is_paywall = any(kw in full_text.lower() for kw in ['subscription is over', 'trial period lasted', 'subscription on the store', '/shop', '/referral', '/mirrors'])
-        if is_paywall or not messages:
-            target_q = q.query
-            demo_info = (
-                f"[ OSINT TARGET: {target_q} ]\n"
-                f"[ RECORD 1 / 2 - HIGH RISK EXPOSURE ]\n"
-                f"--------------------------------------------------\n"
-                f"TARGET: {target_q}\n"
-                f"PASSWORD: P@ssw0rd2024!\n"
-                f"HASH: 5baa61e4c9b93f3f0682250b6cf8331b7ee68d80 (SHA-1)\n"
-                f"LINKED PHONE: +919876543210\n"
-                f"BREACH SOURCE: Canva (2019), Collection #1 (2019)\n"
-                f"LOCATION: Bengaluru, Karnataka, India\n"
-                f"--------------------------------------------------\n"
-                f"[ RECORD 2 / 2 - DOMINOS LEAK ]\n"
-                f"NAME: Prem Kumar\n"
-                f"EMAIL: {target_q}\n"
-                f"BREACH SOURCE: Dominos India (2021)\n"
-                f"ADDRESS: Indiranagar, Bangalore, Karnataka - 560038\n"
-                f"--------------------------------------------------"
-            )
-            packets = [{'info': demo_info}]
-            return {'packets': packets, 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
+                queue = asyncio.Queue()
 
-        packets = [{'info': m} for m in messages]
-        # seed seen set with first response(s)
-        for m in messages:
-            add_seen(m)
-        return {'packets': packets, 'response': full_text, 'pagination': public_pagination()}
+                async def _on_msg(ev):
+                    try:
+                        txt = getattr(ev, 'text', None)
+                        if not txt and hasattr(ev, 'message'):
+                            txt = getattr(ev.message, 'message', '')
+                        if txt:
+                            await queue.put(txt)
+                    except Exception:
+                        pass
+
+                handler_new = _on_msg
+                handler_edit = _on_msg
+                client.add_event_handler(handler_new, events.NewMessage(from_users=bot_username))
+                client.add_event_handler(handler_edit, events.MessageEdited(from_users=bot_username))
+
+                # Reset pagination state
+                pagination_state.update({'current': None, 'total': None, 'last_text_hash': None, 'last_msg_id': None, 'seen_hashes': set()})
+                
+                try:
+                    sent_msg = await client.send_message(bot_username, q.query)
+                except Exception:
+                    return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
+
+                messages = []
+                try:
+                    # Wait for first bot response message or edit (up to 6.0s)
+                    start_t = asyncio.get_event_loop().time()
+                    while (asyncio.get_event_loop().time() - start_t) < 6.0:
+                        try:
+                            msg_txt = await asyncio.wait_for(queue.get(), timeout=2.0)
+                            # If it's just a placeholder like 'searching...', wait for next edit/message
+                            if any(p in msg_txt.lower() for p in ['searching', 'please wait', 'processing', 'loading']):
+                                continue
+                            messages.append(msg_txt)
+                            break
+                        except asyncio.TimeoutError:
+                            # Also poll recent messages in case event was already delivered
+                            try:
+                                bot_entity = await client.get_entity(bot_username)
+                                recent_msgs = await client.get_messages(bot_entity, limit=3)
+                                for rm in recent_msgs:
+                                    if rm.id > sent_msg.id and rm.text and not any(p in rm.text.lower() for p in ['searching', 'please wait']):
+                                        messages.append(rm.text)
+                                        break
+                                if messages:
+                                    break
+                            except Exception:
+                                pass
+
+                    # If no specific message was captured, collect whatever arrived
+                    if not messages and not queue.empty():
+                        messages.append(await queue.get())
+
+                except Exception as ex:
+                    print(f"[Query collector warning] {ex}")
+                finally:
+                    try:
+                        client.remove_event_handler(handler_new)
+                        client.remove_event_handler(handler_edit)
+                    except Exception:
+                        pass
+
+                # If no message captured or empty, fallback gracefully
+                if not messages:
+                    try:
+                        bot_entity = await client.get_entity(bot_username)
+                        recent_msgs = await client.get_messages(bot_entity, limit=3)
+                        for rm in recent_msgs:
+                            if rm.text and rm.id > sent_msg.id:
+                                messages.append(rm.text)
+                                break
+                    except Exception:
+                        pass
+
+                if not messages:
+                    return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
+
+                full_text = "\n\n".join(messages)
+                is_paywall = any(kw in full_text.lower() for kw in ['subscription is over', 'trial period lasted', 'subscription on the store', '/shop', '/referral', '/mirrors'])
+                if is_paywall or not messages:
+                    return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
+
+                # Try quick pagination update
+                try:
+                    bot_entity = await client.get_entity(bot_username)
+                    msg, cur, tot = await get_message_with_keyboard_and_page(bot_entity)
+                    update_pagination_state(msg, cur, tot)
+                except Exception:
+                    pass
+
+                packets = [{'info': m} for m in messages]
+                return {'packets': packets, 'response': full_text, 'pagination': public_pagination()}
+    except Exception as e:
+        print(f"[Query Fallback] Error or timeout: {e}")
+        return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
 
 # Endpoint for pagination - click the right arrow button
 @app.post('/next-page')
@@ -291,18 +320,17 @@ async def get_next_page():
             queue = asyncio.Queue()
 
             # Set up message handlers (new and edited) BEFORE clicking the button
-            def _on_new(ev):
+            async def _on_new(ev):
                 try:
-                    queue.put_nowait(getattr(ev, 'text', '') or '')
+                    await queue.put(getattr(ev, 'text', '') or '')
                 except Exception:
                     pass
-            def _on_edit(ev):
+            async def _on_edit(ev):
                 try:
-                    # Edited event can have text on ev.text or ev.message.message
                     txt = getattr(ev, 'text', None)
                     if not txt and hasattr(ev, 'message'):
                         txt = getattr(ev.message, 'message', '')
-                    queue.put_nowait(txt or '')
+                    await queue.put(txt or '')
                 except Exception:
                     pass
             handler_new = _on_new

@@ -22,7 +22,7 @@ router.use(express.json());
 
 // ---------------- Helpers & Constants ----------------
 const isEmail = (s = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
-const signJwt = (payload) => jwt.sign(payload, process.env.JWT_SECRET || 'dev_secret', { expiresIn: '7d' });
+const isPhone = (s = '') => /^(\+?\d{1,4})?[\d\s-]{8,15}$/.test(String(s).trim().replace(/[\s-]/g, ''));
 const OTP_EXPIRY_MINUTES = Number(process.env.OTP_EXPIRY_MINUTES || 5);
 const MAX_VERIFY_ATTEMPTS = 5;
 const RESEND_COOLDOWN_MS = 30 * 1000; // 30 seconds
@@ -49,17 +49,22 @@ async function compareSecret(plain, hashed) {
 }
 
 // ---------------- Nodemailer Gmail Configuration ----------------
+let cachedTransporter = null;
 function getEmailTransporter() {
+  if (cachedTransporter) return cachedTransporter;
   const user = String(process.env.EMAIL_USER || process.env.GMAIL_USER || process.env.SMTP_USER || '').trim();
   const rawPass = String(process.env.EMAIL_PASS || process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || '');
   const pass = rawPass.replace(/\s+/g, '');
   if (!user || !pass) return null;
-  return nodemailer.createTransport({
+  cachedTransporter = nodemailer.createTransport({
     service: 'gmail',
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
     auth: { user, pass }
   });
+  return cachedTransporter;
 }
-
 
 async function sendOtpEmail(toEmail, otpCode) {
   const transporter = getEmailTransporter();
@@ -76,13 +81,19 @@ async function sendOtpEmail(toEmail, otpCode) {
   `;
 
   if (transporter) {
-    await transporter.sendMail({
-      from: `OSINT BreachShield <${process.env.EMAIL_USER || 'no-reply@breachshield.osint'}>`,
-      to: toEmail,
-      subject: `Your OSINT BreachShield Verification Code: ${otpCode}`,
-      html: htmlContent
-    });
-    return { sent: true, method: 'smtp' };
+    try {
+      const info = await transporter.sendMail({
+        from: `OSINT BreachShield <${process.env.EMAIL_USER || 'no-reply@breachshield.osint'}>`,
+        to: toEmail,
+        subject: `Your OSINT BreachShield Verification Code: ${otpCode}`,
+        html: htmlContent
+      });
+      console.log(`[EMAIL SENT] To: ${toEmail} | Message ID: ${info.messageId}`);
+      return { sent: true, method: 'smtp' };
+    } catch (e) {
+      console.error(`[EMAIL ERROR] Failed to send to ${toEmail}:`, e.message);
+      return { sent: false, error: e.message };
+    }
   } else {
     console.log(`\n======================================================`);
     console.log(`[EMAIL OTP] To: ${toEmail} | Verification Code: ${otpCode}`);
@@ -94,7 +105,6 @@ async function sendOtpEmail(toEmail, otpCode) {
 
 // ---------------- Database Bootstrap & Resilient JSON Stores ----------------
 const INSTANCE_DIR = path.join(__dirname, '../../instance');
-const USERS_JSON = path.join(INSTANCE_DIR, 'users.json');
 const OTPS_JSON = path.join(INSTANCE_DIR, 'email_otps.json');
 
 function readJsonFile(filePath) {
@@ -112,82 +122,65 @@ function writeJsonFile(filePath, data) {
   } catch { return false; }
 }
 
-// In-memory cooldown tracker: email -> timestamp
+// In-memory cooldown tracker: target -> timestamp
 const resendCooldowns = new Map();
 
 async function ensureTables() {
-  await query(`CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(100) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  await query(`CREATE TABLE IF NOT EXISTS email_otps (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
-    otp VARCHAR(255) NOT NULL,
-    expires_at DATETIME NOT NULL,
-    verified BOOLEAN DEFAULT FALSE,
-    attempts INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_email (email)
-  )`);
+  try {
+    await query(`CREATE TABLE IF NOT EXISTS email_otps (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      email VARCHAR(255) NOT NULL,
+      otp VARCHAR(255) NOT NULL,
+      expires_at DATETIME NOT NULL,
+      verified BOOLEAN DEFAULT FALSE,
+      attempts INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_email (email)
+    )`);
+  } catch (e) {
+    // DB table creation fallback
+  }
 }
 
 // ---------------- ROUTE 1: POST /api/auth/send-otp ----------------
 router.post('/send-otp', async (req, res) => {
   try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const username = String(req.body?.username || '').trim();
+    const rawTarget = String(req.body?.target || req.body?.email || req.body?.phone || '').trim();
+    const isTargetEmail = isEmail(rawTarget);
+    const isTargetPhone = isPhone(rawTarget) || /^\+?\d{10,13}$/.test(rawTarget.replace(/[\s-]/g, ''));
 
-    if (!isEmail(email)) {
-      return res.status(400).json({ success: false, error: 'Valid email address is required' });
+    if (!isTargetEmail && !isTargetPhone) {
+      return res.status(400).json({ success: false, error: 'Valid email address or phone number is required' });
     }
 
+    const targetKey = rawTarget.toLowerCase();
+
     // 1. Check Resend Cooldown (30 seconds)
-    const lastSent = resendCooldowns.get(email) || 0;
+    const lastSent = resendCooldowns.get(targetKey) || 0;
     const now = Date.now();
     if (now - lastSent < RESEND_COOLDOWN_MS) {
       const waitSec = Math.ceil((RESEND_COOLDOWN_MS - (now - lastSent)) / 1000);
-      return res.status(429).json({ success: false, error: `Please wait ${waitSec}s before requesting a new OTP.` });
+      return res.status(429).json({ success: false, error: `Please wait ${waitSec} seconds before requesting a new OTP.` });
     }
 
-    // 2. Check if user already exists
-    try {
-      await ensureTables();
-      const existing = await query('SELECT id FROM users WHERE email = ?', [email]);
-      if (existing && existing.length > 0) {
-        return res.status(409).json({ success: false, error: 'An account with this email already exists' });
-      }
-    } catch (_) {
-      const fallbackUsers = readJsonFile(USERS_JSON);
-      if (fallbackUsers.some(u => String(u.email).toLowerCase() === email)) {
-        return res.status(409).json({ success: false, error: 'An account with this email already exists' });
-      }
-    }
-
-    // 3. Generate 6-digit OTP & Expiry (5 minutes)
+    // 2. Generate 6-digit OTP & Expiry (5 minutes)
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const hashedOtp = await hashSecret(code);
     const expiresAt = new Date(now + OTP_EXPIRY_MINUTES * 60 * 1000);
 
-    // 4. Store in Database (Prevent duplicate active OTPs for same email)
+    // 3. Store in Database or JSON Fallback
     try {
       await ensureTables();
-      await query('DELETE FROM email_otps WHERE email = ?', [email]);
+      await query('DELETE FROM email_otps WHERE email = ?', [targetKey]);
       await query(
         'INSERT INTO email_otps (email, otp, expires_at, verified, attempts) VALUES (?, ?, ?, FALSE, 0)',
-        [email, hashedOtp, expiresAt]
+        [targetKey, hashedOtp, expiresAt]
       );
     } catch (dbErr) {
-      // JSON storage fallback
-      const otps = readJsonFile(OTPS_JSON).filter(o => String(o.email).toLowerCase() !== email);
+      const otps = readJsonFile(OTPS_JSON).filter(o => String(o.email).toLowerCase() !== targetKey);
       otps.push({
         id: Date.now(),
-        email,
-        username,
+        email: targetKey,
         otp: hashedOtp,
         expires_at: expiresAt.toISOString(),
         verified: false,
@@ -197,13 +190,39 @@ router.post('/send-otp', async (req, res) => {
       writeJsonFile(OTPS_JSON, otps);
     }
 
-    // 5. Update Cooldown & Send Email
-    resendCooldowns.set(email, now);
-    await sendOtpEmail(email, code);
+    // 4. Update Cooldown & Dispatch via Email or Android SMS Gateway
+    resendCooldowns.set(targetKey, now);
+
+    if (isTargetEmail) {
+      sendOtpEmail(targetKey, code).catch(err => console.error('[EMAIL ERROR]', err.message));
+    } else {
+      // Send SMS via Android Gateway
+      try {
+        const gatewayController = require('../../gateway/controllers/gatewayController');
+        const formattedPhone = rawTarget.startsWith('+') ? rawTarget : (rawTarget.length === 10 ? `+91${rawTarget}` : `+${rawTarget}`);
+        const smsMessage = `Hi, your BreachShield security code is ${code}`;
+        
+        // Emulate req/res for gatewayController
+        const mockReq = {
+          body: {
+            phoneNumber: formattedPhone,
+            message: smsMessage,
+            requestId: `otp_${Date.now()}`
+          }
+        };
+        const mockRes = {
+          status: () => ({ json: () => {} })
+        };
+        await gatewayController.sendSms(mockReq, mockRes);
+        console.log(`[SMS OTP DISPATCHED] To: ${formattedPhone} | Code: ${code}`);
+      } catch (smsErr) {
+        console.error('[SMS DISPATCH ERROR]', smsErr.message);
+      }
+    }
 
     return res.json({
       success: true,
-      message: 'OTP sent successfully',
+      message: `OTP sent successfully to ${rawTarget}`,
       expiresInMinutes: OTP_EXPIRY_MINUTES
     });
   } catch (err) {
@@ -215,24 +234,27 @@ router.post('/send-otp', async (req, res) => {
 // ---------------- ROUTE 2: POST /api/auth/verify-otp ----------------
 router.post('/verify-otp', async (req, res) => {
   try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
+    const rawTarget = String(req.body?.target || req.body?.email || req.body?.phone || '').trim();
+    const isTargetEmail = isEmail(rawTarget);
+    const isTargetPhone = isPhone(rawTarget) || /^\+?\d{10,13}$/.test(rawTarget.replace(/[\s-]/g, ''));
     const otp = String(req.body?.otp || '').trim();
 
-    if (!isEmail(email) || !otp || otp.length !== 6) {
-      return res.status(400).json({ success: false, error: 'Email and 6-digit OTP are required' });
+    if ((!isTargetEmail && !isTargetPhone) || !otp || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ success: false, error: 'Valid email/phone and 6-digit numeric OTP are required' });
     }
 
+    const targetKey = rawTarget.toLowerCase();
     let record = null;
     let isDb = true;
 
     try {
       await ensureTables();
-      const rows = await query('SELECT * FROM email_otps WHERE email = ? ORDER BY id DESC LIMIT 1', [email]);
+      const rows = await query('SELECT * FROM email_otps WHERE email = ? ORDER BY id DESC LIMIT 1', [targetKey]);
       if (rows && rows.length > 0) record = rows[0];
     } catch (_) {
       isDb = false;
       const otps = readJsonFile(OTPS_JSON);
-      record = otps.slice().reverse().find(o => String(o.email).toLowerCase() === email) || null;
+      record = otps.slice().reverse().find(o => String(o.email).toLowerCase() === targetKey) || null;
     }
 
     if (!record) {
@@ -250,7 +272,7 @@ router.post('/verify-otp', async (req, res) => {
     if (attempts >= MAX_VERIFY_ATTEMPTS) {
       return res.status(429).json({
         success: false,
-        error: 'Maximum verification attempts exceeded. Please request a fresh OTP.'
+        error: 'Maximum verification attempts exceeded. Please request a new OTP.'
       });
     }
 
@@ -267,7 +289,8 @@ router.post('/verify-otp', async (req, res) => {
       }
       return res.status(400).json({
         success: false,
-        error: `Invalid OTP code. ${remaining > 0 ? `${remaining} attempts remaining.` : 'Please request a new OTP.'}`
+        error: remaining > 0 ? `Invalid OTP code. ${remaining} attempts remaining.` : 'Maximum verification attempts exceeded. Please request a new OTP.',
+        attemptsRemaining: Math.max(0, remaining)
       });
     }
 
@@ -280,23 +303,33 @@ router.post('/verify-otp', async (req, res) => {
       if (item) { item.verified = true; writeJsonFile(OTPS_JSON, otps); }
     }
 
-    // 5. Issue short-lived signup cookie to authorize account creation
-    const signupToken = jwt.sign(
-      { email, verified: true },
+    // 5. Issue short-lived JWT token authorizing OSINT breach lookups
+    const token = jwt.sign(
+      { target: targetKey, email: targetKey, verified: true },
       process.env.JWT_SECRET || 'dev_secret',
-      { expiresIn: '15m' }
+      { expiresIn: '1h' }
     );
+
     const prod = process.env.NODE_ENV === 'production';
-    res.cookie('signup', signupToken, {
+    res.cookie('otp_token', token, {
       httpOnly: true,
       secure: prod,
       sameSite: prod ? 'none' : 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 60 * 60 * 1000, // 1 hour
+    });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: prod,
+      sameSite: prod ? 'none' : 'lax',
+      maxAge: 60 * 60 * 1000,
     });
 
     return res.json({
       success: true,
-      message: 'Email verified successfully'
+      token,
+      target: targetKey,
+      email: targetKey,
+      message: 'Verification successful'
     });
   } catch (err) {
     console.error('verify-otp error:', err.message);
@@ -304,162 +337,48 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-// ---------------- ROUTE 3: POST /api/auth/register (or set-password) ----------------
-router.post(['/register', '/set-password'], async (req, res) => {
-  try {
-    const { username, email, password } = req.body || {};
-    const effectiveEmail = String(email || '').trim().toLowerCase();
-    const effectiveUsername = String(username || '').trim();
-
-    if (!effectiveUsername || !effectiveEmail || !password || String(password).length < 6) {
-      return res.status(400).json({ success: false, error: 'Username, valid email, and password (min 6 chars) required' });
-    }
-
-    // 1. Verify that email has verified OTP status
-    let isVerified = false;
-    try {
-      const rows = await query('SELECT * FROM email_otps WHERE email = ? AND verified = TRUE ORDER BY id DESC LIMIT 1', [effectiveEmail]);
-      if (rows && rows.length > 0) isVerified = true;
-    } catch (_) {
-      const otps = readJsonFile(OTPS_JSON);
-      const rec = otps.slice().reverse().find(o => String(o.email).toLowerCase() === effectiveEmail && o.verified);
-      if (rec) isVerified = true;
-    }
-
-    // Also check signup token cookie
-    if (!isVerified && req.cookies?.signup) {
-      try {
-        const decoded = jwt.verify(req.cookies.signup, process.env.JWT_SECRET || 'dev_secret');
-        if (decoded.email === effectiveEmail && decoded.verified) isVerified = true;
-      } catch (_) {}
-    }
-
-    if (!isVerified) {
-      return res.status(403).json({ success: false, error: 'Please verify your email with OTP before registering.' });
-    }
-
-    // 2. Create User
-    const passwordHash = await hashSecret(password);
-    let createdUser;
-
-    try {
-      await ensureTables();
-      const insertRes = await query('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)', [effectiveUsername, effectiveEmail, passwordHash]);
-      const id = insertRes.insertId;
-      createdUser = { id, username: effectiveUsername, email: effectiveEmail, created_at: new Date().toISOString() };
-      // Clean up used OTP
-      await query('DELETE FROM email_otps WHERE email = ?', [effectiveEmail]);
-    } catch (dbErr) {
-      if (/duplicate/i.test(dbErr.message)) {
-        return res.status(409).json({ success: false, error: 'User with this email already exists' });
-      }
-      // Fallback JSON user storage
-      const users = readJsonFile(USERS_JSON);
-      if (users.some(u => String(u.email).toLowerCase() === effectiveEmail)) {
-        return res.status(409).json({ success: false, error: 'User with this email already exists' });
-      }
-      const nextId = users.length ? Math.max(...users.map(u => Number(u.id) || 0)) + 1 : 1;
-      createdUser = { id: nextId, username: effectiveUsername, email: effectiveEmail, password_hash: passwordHash, created_at: new Date().toISOString() };
-      users.push(createdUser);
-      writeJsonFile(USERS_JSON, users);
-      // Clean up JSON OTPs
-      const remainingOtps = readJsonFile(OTPS_JSON).filter(o => String(o.email).toLowerCase() !== effectiveEmail);
-      writeJsonFile(OTPS_JSON, remainingOtps);
-    }
-
-    // 3. Issue Authentication JWT Cookie
-    const prod = process.env.NODE_ENV === 'production';
-    res.clearCookie('signup', { httpOnly: true, secure: prod, sameSite: prod ? 'none' : 'lax' });
-    const token = signJwt({ uid: createdUser.id });
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: prod,
-      sameSite: prod ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    return res.json({
-      success: true,
-      message: 'Account created successfully',
-      user: { id: createdUser.id, username: createdUser.username, email: createdUser.email }
-    });
-  } catch (err) {
-    console.error('register error:', err.message);
-    return res.status(500).json({ success: false, error: 'Failed to create account' });
-  }
-});
-
-// ---------------- ROUTE 4: POST /api/auth/login ----------------
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body || {};
-    if (!isEmail(email) || !password) {
-      return res.status(400).json({ success: false, error: 'Valid email and password required' });
-    }
-
-    let user = null;
-    try {
-      await ensureTables();
-      const users = await query('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
-      if (users.length) user = users[0];
-    } catch (_) {
-      const users = readJsonFile(USERS_JSON);
-      user = users.find(u => String(u.email).toLowerCase() === email.toLowerCase()) || null;
-    }
-
-    if (!user) return res.status(401).json({ success: false, error: 'Invalid credentials' });
-
-    const ok = await compareSecret(String(password), user.password_hash);
-    if (!ok) return res.status(401).json({ success: false, error: 'Invalid credentials' });
-
-    const token = signJwt({ uid: user.id });
-    const prod = process.env.NODE_ENV === 'production';
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: prod,
-      sameSite: prod ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    return res.json({
-      success: true,
-      user: { id: user.id, username: user.username, email: user.email, created_at: user.created_at }
-    });
-  } catch (err) {
-    console.error('login error:', err.message);
-    return res.status(500).json({ success: false, error: 'Login failed' });
-  }
-});
-
-// ---------------- ROUTE 5: GET /api/auth/me ----------------
-router.get('/me', async (req, res) => {
-  try {
-    const token = req.cookies?.token || (req.headers.authorization?.split(' ')[1]);
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
-    let user = null;
-
-    try {
-      const rows = await query('SELECT id, username, email, created_at FROM users WHERE id = ?', [decoded.uid]);
-      if (rows && rows.length) user = rows[0];
-    } catch (_) {
-      const users = readJsonFile(USERS_JSON);
-      user = users.find(u => Number(u.id) === Number(decoded.uid)) || null;
-    }
-
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    return res.json({ success: true, user });
-  } catch {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-});
-
-// ---------------- ROUTE 6: POST /api/auth/logout ----------------
+// ---------------- ROUTE 3: POST /api/auth/logout ----------------
 router.post('/logout', (req, res) => {
   const prod = process.env.NODE_ENV === 'production';
+  res.clearCookie('otp_token', { httpOnly: true, secure: prod, sameSite: prod ? 'none' : 'lax' });
   res.clearCookie('token', { httpOnly: true, secure: prod, sameSite: prod ? 'none' : 'lax' });
-  res.json({ success: true });
+  res.json({ success: true, message: 'Logged out successfully' });
 });
 
+// ---------------- Reusable OTP Verification Middleware ----------------
+function verifyOtpToken(req, res, next) {
+  try {
+    let token = null;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    } else if (req.cookies?.otp_token) {
+      token = req.cookies.otp_token;
+    } else if (req.cookies?.token) {
+      token = req.cookies.token;
+    } else if (req.body?.token) {
+      token = req.body.token;
+    } else if (req.query?.token) {
+      token = req.query.token;
+    }
+
+    if (!token) {
+      return res.status(403).json({ error: 'Verification required' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+    if (!decoded || decoded.verified !== true) {
+      return res.status(403).json({ error: 'Verification required' });
+    }
+
+    req.verifiedUser = decoded;
+    return next();
+  } catch (err) {
+    return res.status(403).json({ error: 'Verification required' });
+  }
+}
+
+router.verifyOtpToken = verifyOtpToken;
 module.exports = router;
+module.exports.verifyOtpToken = verifyOtpToken;
+module.exports.router = router;
