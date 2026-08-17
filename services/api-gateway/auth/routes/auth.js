@@ -124,6 +124,8 @@ function writeJsonFile(filePath, data) {
 
 // In-memory cooldown tracker: target -> timestamp
 const resendCooldowns = new Map();
+// In-memory OTP storage for fast lookups and concurrency safety
+const memoryOtps = new Map();
 
 async function ensureTables() {
   try {
@@ -169,6 +171,17 @@ router.post('/send-otp', async (req, res) => {
     const expiresAt = new Date(now + OTP_EXPIRY_MINUTES * 60 * 1000);
 
     // 3. Store in Database or JSON Fallback
+    const otpRecord = {
+      id: Date.now(),
+      email: targetKey,
+      otp: hashedOtp,
+      expires_at: expiresAt.toISOString(),
+      verified: false,
+      attempts: 0,
+      created_at: new Date().toISOString()
+    };
+    memoryOtps.set(targetKey, otpRecord);
+
     try {
       await ensureTables();
       await query('DELETE FROM email_otps WHERE email = ?', [targetKey]);
@@ -178,15 +191,7 @@ router.post('/send-otp', async (req, res) => {
       );
     } catch (dbErr) {
       const otps = readJsonFile(OTPS_JSON).filter(o => String(o.email).toLowerCase() !== targetKey);
-      otps.push({
-        id: Date.now(),
-        email: targetKey,
-        otp: hashedOtp,
-        expires_at: expiresAt.toISOString(),
-        verified: false,
-        attempts: 0,
-        created_at: new Date().toISOString()
-      });
+      otps.push(otpRecord);
       writeJsonFile(OTPS_JSON, otps);
     }
 
@@ -194,7 +199,7 @@ router.post('/send-otp', async (req, res) => {
     resendCooldowns.set(targetKey, now);
 
     if (isTargetEmail) {
-      sendOtpEmail(targetKey, code).catch(err => console.error('[EMAIL ERROR]', err.message));
+      await sendOtpEmail(targetKey, code).catch(err => console.error('[EMAIL ERROR]', err.message));
     } else {
       // Send SMS via Android Gateway
       try {
@@ -253,8 +258,11 @@ router.post('/verify-otp', async (req, res) => {
       if (rows && rows.length > 0) record = rows[0];
     } catch (_) {
       isDb = false;
-      const otps = readJsonFile(OTPS_JSON);
-      record = otps.slice().reverse().find(o => String(o.email).toLowerCase() === targetKey) || null;
+      record = memoryOtps.get(targetKey) || null;
+      if (!record) {
+        const otps = readJsonFile(OTPS_JSON);
+        record = otps.slice().reverse().find(o => String(o.email).toLowerCase() === targetKey) || null;
+      }
     }
 
     if (!record) {
@@ -283,8 +291,11 @@ router.post('/verify-otp', async (req, res) => {
       if (isDb) {
         await query('UPDATE email_otps SET attempts = attempts + 1 WHERE id = ?', [record.id]);
       } else {
+        if (memoryOtps.has(targetKey)) {
+          memoryOtps.get(targetKey).attempts = (memoryOtps.get(targetKey).attempts || 0) + 1;
+        }
         const otps = readJsonFile(OTPS_JSON);
-        const item = otps.find(o => o.id === record.id);
+        const item = otps.find(o => o.id === record.id || String(o.email).toLowerCase() === targetKey);
         if (item) { item.attempts = (item.attempts || 0) + 1; writeJsonFile(OTPS_JSON, otps); }
       }
       return res.status(400).json({
@@ -298,8 +309,11 @@ router.post('/verify-otp', async (req, res) => {
     if (isDb) {
       await query('UPDATE email_otps SET verified = TRUE WHERE id = ?', [record.id]);
     } else {
+      if (memoryOtps.has(targetKey)) {
+        memoryOtps.get(targetKey).verified = true;
+      }
       const otps = readJsonFile(OTPS_JSON);
-      const item = otps.find(o => o.id === record.id);
+      const item = otps.find(o => o.id === record.id || String(o.email).toLowerCase() === targetKey);
       if (item) { item.verified = true; writeJsonFile(OTPS_JSON, otps); }
     }
 

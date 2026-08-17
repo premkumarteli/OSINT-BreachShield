@@ -92,8 +92,8 @@ describe('OSINT BreachShield Test Suite', () => {
       backendProcess.stdout.on('data', (chunk) => {
         const text = chunk.toString();
         // Capture OTP prints: [EMAIL OTP] To: ... | Verification Code: 123456
-        const match = text.match(/To:\s*([^\s|]+)\s*\|\s*Verification Code:\s*(\d{6})/);
-        if (match) {
+        const matches = text.matchAll(/To:\s*([^\s|]+)\s*\|\s*Verification Code:\s*(\d{6})/g);
+        for (const match of matches) {
           otpMap.set(match[1].toLowerCase().trim(), match[2]);
         }
         if (!started && text.includes(`OSINT backend running on port ${BACKEND_PORT}`)) {

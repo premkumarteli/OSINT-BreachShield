@@ -37,7 +37,7 @@ process.on('unhandledRejection', (reason) => { console.error('Unhandled rejectio
 
 // Mount auth router and import verification middleware
 let authRouter;
-let verifyOtpToken = (req, res, next) => res.status(403).json({ error: 'Email verification required' });
+let verifyOtpToken = (req, res, next) => res.status(403).json({ error: 'Verification required' });
 
 try {
   const authModule = require('./auth/routes/auth');

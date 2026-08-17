@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "scripts": {
+    "build": "npm --prefix apps/web-dashboard run build",
     "dev": "python run_servers.py",
     "test": "npm --prefix services/api-gateway test && npm --prefix apps/web-dashboard test -- --watchAll=false",
     "install:all": "npm --prefix services/api-gateway install && npm --prefix apps/web-dashboard install",

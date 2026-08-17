@@ -16,6 +16,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.min
+import kotlin.random.Random
 
 @Singleton
 class WebSocketManager @Inject constructor(
@@ -31,6 +33,7 @@ class WebSocketManager @Inject constructor(
     private var reconnectJob: Job? = null
     private var heartbeatJob: Job? = null
     private var pollingJob: Job? = null
+    private var reconnectAttempts = 0
 
     var onSmsCommandReceived: ((SmsCommand) -> Unit)? = null
 
@@ -78,6 +81,7 @@ class WebSocketManager @Inject constructor(
                 
                 startHeartbeat()
                 startPollingSafetyNet()
+                reconnectAttempts = 0
                 reconnectJob?.cancel()
             }
 
@@ -126,6 +130,7 @@ class WebSocketManager @Inject constructor(
         webSocket = null
         stopHeartbeat()
         stopPollingSafetyNet()
+        reconnectAttempts = 0
         reconnectJob?.cancel()
     }
 
@@ -225,8 +230,10 @@ class WebSocketManager @Inject constructor(
     private fun scheduleReconnect() {
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
-            delay(5000)
-            Log.d(TAG, "Attempting to reconnect...")
+            val delayMs = min(1000L * (1L shl min(reconnectAttempts, 5)), 30000L) + Random.nextLong(500L)
+            Log.d(TAG, "Attempting to reconnect in ${delayMs}ms (attempt #${reconnectAttempts + 1})...")
+            delay(delayMs)
+            reconnectAttempts++
             connect()
         }
     }

@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm --prefix apps/web-dashboard run build",
+  "outputDirectory": "apps/web-dashboard/build",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

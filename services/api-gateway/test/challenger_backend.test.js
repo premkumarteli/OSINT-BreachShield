@@ -87,8 +87,8 @@ describe('Adversarial Backend Security Challenge Suite', () => {
       backendProcess.stdout.on('data', (chunk) => {
         const text = chunk.toString();
         // Extract OTP prints: [EMAIL OTP] To: ... | Verification Code: 123456
-        const match = text.match(/To:\s*([^\s|]+)\s*\|\s*Verification Code:\s*(\d{6})/);
-        if (match) {
+        const matches = text.matchAll(/To:\s*([^\s|]+)\s*\|\s*Verification Code:\s*(\d{6})/g);
+        for (const match of matches) {
           otpMap.set(match[1].toLowerCase().trim(), match[2]);
         }
         if (!started && text.includes(`OSINT backend running on port ${BACKEND_PORT}`)) {
@@ -133,7 +133,7 @@ describe('Adversarial Backend Security Challenge Suite', () => {
 
       assert.equal(res.status, 403, 'Expected 403 Forbidden');
       const json = await res.json();
-      assert.deepEqual(json, { error: 'Email verification required' });
+      assert.deepEqual(json, { error: 'Verification required' });
     });
 
     it('1.2: Request with invalid Authorization header schemes and malformed strings returns 403', async () => {
@@ -158,7 +158,7 @@ describe('Adversarial Backend Security Challenge Suite', () => {
         });
         assert.equal(res.status, 403, `Auth header "${authHeader}" must return 403`);
         const json = await res.json();
-        assert.deepEqual(json, { error: 'Email verification required' });
+        assert.deepEqual(json, { error: 'Verification required' });
       }
     });
 
@@ -179,7 +179,7 @@ describe('Adversarial Backend Security Challenge Suite', () => {
 
       assert.equal(res.status, 403, 'Forged JWT signature must return 403');
       const json = await res.json();
-      assert.deepEqual(json, { error: 'Email verification required' });
+      assert.deepEqual(json, { error: 'Verification required' });
     });
 
     it('1.4: Expired JWT returns 403 Forbidden', async () => {
@@ -200,7 +200,7 @@ describe('Adversarial Backend Security Challenge Suite', () => {
 
       assert.equal(res.status, 403, 'Expired JWT must return 403');
       const json = await res.json();
-      assert.deepEqual(json, { error: 'Email verification required' });
+      assert.deepEqual(json, { error: 'Verification required' });
     });
 
     it('1.5: Valid JWT signature but verified === false returns 403 Forbidden', async () => {
@@ -221,7 +221,7 @@ describe('Adversarial Backend Security Challenge Suite', () => {
 
       assert.equal(res.status, 403, 'JWT with verified:false must return 403');
       const json = await res.json();
-      assert.deepEqual(json, { error: 'Email verification required' });
+      assert.deepEqual(json, { error: 'Verification required' });
     });
 
     it('1.6: JWT with verified missing returns 403 Forbidden', async () => {
@@ -242,7 +242,7 @@ describe('Adversarial Backend Security Challenge Suite', () => {
 
       assert.equal(res.status, 403, 'JWT without verified field must return 403');
       const json = await res.json();
-      assert.deepEqual(json, { error: 'Email verification required' });
+      assert.deepEqual(json, { error: 'Verification required' });
     });
   });
 
@@ -275,7 +275,7 @@ describe('Adversarial Backend Security Challenge Suite', () => {
         assert.equal(res.status, 400, `Expected 400 for invalid email: ${JSON.stringify(email)}`);
         const json = await res.json();
         assert.equal(json.success, false);
-        assert.equal(json.error, 'Valid email address is required');
+        assert.equal(json.error, 'Valid email address or phone number is required');
       }
     });
 
@@ -290,7 +290,7 @@ describe('Adversarial Backend Security Challenge Suite', () => {
       assert.equal(res.status, 200);
       const json = await res.json();
       assert.equal(json.success, true);
-      assert.equal(json.message, 'OTP sent successfully');
+      assert.equal(json.message, `OTP sent successfully to ${email}`);
       assert.equal(json.expiresInMinutes, 5);
 
       const code = await waitForOtp(email);
@@ -477,7 +477,7 @@ describe('Adversarial Backend Security Challenge Suite', () => {
       const json = await res.json();
       assert.equal(json.success, true);
       assert.equal(json.email, email);
-      assert.equal(json.message, 'Email verified successfully');
+      assert.equal(json.message, 'Verification successful');
       assert.ok(json.token, 'Token must be present in response');
 
       // Verify token signature & payload

@@ -65,3 +65,10 @@ apps/android-gateway/.kotlin/
 apps/android-gateway/.artifacts/
 *.apk
 *.aab
+
+# Keystores & Signing Keys
+*.jks
+*.keystore
+*.key
+*.pepk
+*.p12

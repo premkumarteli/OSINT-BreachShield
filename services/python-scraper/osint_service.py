@@ -586,10 +586,6 @@ async def get_prev_page():
             except Exception:
                 pass
 
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(app, host='127.0.0.1', port=8001)
-
 # Endpoint to click 'Download' and return the HTML file
 @app.post('/download')
 async def click_download_and_fetch():
@@ -666,3 +662,8 @@ async def click_download_and_fetch():
                 client.remove_event_handler(handler_doc, events.NewMessage(from_users=bot_username))
         except Exception:
             pass
+
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='127.0.0.1', port=8001)
