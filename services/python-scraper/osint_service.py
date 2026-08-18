@@ -1,10 +1,12 @@
 from telethon import TelegramClient, events
-from fastapi import FastAPI, HTTPException
+from telethon.tl.types import DocumentAttributeFilename
+from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 import asyncio
 import os
 import sys
 import re
+import httpx
 from dotenv import load_dotenv
 
 # Load .env file from local directory or parents

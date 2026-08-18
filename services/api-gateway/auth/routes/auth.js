@@ -206,9 +206,8 @@ router.post('/send-otp', async (req, res) => {
       try {
         const gatewayController = require('../../gateway/controllers/gatewayController');
         const formattedPhone = rawTarget.startsWith('+') ? rawTarget : (rawTarget.length === 10 ? `+91${rawTarget}` : `+${rawTarget}`);
-        // Carrier-safe format to prevent telecom DLT spam filter blocking
-        const spacedCode = String(code).split('').join(' ');
-        const smsMessage = `BreachShield PIN: ${spacedCode} (valid 5 min)`;
+        const template = process.env.SMS_OTP_TEMPLATE || 'You breach otp is valid for 5 min\n{OTP}';
+        const smsMessage = template.replace('{OTP}', code);
         
         // Emulate req/res for gatewayController
         const mockReq = {
