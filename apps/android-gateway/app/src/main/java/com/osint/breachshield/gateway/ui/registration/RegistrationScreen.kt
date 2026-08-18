@@ -1,5 +1,6 @@
 package com.osint.breachshield.gateway.ui.registration
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -7,9 +8,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
@@ -18,7 +23,7 @@ fun RegistrationScreen(
     viewModel: RegistrationViewModel = hiltViewModel()
 ) {
     var serverUrl by remember { mutableStateOf("http://10.25.185.96:5000") }
-    var deviceName by remember { mutableStateOf("Prem OPPO Gateway") }
+    var deviceName by remember { mutableStateOf("BreachShield Node 01") }
 
     val uiState by viewModel.uiState.collectAsState()
 
@@ -31,15 +36,24 @@ fun RegistrationScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF070A13),
+                        Color(0xFF0B1020),
+                        Color(0xFF070A13)
+                    )
+                )
+            )
+            .padding(20.dp),
         contentAlignment = Alignment.Center
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.95f)),
             shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            border = BorderStroke(1.dp, Color(0xFF00F3FF).copy(alpha = 0.35f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -47,28 +61,64 @@ fun RegistrationScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Cyber Badge Header
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF00F3FF).copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, Color(0xFF00F3FF).copy(alpha = 0.4f)),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                ) {
+                    Text(
+                        text = "🛡️ SECURE SIM RELAY",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = Color(0xFF00F3FF),
+                        letterSpacing = 1.sp
+                    )
+                }
+
                 Text(
-                    text = "BreachShield SMS Gateway",
+                    text = "OSINT BREACHSHIELD",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    fontWeight = FontWeight.Black,
+                    fontFamily = FontFamily.Monospace,
+                    color = Color(0xFF00F3FF),
+                    letterSpacing = 1.5.sp
                 )
                 Text(
-                    text = "Device Registration",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+                    text = "HARDWARE GATEWAY PROTOCOL v2.0",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    color = Color(0xFF64748B),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 28.dp),
+                    textAlign = TextAlign.Center
                 )
 
                 OutlinedTextField(
                     value = serverUrl,
                     onValueChange = { serverUrl = it },
-                    label = { Text("Server URL (e.g. http://10.25.185.96:5000)") },
+                    label = { 
+                        Text(
+                            "CORE API GATEWAY URL",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        ) 
+                    },
+                    placeholder = { Text("http://192.168.1.100:5000", color = Color(0xFF475569)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        focusedTextColor = Color(0xFFF8FAFC),
+                        unfocusedTextColor = Color(0xFFE2E8F0),
+                        focusedBorderColor = Color(0xFF00F3FF),
+                        unfocusedBorderColor = Color(0xFF1E293B),
+                        focusedLabelColor = Color(0xFF00F3FF),
+                        unfocusedLabelColor = Color(0xFF64748B),
+                        cursorColor = Color(0xFF00F3FF)
                     )
                 )
 
@@ -77,19 +127,37 @@ fun RegistrationScreen(
                 OutlinedTextField(
                     value = deviceName,
                     onValueChange = { deviceName = it },
-                    label = { Text("Gateway Name") },
+                    label = { 
+                        Text(
+                            "GATEWAY NODE IDENTIFIER",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        ) 
+                    },
+                    placeholder = { Text("Primary Physical SIM Gateway", color = Color(0xFF475569)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        focusedTextColor = Color(0xFFF8FAFC),
+                        unfocusedTextColor = Color(0xFFE2E8F0),
+                        focusedBorderColor = Color(0xFF00F3FF),
+                        unfocusedBorderColor = Color(0xFF1E293B),
+                        focusedLabelColor = Color(0xFF00F3FF),
+                        unfocusedLabelColor = Color(0xFF64748B),
+                        cursorColor = Color(0xFF00F3FF)
                     )
                 )
 
                 Spacer(modifier = Modifier.height(28.dp))
 
                 if (uiState is RegistrationUiState.Loading) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    CircularProgressIndicator(
+                        color = Color(0xFF00F3FF),
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(36.dp)
+                    )
                 } else {
                     Button(
                         onClick = { 
@@ -98,25 +166,42 @@ fun RegistrationScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(8.dp),
+                            .height(52.dp),
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            containerColor = Color(0xFF00F3FF),
+                            contentColor = Color(0xFF070A13)
                         ),
+                        border = BorderStroke(1.dp, Color(0xFF00F3FF)),
                         enabled = serverUrl.isNotBlank() && deviceName.isNotBlank()
                     ) {
-                        Text("Register Device", fontWeight = FontWeight.Bold)
+                        Text(
+                            "⚡ INITIALIZE GATEWAY",
+                            fontWeight = FontWeight.Black,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 1.sp
+                        )
                     }
                 }
 
                 if (uiState is RegistrationUiState.Error) {
-                    Text(
-                        text = (uiState as RegistrationUiState.Error).message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFF003C).copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, Color(0xFFFF003C).copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp)
+                    ) {
+                        Text(
+                            text = "❌ " + (uiState as RegistrationUiState.Error).message,
+                            color = Color(0xFFFF003C),
+                            fontFamily = FontFamily.Monospace,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(12.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }

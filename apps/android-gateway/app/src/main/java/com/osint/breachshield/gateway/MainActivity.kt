@@ -24,20 +24,27 @@ import com.osint.breachshield.gateway.ui.registration.RegistrationScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
-// High-contrast Cyberpunk Dark Color Scheme
-private val DarkColors = darkColorScheme(
-    primary = Color(0xFF00F3FF),
-    onPrimary = Color(0xFF000000),
-    secondary = Color(0xFF00FF66),
-    onSecondary = Color(0xFF000000),
-    background = Color(0xFF0B0F19),
-    onBackground = Color(0xFFE2E8F0),
-    surface = Color(0xFF151C2C),
+// OSINT BreachShield Cyberpunk Dark Color Scheme (Matches Web Dashboard)
+val CyberDarkColors = darkColorScheme(
+    primary = Color(0xFF00F3FF),         // Cyber Neon Cyan
+    onPrimary = Color(0xFF070A13),       // Deep Obsidian Text
+    primaryContainer = Color(0xFF0B2538),
+    onPrimaryContainer = Color(0xFF00F3FF),
+    secondary = Color(0xFF00FF66),       // Terminal Matrix Green
+    onSecondary = Color(0xFF070A13),
+    secondaryContainer = Color(0xFF0A2E1C),
+    onSecondaryContainer = Color(0xFF00FF66),
+    tertiary = Color(0xFFA855F7),        // Cyber Purple
+    background = Color(0xFF070A13),      // Deep Obsidian Background
+    onBackground = Color(0xFFE2E8F0),    // Slate-200 Text
+    surface = Color(0xFF0F172A),         // Slate-900 Card Surface
     onSurface = Color(0xFFF8FAFC),
-    surfaceVariant = Color(0xFF1E293B),
-    onSurfaceVariant = Color(0xFF94A3B8),
-    error = Color(0xFFFF3366),
-    onError = Color(0xFFFFFFFF)
+    surfaceVariant = Color(0xFF1E293B),  // Slate-800 Card Variant & Borders
+    onSurfaceVariant = Color(0xFF94A3B8),// Slate-400 Muted Text
+    error = Color(0xFFFF003C),           // Critical Neon Red
+    onError = Color(0xFFFFFFFF),
+    outline = Color(0xFF00F3FF).copy(alpha = 0.3f),
+    outlineVariant = Color(0xFF1E293B)
 )
 
 @AndroidEntryPoint
@@ -55,7 +62,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme(colorScheme = DarkColors) {
+            MaterialTheme(colorScheme = CyberDarkColors) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -104,34 +111,26 @@ class MainActivity : ComponentActivity() {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        val toRequest = permissions.filter {
+        val neededPermissions = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
 
-        if (toRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, toRequest.toTypedArray(), 101)
+        if (neededPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, neededPermissions.toTypedArray(), 1001)
         }
     }
 
     private fun startGatewayService() {
-        try {
-            val intent = Intent(this, GatewayForegroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "Failed to start service", e)
+        val intent = Intent(this, GatewayForegroundService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
         }
     }
 
     private fun stopGatewayService() {
-        try {
-            val intent = Intent(this, GatewayForegroundService::class.java)
-            stopService(intent)
-        } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "Failed to stop service", e)
-        }
+        val intent = Intent(this, GatewayForegroundService::class.java)
+        stopService(intent)
     }
 }
