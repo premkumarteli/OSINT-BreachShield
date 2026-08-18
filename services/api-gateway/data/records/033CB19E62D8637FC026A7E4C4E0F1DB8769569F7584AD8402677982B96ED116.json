@@ -1,0 +1,21 @@
+[
+  {
+    "source": "Air_India_SITA_2021",
+    "year": "2021",
+    "dataClasses": [
+      "PHONE",
+      "NAME",
+      "PASSPORT",
+      "FREQUENT_FLYER"
+    ],
+    "fields": {
+      "passenger_name": "Rahul Sharma",
+      "contact_phone": "+91733771210",
+      "passport_number": "IND-P8492019",
+      "frequent_flyer_id": "AI-GOLD-98402",
+      "frequent_routes": "DEL-BLR, BLR-BOM",
+      "ticket_pnr": "SITA-PNR-774028"
+    },
+    "ingestedAt": "2026-08-18T19:22:02.901Z"
+  }
+]

@@ -1,0 +1,21 @@
+[
+  {
+    "source": "BigBasket_India_2020",
+    "year": "2020",
+    "dataClasses": [
+      "PHONE",
+      "NAME",
+      "EMAIL",
+      "DELIVERY_ADDRESS"
+    ],
+    "fields": {
+      "customer_name": "Ananya Verma",
+      "registered_phone": "+917338240637",
+      "registered_email": "ananya.verma@outlook.com",
+      "delivery_city": "Bangalore, Karnataka",
+      "pin_code": "560034",
+      "last_order_date": "2020-10-14"
+    },
+    "ingestedAt": "2026-08-18T19:22:02.903Z"
+  }
+]

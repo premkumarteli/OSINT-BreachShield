@@ -170,13 +170,14 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
     let packets = [];
     let pagination = null;
 
-    // Source 1: Local k-Anonymity Database Check
-    const { hashTarget, getRange } = require('./ingest/kAnonymityStore');
+    // Source 1: Local k-Anonymity & Document Store Check
+    const { hashTarget, getRange, getStoredRecords } = require('./ingest/kAnonymityStore');
     const targetHash = hashTarget(normalizedQuery);
     const prefix = targetHash.slice(0, 5);
     const suffix = targetHash.slice(5);
     const rangeMatches = getRange(prefix);
     const localMatch = rangeMatches.find(m => m.suffix === suffix);
+    const storedRecords = getStoredRecords(normalizedQuery);
 
     // Source 2: Deep OSINT Scraper Service (Optional: enable via ENABLE_TELEGRAM_SCRAPER=true)
     if (process.env.ENABLE_TELEGRAM_SCRAPER === 'true') {
@@ -199,40 +200,43 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
       }
     }
 
-    // Merge Local Breach Intelligence if found with full record breakdown
-    if (localMatch && localMatch.sources.length > 0) {
+    // Merge Local Breach Intelligence if found with full genuine record breakdown
+    if ((localMatch && localMatch.sources.length > 0) || storedRecords.length > 0) {
+      const matchSources = localMatch ? localMatch.sources : storedRecords.map(r => r.source);
+      const matchClasses = localMatch ? localMatch.dataClasses : Array.from(new Set(storedRecords.flatMap(r => r.dataClasses || [])));
+      const matchYear = (localMatch && localMatch.year) || storedRecords[0]?.year || '2024';
+
       let breachDetails = `══════════════════════════════════════════════════════\n` +
         `[ BREACHSHIELD RAW INTELLIGENCE REPOSITORY ]\n` +
         `• Target Identifier: ${normalizedQuery}\n` +
         `• SHA-256 Fingerprint: ${targetHash}\n` +
         `• Partition Bucket: ${prefix}\n` +
-        `• Compromised Records: ${localMatch.sources.length}\n` +
-        `• Exposed Data Classes: ${localMatch.dataClasses.join(', ')}\n` +
+        `• Compromised Records: ${Math.max(matchSources.length, storedRecords.length)}\n` +
+        `• Exposed Data Classes: ${matchClasses.join(', ')}\n` +
         `══════════════════════════════════════════════════════\n\n`;
 
-      localMatch.sources.forEach((src, idx) => {
-        breachDetails += `[ RECORD #${idx + 1} | SOURCE: ${src.toUpperCase()} (Year: ${localMatch.year}) ]\n`;
-        breachDetails += `• Phone Number    : ${normalizedQuery}\n`;
-        if (src.toLowerCase().includes('dominos')) {
-          breachDetails += `• Customer Name   : Prem Kumar\n`;
-          breachDetails += `• Order Number    : DOM-IN-98421038\n`;
-          breachDetails += `• Order Items     : 1x Farmhouse Pizza, 1x Stuffed Garlic Bread, 1x Pepsi\n`;
-          breachDetails += `• Order Amount    : ₹589.00\n`;
-          breachDetails += `• Delivery Address: Flat 402, Cyber Heights, Bangalore, Karnataka - 560100\n`;
-          breachDetails += `• Payment Method  : UPI / NetBanking\n`;
-        } else if (src.toLowerCase().includes('mobikwik')) {
-          breachDetails += `• Full Name       : Prem Kumar\n`;
-          breachDetails += `• KYC Verification: Complete (Level 2)\n`;
-          breachDetails += `• Aadhaar Hash    : ${targetHash.slice(0, 32)}...\n`;
-          breachDetails += `• National ID Ref : AADHAAR-IND-5482-9104-8983\n`;
-          breachDetails += `• Linked Bank VPA : premkumar@okhdfcbank\n`;
-          breachDetails += `• GPS Coordinates : 12.9716° N, 77.5946° E\n`;
-        } else {
+      if (storedRecords.length > 0) {
+        storedRecords.forEach((rec, idx) => {
+          breachDetails += `[ RECORD #${idx + 1} | SOURCE: ${String(rec.source || 'BREACH_ARCHIVE').toUpperCase()} (Year: ${rec.year || matchYear}) ]\n`;
+          breachDetails += `• Target          : ${normalizedQuery}\n`;
+          if (rec.fields && typeof rec.fields === 'object') {
+            for (const [key, val] of Object.entries(rec.fields)) {
+              if (val !== undefined && val !== null && val !== '') {
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                breachDetails += `• ${label.padEnd(16)}: ${val}\n`;
+              }
+            }
+          }
+          breachDetails += `\n`;
+        });
+      } else if (localMatch) {
+        localMatch.sources.forEach((src, idx) => {
+          breachDetails += `[ RECORD #${idx + 1} | SOURCE: ${src.toUpperCase()} (Year: ${localMatch.year}) ]\n`;
+          breachDetails += `• Target Phone    : ${normalizedQuery}\n`;
           breachDetails += `• Exposed Classes : ${localMatch.dataClasses.join(', ')}\n`;
-          breachDetails += `• Discovery Year  : ${localMatch.year}\n`;
-        }
-        breachDetails += `\n`;
-      });
+          breachDetails += `• Discovery Year  : ${localMatch.year}\n\n`;
+        });
+      }
 
       packets.unshift({ query, info: breachDetails.trim(), source: 'LOCAL_K_ANON_DB' });
     }

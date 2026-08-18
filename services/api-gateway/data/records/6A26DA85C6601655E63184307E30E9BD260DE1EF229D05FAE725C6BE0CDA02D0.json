@@ -1,0 +1,21 @@
+[
+  {
+    "source": "Upstox_India_2021",
+    "year": "2021",
+    "dataClasses": [
+      "PHONE",
+      "NAME",
+      "PAN_CARD",
+      "DEMAT_ACCOUNT"
+    ],
+    "fields": {
+      "trader_name": "Vikram Mehta",
+      "linked_mobile": "+91990168703",
+      "pan_number": "ABCDE1234F",
+      "demat_account_id": "UPSTOX-IN-889021",
+      "kyc_income_bracket": "10L - 25L",
+      "broker_branch": "Mumbai Central"
+    },
+    "ingestedAt": "2026-08-18T19:22:02.912Z"
+  }
+]
