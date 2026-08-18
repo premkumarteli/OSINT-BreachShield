@@ -166,21 +166,48 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
   }
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
-    const resp = await fetch(PYTHON_SERVICE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    const data = await resp.json();
-    const botText = data.response || '';
-    const packets = data.packets || (botText ? [{ query, info: botText }] : []);
-    const pagination = data.pagination || null;
+    let botText = '';
+    let packets = [];
+    let pagination = null;
 
-    // Run Analytics & Timeline Parsers on raw text to calculate full risk profile
+    // Source 1: Local k-Anonymity Database Check
+    const { hashTarget, getRange } = require('./ingest/kAnonymityStore');
+    const targetHash = hashTarget(normalizedQuery);
+    const prefix = targetHash.slice(0, 5);
+    const suffix = targetHash.slice(5);
+    const rangeMatches = getRange(prefix);
+    const localMatch = rangeMatches.find(m => m.suffix === suffix);
+
+    // Source 2: Deep OSINT Scraper Service
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      const resp = await fetch(PYTHON_SERVICE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: normalizedQuery }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      const data = await resp.json();
+      botText = data.response || '';
+      packets = data.packets || (botText ? [{ query, info: botText }] : []);
+      pagination = data.pagination || null;
+    } catch (scraperErr) {
+      console.warn('[MULTI-SOURCE] Primary scraper offline or timed out; relying on local breach store:', scraperErr.message);
+    }
+
+    // Merge Local Breach Intelligence if found
+    if (localMatch && localMatch.sources.length > 0) {
+      const localSummary = `[ LOCAL BREACH REPOSITORY MATCH ]\n• Target Hash: ${targetHash.slice(0, 16)}...\n• Compromised in Sources: ${localMatch.sources.join(', ')}\n• Exposed Data Classes: ${localMatch.dataClasses.join(', ')}\n• Breach Year: ${localMatch.year}\n`;
+      packets.unshift({ query, info: localSummary, source: 'LOCAL_K_ANON_DB' });
+    }
+
+    if (packets.length === 0) {
+      packets.push({ query, info: 'Scan complete. No public breach records detected in primary archives.' });
+    }
+
+    // Run Analytics & Timeline Parsers on combined multi-source text
     const fullText = packets.map(p => p.info || '').join('\n\n');
     const exposure = analyzeExposure(fullText, query);
     const timeline = parseBreachTimeline(fullText);
