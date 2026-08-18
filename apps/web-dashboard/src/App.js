@@ -324,11 +324,14 @@ function App() {
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      const preferredPacket = (result?.packets && result.packets[1] !== undefined) ? result.packets[1] : result?.packets?.[0];
-      const content = terminalText || preferredPacket?.info || JSON.stringify(result || {});
+      const currentToken = token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('osint_token') : '');
       const res = await fetch(`${API_BASE}/api/download`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+        },
+        credentials: 'include',
         body: JSON.stringify({ query, content })
       });
       if (!res.ok) {
