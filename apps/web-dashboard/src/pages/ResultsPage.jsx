@@ -241,11 +241,10 @@ export default function ResultsPage() {
   // Terminal typewriter effect upon result/page change
   useEffect(() => {
     if (!result) return undefined;
-    try {
-      const packet = result.packets && (result.packets[1] !== undefined ? result.packets[1] : result.packets[0]);
-      const text = packet
-        ? (packet.info || (`[ TARGET: ${email} ]\n[ MOBILE: ${packet.mobile || 'N/A'} ]\n[ NAME: ${packet.name || 'N/A'} ]\n[ ADDRESS: ${packet.address || 'N/A'} ]\n`))
-        : '';
+      const text = (result.packets || [])
+        .map(p => p.info || (`[ TARGET: ${email} ]\n[ MOBILE: ${p.mobile || 'N/A'} ]\n[ NAME: ${p.name || 'N/A'} ]\n[ ADDRESS: ${p.address || 'N/A'} ]\n`))
+        .filter(Boolean)
+        .join('\n\n');
 
       if (visitedPagesRef.current.has(currentPage)) {
         stopTyping();

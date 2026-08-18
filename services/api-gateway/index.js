@@ -199,8 +199,12 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
 
     // Merge Local Breach Intelligence if found
     if (localMatch && localMatch.sources.length > 0) {
-      const localSummary = `[ LOCAL BREACH REPOSITORY MATCH ]\n• Target Hash: ${targetHash.slice(0, 16)}...\n• Compromised in Sources: ${localMatch.sources.join(', ')}\n• Exposed Data Classes: ${localMatch.dataClasses.join(', ')}\n• Breach Year: ${localMatch.year}\n`;
-      packets.unshift({ query, info: localSummary, source: 'LOCAL_K_ANON_DB' });
+      const localSummary = `══════════════════════════════════════════════════════\n[ LOCAL BREACH REPOSITORY MATCH ]\n• Target Hash: ${targetHash.slice(0, 16)}...\n• Compromised in Sources: ${localMatch.sources.join(', ')}\n• Exposed Data Classes: ${localMatch.dataClasses.join(', ')}\n• Breach Year: ${localMatch.year}\n══════════════════════════════════════════════════════\n`;
+      if (packets.length > 0) {
+        packets[0].info = localSummary + '\n' + (packets[0].info || '');
+      } else {
+        packets.push({ query, info: localSummary, source: 'LOCAL_K_ANON_DB' });
+      }
     }
 
     if (packets.length === 0) {

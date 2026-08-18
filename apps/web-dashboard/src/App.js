@@ -240,12 +240,11 @@ function App() {
 
   useEffect(() => {
     if (!result) return undefined;
-    try {
-      // Prefer packets[1] (existing UI contract) but fall back to packets[0]
-      const packet = result.packets && (result.packets[1] !== undefined ? result.packets[1] : result.packets[0]);
-      const text = packet
-        ? (packet.info || (`[ MOBILE: ${packet.mobile || 'N/A'} ]\n[ NAME: ${packet.name || 'N/A'} ]\n[ ADDRESS: ${packet.address || 'N/A'} ]\n`))
-        : '';
+      // Combine all packet information across all multi-source intelligence feeds
+      const text = (result.packets || [])
+        .map(p => p.info || (`[ MOBILE: ${p.mobile || 'N/A'} ]\n[ NAME: ${p.name || 'N/A'} ]\n[ ADDRESS: ${p.address || 'N/A'} ]\n`))
+        .filter(Boolean)
+        .join('\n\n');
       // If this page index was visited before, show instantly and skip typing
       if (visitedPagesRef.current.has(currentPage)) {
         stopTyping();
