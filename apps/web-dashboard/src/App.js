@@ -524,11 +524,15 @@ function App() {
 
     for (; pageCount <= MAX_PREFETCH; pageCount += 1) {
       try {
+        const currentToken = token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('osint_token') : '');
         const res = await fetch(`${API_BASE}/api/telegram-page`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+          },
+          credentials: 'include'
+        });
 
         if (!res.ok) {
           // Stop prefetching if backend indicates no more pages
@@ -585,11 +589,15 @@ function App() {
     setLoadingNextPage(true);
     try {
       console.log('Requesting next page from backend (cache miss)...');
+      const currentToken = token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('osint_token') : '');
       const res = await fetch(`${API_BASE}/api/telegram-page`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+        },
+        credentials: 'include'
+      });
 
       console.log('Response status:', res.status);
       const data = await res.json();
@@ -650,10 +658,15 @@ function App() {
     // Otherwise, try calling the API for previous page
     setLoadingPrevPage(true);
     try {
+      const currentToken = token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('osint_token') : '');
       const res = await fetch(`${API_BASE}/api/telegram-prev-page`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+        },
+        credentials: 'include'
+      });
 
   const data = await res.json();
   if (!res.ok) {
