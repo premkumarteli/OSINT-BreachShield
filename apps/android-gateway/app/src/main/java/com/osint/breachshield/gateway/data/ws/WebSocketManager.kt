@@ -147,9 +147,10 @@ class WebSocketManager @Inject constructor(
     }
 
     fun sendSmsStatus(requestId: String, status: String) {
+        val deviceId = preferenceManager.getDeviceId()
         val update = SmsStatusUpdate(
             requestId = requestId,
-            deviceId = preferenceManager.getDeviceId(),
+            deviceId = deviceId,
             status = status,
             timestamp = System.currentTimeMillis()
         )
@@ -159,11 +160,16 @@ class WebSocketManager @Inject constructor(
         scope.launch {
             try {
                 val serverUrl = preferenceManager.getServerUrl() ?: return@launch
+                val token = preferenceManager.getGatewayToken()
                 val url = "${serverUrl.trimEnd('/')}/api/gateway/status"
                 val json = gson.toJson(update)
                 val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
                 val body = json.toRequestBody(mediaType)
-                val req = Request.Builder().url(url).post(body).build()
+                val reqBuilder = Request.Builder().url(url).post(body)
+                if (token != null) {
+                    reqBuilder.addHeader("Authorization", "Bearer $token")
+                }
+                val req = reqBuilder.build()
                 client.newCall(req).execute()
             } catch (e: Exception) {
                 Log.w(TAG, "HTTP status sync failed: ${e.message}")
@@ -176,10 +182,15 @@ class WebSocketManager @Inject constructor(
             try {
                 val serverUrl = preferenceManager.getServerUrl() ?: return@launch
                 val deviceId = preferenceManager.getDeviceId()
+                val token = preferenceManager.getGatewayToken()
                 val url = "${serverUrl.trimEnd('/')}/api/gateway/pending/$deviceId"
                 Log.d(TAG, "Fetching pending jobs from: $url")
 
-                val req = Request.Builder().url(url).get().build()
+                val reqBuilder = Request.Builder().url(url).get()
+                if (token != null) {
+                    reqBuilder.addHeader("Authorization", "Bearer $token")
+                }
+                val req = reqBuilder.build()
                 val resp = client.newCall(req).execute()
                 if (resp.isSuccessful) {
                     val respBody = resp.body?.string() ?: return@launch
@@ -215,8 +226,10 @@ class WebSocketManager @Inject constructor(
         heartbeatJob?.cancel()
         heartbeatJob = scope.launch {
             while (true) {
-                delay(30000)
-                webSocket?.send("ping")
+                delay(15000)
+                val deviceId = preferenceManager.getDeviceId()
+                val hb = mapOf("type" to "HEARTBEAT", "deviceId" to deviceId)
+                webSocket?.send(gson.toJson(hb))
             }
         }
     }
@@ -229,7 +242,7 @@ class WebSocketManager @Inject constructor(
         pollingJob?.cancel()
         pollingJob = scope.launch {
             while (true) {
-                delay(10000) // Safety net poll every 10s
+                delay(5000) // Safety net poll every 5s
                 fetchPendingJobs()
             }
         }

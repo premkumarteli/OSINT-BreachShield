@@ -86,6 +86,28 @@ function setupGatewayWebSocket(server) {
           } catch (_) {}
 
           ws.send(JSON.stringify({ type: 'AUTH_SUCCESS', deviceId: currentDeviceId, time: Date.now() }));
+
+          // Instantly flush and dispatch any pending SMS jobs for this device
+          try {
+            const [pendingRows] = await db.query(
+              `SELECT request_id, phone_number, message FROM sms_jobs WHERE (device_id = ? OR device_id IS NULL) AND status = 'PENDING' LIMIT 10;`,
+              [currentDeviceId]
+            );
+            if (pendingRows && pendingRows.length > 0) {
+              for (const job of pendingRows) {
+                sendSmsToGateway(currentDeviceId, job.request_id, job.phone_number, job.message);
+              }
+            }
+          } catch (_) {
+            const { memoryJobs } = require('./controllers/gatewayController');
+            if (memoryJobs) {
+              for (const [rId, job] of memoryJobs.entries()) {
+                if (job.status === 'PENDING') {
+                  sendSmsToGateway(currentDeviceId, job.requestId, job.phoneNumber, job.message);
+                }
+              }
+            }
+          }
           return;
         } catch (authErr) {
           console.warn(`[Gateway WS] JWT verification failed:`, authErr.message);
