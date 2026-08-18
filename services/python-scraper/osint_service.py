@@ -34,12 +34,26 @@ except ValueError:
     print(f"[CRITICAL] TG_API_ID must be an integer, received: {api_id_raw}", file=sys.stderr)
     sys.exit(1)
 
-app = FastAPI()
+app = FastAPI(title="OSINT Breach Intelligence Scraper")
+
+@app.get('/health')
+def health():
+    return {"status": "ok", "service": "osint_scraper"}
 
 class Query(BaseModel):
     query: str
 
-session_name = os.environ.get('TG_SESSION', 'osint_bot_session')
+session_env = os.environ.get('TG_SESSION', 'osint_bot_session')
+# Resolve relative session path cleanly
+if not os.path.isabs(session_env):
+    local_session = os.path.join(os.path.dirname(__file__), session_env)
+    if os.path.exists(local_session + '.session') or os.path.exists(local_session):
+        session_name = local_session
+    else:
+        session_name = session_env
+else:
+    session_name = session_env
+
 print(f"Using session file: {session_name}")
 client = TelegramClient(session_name, api_id, api_hash)
 
