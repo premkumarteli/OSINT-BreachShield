@@ -377,13 +377,13 @@ export default function ResultsPage() {
             const infoText = preferredPacket && typeof preferredPacket.info === 'string' ? preferredPacket.info : '';
             const isNoResult = /no\s*results?(\s*found)?/i.test(infoText || '');
 
-            const effectiveTotal = (typeof totalPages === 'number' && totalPages > 0)
+            const effectiveTotal = (typeof totalPages === 'number' && totalPages > 1)
               ? totalPages
-              : (result?.pagination?.total && typeof result.pagination.total === 'number')
+              : (result?.pagination?.total && typeof result.pagination.total === 'number' && result.pagination.total > 1)
                 ? result.pagination.total
-                : (breaches && breaches.length ? breaches.length : 1);
+                : 1;
 
-            const hasPagination = Number(effectiveTotal) > 1;
+            const hasPagination = effectiveTotal > 1;
 
             return (
               <div className="packet" key={0}>

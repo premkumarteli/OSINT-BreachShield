@@ -897,16 +897,14 @@ function App() {
           // Detect no-results scenario to hide Download button
           const infoText = preferredPacket && typeof preferredPacket.info === 'string' ? preferredPacket.info : '';
           const isNoResult = /no\s*results?(\s*found)?/i.test(infoText || '');
-          // Determine if pagination should be shown: only when total pages > 1
-          const effectiveTotal = (typeof totalPages === 'number' && totalPages > 0)
-            ? totalPages
-            : (result && result.pagination && typeof result.pagination.total === 'number')
-              ? result.pagination.total
-              : (breaches && breaches.length ? breaches.length : 1);
+          // Determine if pagination should be shown: ONLY when real total pages > 1
+          const effectiveTotal = (typeof totalPages === 'number' && totalPages > 1) 
+            ? totalPages 
+            : (result?.pagination?.total && typeof result.pagination.total === 'number' && result.pagination.total > 1)
+              ? result.pagination.total 
+              : 1;
           
-          // Only show pagination if we have more than 1 page AND the backend actually supports pagination
-          const hasPagination = Number(effectiveTotal) > 1 && 
-                               (result && result.pagination && result.pagination.total > 1);
+          const hasPagination = effectiveTotal > 1;
           return (
             <div className="packet" key={0}>
               {/* Exposure Score & Risk Classification Header */}
@@ -1000,18 +998,18 @@ function App() {
                   <button 
                     className="pagination-btn prev-btn"
                     onClick={handlePrevPage}
-                    disabled={loadingPrevPage}
+                    disabled={loadingPrevPage || currentPage <= 0}
                     aria-label="previous-page"
                   >
                     {loadingPrevPage ? 'Loading...' : '◀ Prev'}
                   </button>
                   <span className="page-indicator">
-                    Page {Math.max(1, currentPage + 1)} of {effectiveTotal}
+                    Page {currentPage + 1} of {effectiveTotal}
                   </span>
                   <button 
                     className="pagination-btn next-btn"
                     onClick={handleNextPage}
-                    disabled={loadingNextPage || (typeof effectiveTotal === 'number' && (currentPage + 1) >= effectiveTotal)}
+                    disabled={loadingNextPage || (currentPage + 1) >= effectiveTotal}
                     aria-label="next-page"
                   >
                     {loadingNextPage ? 'Loading...' : 'Next ▶'}
