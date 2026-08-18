@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import BreachTimeline from '../components/BreachTimeline';
+import { checkKAnonymity } from '../lib/kAnonymity';
 import bgVideo2 from '../bg2.mp4';
 import bgVideo3 from '../bg3.mp4';
 import '../App.css';
@@ -17,6 +18,7 @@ export default function ResultsPage() {
   const isVerified = Boolean(location.state?.verified || sessionStorage.getItem('osint_verified_email'));
 
   const [result, setResult] = useState(null);
+  const [kAnon, setKAnon] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showWaitHint, setShowWaitHint] = useState(false);
   const [viewMode, setViewMode] = useState('terminal');
@@ -148,6 +150,11 @@ export default function ResultsPage() {
 
     const executeSearch = async () => {
       try {
+        // Trigger parallel k-Anonymity zero-knowledge range query
+        checkKAnonymity(email).then((kData) => {
+          if (isMounted) setKAnon(kData);
+        }).catch(() => {});
+
         const res = await api.post('/api/search', {
           query: email,
           searchType: 'Email',
@@ -419,6 +426,44 @@ export default function ResultsPage() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Zero-Knowledge k-Anonymity Cryptographic Verification Card */}
+                {kAnon && (
+                  <div className="kanon-hud-card" style={{
+                    background: 'rgba(7, 10, 19, 0.75)',
+                    border: '1px solid rgba(0, 243, 255, 0.4)',
+                    borderRadius: '10px',
+                    padding: '12px 16px',
+                    marginBottom: '16px',
+                    fontFamily: 'monospace',
+                    fontSize: '0.85rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ color: '#00F3FF', fontWeight: 'bold' }}>
+                        🛡️ ZERO-KNOWLEDGE k-ANONYMITY PROOF
+                      </span>
+                      <span style={{
+                        color: kAnon.isPwned ? '#FF003C' : '#00FF66',
+                        background: kAnon.isPwned ? 'rgba(255, 0, 60, 0.15)' : 'rgba(0, 255, 102, 0.15)',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        border: `1px solid ${kAnon.isPwned ? '#FF003C' : '#00FF66'}`
+                      }}>
+                        {kAnon.isPwned ? `⚠️ COMPROMISED IN ${kAnon.exposureCount} BREACH(ES)` : '✅ ZERO DIRECT LEAKS IN PARTITION'}
+                      </span>
+                    </div>
+
+                    <div style={{ color: '#94A3B8', fontSize: '0.75rem', lineHeight: '1.4' }}>
+                      <div>SHA-256 Hash: <span style={{ color: '#E2E8F0' }}>{kAnon.fullHash ? `${kAnon.fullHash.slice(0, 16)}...${kAnon.fullHash.slice(-8)}` : 'N/A'}</span></div>
+                      <div>k-Anonymity Partition Prefix: <span style={{ color: '#00F3FF', fontWeight: 'bold' }}>{kAnon.prefix || 'N/A'}</span> (Queried 5-char hex bucket anonymously)</div>
+                      {kAnon.sources && kAnon.sources.length > 0 && (
+                        <div style={{ marginTop: '4px' }}>
+                          Breach Sources: <span style={{ color: '#F59E0B' }}>{kAnon.sources.join(', ')}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
