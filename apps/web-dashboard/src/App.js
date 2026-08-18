@@ -240,6 +240,7 @@ function App() {
 
   useEffect(() => {
     if (!result) return undefined;
+    try {
       // Combine all packet information across all multi-source intelligence feeds
       const text = (result.packets || [])
         .map(p => p.info || (`[ MOBILE: ${p.mobile || 'N/A'} ]\n[ NAME: ${p.name || 'N/A'} ]\n[ ADDRESS: ${p.address || 'N/A'} ]\n`))
@@ -324,6 +325,8 @@ function App() {
     try {
       setDownloading(true);
       const currentToken = token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('osint_token') : '');
+      const preferredPacket = (result?.packets && result.packets[1] !== undefined) ? result.packets[1] : result?.packets?.[0];
+      const content = terminalText || preferredPacket?.info || JSON.stringify(result || {});
       const res = await fetch(`${API_BASE}/api/download`, {
         method: 'POST',
         headers: {
