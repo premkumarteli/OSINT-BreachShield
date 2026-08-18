@@ -894,9 +894,9 @@ function App() {
           // Defensive: backend sometimes returns only packets[0]. Prefer packets[1] if present,
           // otherwise fall back to packets[0]. Build a single-element array so rendering stays simple.
           const preferredPacket = (result.packets[1] !== undefined) ? result.packets[1] : result.packets[0];
-          // Detect no-results scenario to hide Download button
+          // Detect no-results scenario to hide Download button and threat meter
           const infoText = preferredPacket && typeof preferredPacket.info === 'string' ? preferredPacket.info : '';
-          const isNoResult = /no\s*results?(\s*found)?/i.test(infoText || '');
+          const isNoResult = /no\s*results?(\s*found)?|no\s*public\s*breach|scan\s*complete/i.test(infoText || '');
           // Determine if pagination should be shown: ONLY when real total pages > 1
           const effectiveTotal = (typeof totalPages === 'number' && totalPages > 1) 
             ? totalPages 

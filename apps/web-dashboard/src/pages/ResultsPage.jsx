@@ -375,7 +375,7 @@ export default function ResultsPage() {
           {result && result.packets && (() => {
             const preferredPacket = (result.packets[1] !== undefined) ? result.packets[1] : result.packets[0];
             const infoText = preferredPacket && typeof preferredPacket.info === 'string' ? preferredPacket.info : '';
-            const isNoResult = /no\s*results?(\s*found)?/i.test(infoText || '');
+            const isNoResult = /no\s*results?(\s*found)?|no\s*public\s*breach|scan\s*complete/i.test(infoText || '');
 
             const effectiveTotal = (typeof totalPages === 'number' && totalPages > 1)
               ? totalPages

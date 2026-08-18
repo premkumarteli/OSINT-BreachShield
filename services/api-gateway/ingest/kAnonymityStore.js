@@ -17,8 +17,9 @@ function normalizeTarget(raw = '') {
   // Strip whitespace/dashes from phone numbers
   if (/^[\d+\s()-]+$/.test(str)) {
     let cleanPhone = str.replace(/[\s()-]/g, '');
-    if (cleanPhone.startsWith('91') && cleanPhone.length === 12) cleanPhone = '+' + cleanPhone;
-    else if (!cleanPhone.startsWith('+') && cleanPhone.length === 10) cleanPhone = '+91' + cleanPhone;
+    if (cleanPhone.startsWith('+')) return cleanPhone;
+    if (cleanPhone.startsWith('91') && cleanPhone.length >= 11) return '+' + cleanPhone;
+    if (cleanPhone.length >= 9 && cleanPhone.length <= 11) return '+91' + cleanPhone;
     return cleanPhone;
   }
   return str;

@@ -5,7 +5,7 @@
 
 function analyzeExposure(rawText = '', query = '') {
   const text = String(rawText || '');
-  if (!text.trim() || /no\s*results?(\s*found)?/i.test(text)) {
+  if (!text.trim() || /no\s*results?(\s*found)?|no\s*public\s*breach\s*records|scan\s*complete/i.test(text)) {
     return {
       score: 0,
       riskLevel: 'LOW',
