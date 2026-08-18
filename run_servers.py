@@ -135,12 +135,12 @@ def main():
     print(f"{CYAN}[LAUNCHER] Node Binary  :{RESET} {node_bin}")
     print(f"{CYAN}[LAUNCHER] NPM Binary   :{RESET} {npm_bin}\n")
 
-    start_telegram = "--telegram" in sys.argv or os.environ.get("ENABLE_TELEGRAM_SCRAPER") == "true"
+    start_telegram = "--no-telegram" not in sys.argv and os.environ.get("ENABLE_TELEGRAM_SCRAPER") != "false"
 
-    # 1. Start Python FastAPI Service (Optional: only if --telegram is passed)
+    # 1. Start Python FastAPI Live Threat Feed Service (Port 8001)
     if start_telegram:
         fastapi_cmd = [python_bin, "-m", "uvicorn", "osint_service:app", "--host", "127.0.0.1", "--port", "8001"]
-        print(f"{MAGENTA}[1/3] Starting Python FastAPI Service on port 8001...{RESET}")
+        print(f"{MAGENTA}[1/3] Starting Python Live Threat Feed Scraper on port 8001...{RESET}")
         p_fastapi = subprocess.Popen(
             fastapi_cmd,
             cwd=PYTHON_DIR,
@@ -153,7 +153,7 @@ def main():
         threading.Thread(target=stream_log, args=(p_fastapi, "FastAPI", MAGENTA), daemon=True).start()
         wait_for_service("http://127.0.0.1:8001/health", "FastAPI (8001)", max_retries=15)
     else:
-        print(f"{CYAN}[INFO] Telegram Bot Scraper is OFF (relying on Local k-Anonymity & 1,027-Breach Store). Pass --telegram to enable.{RESET}")
+        print(f"{CYAN}[INFO] Live Scraper is OFF (using Local k-Anonymity & 1,027-Breach Store).{RESET}")
 
     # 2. Start Node.js Express Backend (Port 5000)
     node_cmd = [node_bin, "index.js"]

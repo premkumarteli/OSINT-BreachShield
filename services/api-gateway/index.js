@@ -180,11 +180,12 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
     const localMatch = rangeMatches.find(m => m.suffix === suffix);
     const storedRecords = getStoredRecords(normalizedQuery);
 
-    // Source 2: Deep OSINT Scraper Service (Optional: enable via ENABLE_TELEGRAM_SCRAPER=true)
-    if (process.env.ENABLE_TELEGRAM_SCRAPER === 'true') {
+    // Source 2: Deep OSINT Threat Feed Service (Runs live search, then automatically stores to local database)
+    const enableScraper = process.env.ENABLE_TELEGRAM_SCRAPER !== 'false';
+    if (enableScraper) {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 12000);
+        const timeout = setTimeout(() => controller.abort(), 15000);
         const resp = await fetch(PYTHON_SERVICE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -196,8 +197,36 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
         botText = data.response || '';
         packets = data.packets || (botText ? [{ query, info: botText }] : []);
         pagination = data.pagination || null;
+
+        // Auto-Cache Live Found Breach directly to Local Database Store
+        if (botText && !/no\s*results?(\s*found)?/i.test(botText)) {
+          const { ingestRecord } = require('./ingest/kAnonymityStore');
+          const exposureCheck = analyzeExposure(botText, normalizedQuery);
+          const dataClasses = [];
+          if (exposureCheck.entities.phoneCount > 0) dataClasses.push('PHONE');
+          if (exposureCheck.entities.passwordCount > 0) dataClasses.push('PASSWORD_HASH');
+          if (exposureCheck.entities.emailCount > 0) dataClasses.push('EMAIL');
+          if (exposureCheck.entities.hasDocument) dataClasses.push('NATIONAL_ID');
+          if (exposureCheck.entities.hasAddress) dataClasses.push('PHYSICAL_ADDRESS');
+
+          ingestRecord(
+            normalizedQuery,
+            'Live_OSINT_Feed',
+            dataClasses.length > 0 ? dataClasses : ['PHONE', 'IDENTITY'],
+            new Date().getFullYear().toString(),
+            {
+              target: normalizedQuery,
+              source: 'Live_OSINT_Feed',
+              threat_details: botText,
+              exposure_score: exposureCheck.score,
+              threat_level: exposureCheck.riskLevel,
+              discovered_at: new Date().toISOString()
+            }
+          );
+          console.log(`[AUTO-INGEST] Real breach discovered on internet for ${normalizedQuery} -> Saved to local database!`);
+        }
       } catch (scraperErr) {
-        console.warn('[TELEGRAM SCRAPER] Scraper offline or timed out; relying on local breach store:', scraperErr.message);
+        console.warn('[LIVE OSINT] Scraper offline or timed out; relying on local breach store:', scraperErr.message);
       }
     }
 
