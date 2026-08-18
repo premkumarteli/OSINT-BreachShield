@@ -3,15 +3,36 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import asyncio
 import os
+import sys
 import re
-from fastapi import Response
-from telethon.tl.types import DocumentAttributeFilename
-import httpx
+from dotenv import load_dotenv
 
-api_id = int(os.environ.get('TG_API_ID', '28444606'))
-api_hash = os.environ.get('TG_API_HASH', '409411e66ccb00968523f446d30cded9')
-phone = os.environ.get('TG_PHONE', '+917337771210')
+# Load .env file from local directory or parents
+dotenv_paths = [
+    os.path.join(os.path.dirname(__file__), '.env'),
+    os.path.join(os.path.dirname(__file__), '..', 'api-gateway', '.env'),
+    os.path.join(os.path.dirname(__file__), '..', '..', '.env'),
+]
+for p in dotenv_paths:
+    if os.path.exists(p):
+        load_dotenv(p)
+        break
+
+api_id_raw = os.environ.get('TG_API_ID')
+api_hash = os.environ.get('TG_API_HASH')
+phone = os.environ.get('TG_PHONE')
 bot_username = os.environ.get('TG_BOT_USERNAME', 'The_Devil_OSINT_bot')
+
+if not api_id_raw or not api_hash or not phone:
+    print("[CRITICAL] Missing required Telegram credentials in environment variables.", file=sys.stderr)
+    print("Please set TG_API_ID, TG_API_HASH, and TG_PHONE in .env. Exiting.", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    api_id = int(api_id_raw)
+except ValueError:
+    print(f"[CRITICAL] TG_API_ID must be an integer, received: {api_id_raw}", file=sys.stderr)
+    sys.exit(1)
 
 app = FastAPI()
 

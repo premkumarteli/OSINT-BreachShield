@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const path = require('path');
 const { query } = require('../db');
+const { JWT_SECRET } = require('../../config/env');
 
 // Try native bcrypt; fallback to bcryptjs if native module is unavailable
 let bcrypt;
@@ -320,7 +321,7 @@ router.post('/verify-otp', async (req, res) => {
     // 5. Issue short-lived JWT token authorizing OSINT breach lookups
     const token = jwt.sign(
       { target: targetKey, email: targetKey, verified: true },
-      process.env.JWT_SECRET || 'dev_secret',
+      JWT_SECRET,
       { expiresIn: '1h' }
     );
 
@@ -380,7 +381,7 @@ function verifyOtpToken(req, res, next) {
       return res.status(403).json({ error: 'Verification required' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+    const decoded = jwt.verify(token, JWT_SECRET);
     if (!decoded || decoded.verified !== true) {
       return res.status(403).json({ error: 'Verification required' });
     }

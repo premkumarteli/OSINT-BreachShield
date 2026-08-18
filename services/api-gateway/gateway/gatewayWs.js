@@ -1,5 +1,7 @@
 const { WebSocketServer } = require('ws');
+const jwt = require('jsonwebtoken');
 const db = require('../auth/db');
+const { JWT_SECRET } = require('../config/env');
 
 // Map of active connected gateway sockets: deviceId -> ws
 const activeSockets = new Map();
@@ -22,23 +24,59 @@ function setupGatewayWebSocket(server) {
 
   wss.on('connection', (ws, req) => {
     let currentDeviceId = null;
+    let isAuthenticated = false;
     console.log('[Gateway WS] Phone WebSocket connected from:', req.socket.remoteAddress);
 
     ws.on('message', async (rawMsg) => {
       const msgStr = rawMsg.toString().trim();
 
-      // Handle heartbeat ping
+      // Handle raw ping if already authenticated
       if (msgStr === 'ping') {
-        ws.send('pong');
+        if (isAuthenticated) {
+          ws.send('pong');
+        } else {
+          ws.send(JSON.stringify({ type: 'AUTH_FAILED', error: 'Authentication required' }));
+          ws.close(1008, 'Authentication required');
+        }
         return;
       }
 
+      let data;
       try {
-        const data = JSON.parse(msgStr);
+        data = JSON.parse(msgStr);
+      } catch (err) {
+        console.warn('[Gateway WS] Non-JSON message received:', msgStr);
+        if (!isAuthenticated) {
+          ws.send(JSON.stringify({ type: 'AUTH_FAILED', error: 'Invalid message format' }));
+          ws.close(1008, 'Invalid message format');
+        }
+        return;
+      }
 
-        // 1. Authenticate / Handshake
-        if (data.deviceId) {
-          currentDeviceId = data.deviceId;
+      // 1. Initial Handshake & JWT Authentication
+      if (!isAuthenticated) {
+        const { deviceId, gatewayToken, token } = data;
+        const targetToken = gatewayToken || token;
+
+        if (!deviceId || !targetToken) {
+          console.warn('[Gateway WS] Missing deviceId or gatewayToken on initial message');
+          ws.send(JSON.stringify({ type: 'AUTH_FAILED', error: 'Missing deviceId or gatewayToken' }));
+          ws.close(1008, 'Missing credentials');
+          return;
+        }
+
+        try {
+          const decoded = jwt.verify(targetToken, JWT_SECRET);
+          if (!decoded || decoded.deviceId !== deviceId || decoded.role !== 'sms_gateway') {
+            console.warn(`[Gateway WS] Invalid token payload for device ${deviceId}`);
+            ws.send(JSON.stringify({ type: 'AUTH_FAILED', error: 'Invalid gateway credentials' }));
+            ws.close(1008, 'Invalid credentials');
+            return;
+          }
+
+          // Authentication successful
+          isAuthenticated = true;
+          currentDeviceId = deviceId;
           activeSockets.set(currentDeviceId, ws);
           console.log(`[Gateway WS] Authenticated Gateway Device: ${currentDeviceId}`);
 
@@ -49,46 +87,44 @@ function setupGatewayWebSocket(server) {
 
           ws.send(JSON.stringify({ type: 'AUTH_SUCCESS', deviceId: currentDeviceId, time: Date.now() }));
           return;
-        }
-
-        // 2. Heartbeat Payload
-        if (data.type === 'HEARTBEAT') {
-          if (data.deviceId) currentDeviceId = data.deviceId;
-          if (currentDeviceId) activeSockets.set(currentDeviceId, ws);
-          
-          try {
-            if (currentDeviceId) {
-              await db.query(`
-                UPDATE gateway_devices 
-                SET status = 'ONLINE', battery_level = ?, signal_strength = ?, last_seen = NOW() 
-                WHERE device_id = ?
-              `, [data.battery || null, data.signalStrength || null, currentDeviceId]);
-            }
-          } catch (_) {}
-
-          ws.send(JSON.stringify({ type: 'PONG', time: Date.now() }));
+        } catch (authErr) {
+          console.warn(`[Gateway WS] JWT verification failed:`, authErr.message);
+          ws.send(JSON.stringify({ type: 'AUTH_FAILED', error: 'Authentication failed', message: authErr.message }));
+          ws.close(1008, 'Authentication failed');
           return;
         }
+      }
 
-        // 3. SMS Delivery Status Update from Android
-        if (data.requestId && data.status) {
-          console.log(`[Gateway WS] SMS Status Callback from ${data.deviceId}: requestId=${data.requestId}, status=${data.status}`);
-          try {
-            const statusUpper = String(data.status).toUpperCase();
-            let updateSql = `UPDATE sms_jobs SET status = ?, updated_at = NOW()`;
-            if (statusUpper === 'SENT') updateSql += `, sent_at = NOW()`;
-            if (statusUpper === 'DELIVERED') updateSql += `, delivered_at = NOW()`;
-            updateSql += ` WHERE request_id = ?;`;
-            await db.query(updateSql, [statusUpper, data.requestId]);
-          } catch (_) {}
-        }
-      } catch (err) {
-        console.warn('[Gateway WS] Non-JSON message received:', msgStr);
+      // 2. Heartbeat Payload (Authenticated sockets only)
+      if (data.type === 'HEARTBEAT') {
+        try {
+          await db.query(`
+            UPDATE gateway_devices 
+            SET status = 'ONLINE', battery_level = ?, signal_strength = ?, last_seen = NOW() 
+            WHERE device_id = ?
+          `, [data.battery || null, data.signalStrength || null, currentDeviceId]);
+        } catch (_) {}
+
+        ws.send(JSON.stringify({ type: 'PONG', time: Date.now() }));
+        return;
+      }
+
+      // 3. SMS Delivery Status Update from Android
+      if (data.requestId && data.status) {
+        console.log(`[Gateway WS] SMS Status Callback from ${currentDeviceId}: requestId=${data.requestId}, status=${data.status}`);
+        try {
+          const statusUpper = String(data.status).toUpperCase();
+          let updateSql = `UPDATE sms_jobs SET status = ?, updated_at = NOW()`;
+          if (statusUpper === 'SENT') updateSql += `, sent_at = NOW()`;
+          if (statusUpper === 'DELIVERED') updateSql += `, delivered_at = NOW()`;
+          updateSql += ` WHERE request_id = ?;`;
+          await db.query(updateSql, [statusUpper, data.requestId]);
+        } catch (_) {}
       }
     });
 
     ws.on('close', async () => {
-      if (currentDeviceId) {
+      if (currentDeviceId && isAuthenticated) {
         activeSockets.delete(currentDeviceId);
         console.log(`[Gateway WS] Device ${currentDeviceId} disconnected`);
         try {

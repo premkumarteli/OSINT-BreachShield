@@ -1,13 +1,12 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const db = require('../../auth/db');
+const { JWT_SECRET } = require('../../config/env');
 
 // In-memory fallback stores in case MySQL is offline in local dev environment
 const memoryDevices = new Map();
 const memoryJobs = new Map();
 const memoryLogs = [];
-
-const JWT_SECRET = process.env.JWT_SECRET || 'breachshield_gateway_secret_2026';
 
 /**
  * 1. POST /api/gateway/register
@@ -370,10 +369,52 @@ async function getPendingJobs(req, res) {
   }
 }
 
+/**
+ * Middleware to verify gatewayToken JWT for device endpoints
+ */
+function verifyGatewayToken(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized: Gateway token required'
+      });
+    }
+
+    const token = authHeader.substring(7).trim();
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (!decoded || decoded.role !== 'sms_gateway' || !decoded.deviceId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden: Invalid gateway token role'
+      });
+    }
+
+    const targetDeviceId = req.params?.deviceId || req.body?.deviceId;
+    if (targetDeviceId && targetDeviceId !== decoded.deviceId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden: Token deviceId mismatch'
+      });
+    }
+
+    req.gatewayDevice = decoded;
+    return next();
+  } catch (err) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Invalid or expired gateway token'
+    });
+  }
+}
+
 module.exports = {
   registerDevice,
   getDevices,
   sendSms,
   updateStatus,
-  getPendingJobs
+  getPendingJobs,
+  verifyGatewayToken
 };

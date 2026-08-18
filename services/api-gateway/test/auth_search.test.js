@@ -220,6 +220,39 @@ describe('OSINT BreachShield Test Suite', () => {
       assert.match(json.error, /verification required/i);
     });
 
+    it('T1.4b: Searching a different target than verified token returns 403 Forbidden', async () => {
+      const verifiedEmail = makeEmail('verified_user');
+      const victimEmail = makeEmail('victim_user');
+
+      await fetch(`${BASE_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verifiedEmail })
+      });
+
+      const code = await waitForOtp(verifiedEmail);
+      const vRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verifiedEmail, otp: code })
+      });
+      const { token } = await vRes.json();
+
+      // Attempt to search victim's email using verifiedEmail's token
+      const hijackRes = await fetch(`${BASE_URL}/api/search`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ query: victimEmail, searchType: 'Email' })
+      });
+
+      assert.equal(hijackRes.status, 403, 'Searching a different target than verified token must return 403');
+      const hijackJson = await hijackRes.json();
+      assert.match(hijackJson.error, /You can only search the email\/phone you verified/i);
+    });
+
     it('T1.5: Legacy routes return 404 Not Found (Purged)', async () => {
       const legacyEndpoints = [
         { method: 'POST', url: '/api/auth/register' },
@@ -486,14 +519,40 @@ describe('OSINT BreachShield Test Suite', () => {
     });
 
     it('T3.3: POST /api/download generates and streams standalone HTML report', async () => {
+      const email = makeEmail('t3_download');
+      await fetch(`${BASE_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const code = await waitForOtp(email);
+      const verifyRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp: code })
+      });
+      const { token } = await verifyRes.json();
+
+      // 1. Unauthenticated download request must return 403
+      const unauthRes = await fetch(`${BASE_URL}/api/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: email, content: 'Test content' })
+      });
+      assert.equal(unauthRes.status, 403, 'Unauthenticated download must return 403');
+
+      // 2. Authenticated download request returns 200 with HTML report
       const payload = {
-        query: 'target_breach@example.com',
+        query: email,
         content: 'Password: leakedPass123\nPhone: 9988776655\nLeaked Database: TestDB'
       };
 
       const res = await fetch(`${BASE_URL}/api/download`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
 
@@ -506,7 +565,7 @@ describe('OSINT BreachShield Test Suite', () => {
 
       const html = await res.text();
       assert.ok(html.includes('[ OSINT THREAT INTELLIGENCE REPORT ]'), 'HTML report header present');
-      assert.ok(html.includes('target_breach@example.com'), 'Target query present in report');
+      assert.ok(html.includes(email), 'Target query present in report');
       assert.ok(html.includes('leakedPass123'), 'Extracted breach content present in report');
     });
   });
