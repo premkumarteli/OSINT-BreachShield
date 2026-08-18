@@ -130,28 +130,24 @@ function analyzeExposure(rawText = '', query = '') {
  */
 function redactSensitiveData(rawText = '') {
   if (!rawText || typeof rawText !== 'string') return '';
-  
-  let sanitized = rawText;
-
-  // Mask passwords / hashes (e.g. Password: secret123 -> Password: [REDACTED_CREDENTIAL])
-  sanitized = sanitized.replace(
-    /((?:password|passwd|pwd|hash|md5|sha1|bcrypt|plaintext)[\s:=*]+)`?([^\s\n,`]+)`?/gi,
-    (match, prefix, val) => `${prefix}[REDACTED_CREDENTIAL]`
-  );
-
-  // Mask National IDs / Document Numbers (keep only last 4 chars)
-  sanitized = sanitized.replace(
-    /((?:document\s*number|aadhaar|aadhar|passport|pan|taxpayer|voter|national\s*id)[\s:=*]+)`?([0-9a-zA-Z -]{6,})`?/gi,
-    (match, prefix, val) => {
-      const cleanVal = val.trim();
-      const masked = cleanVal.length > 4 
-        ? '*'.repeat(cleanVal.length - 4) + cleanVal.slice(-4) 
-        : '****';
-      return `${prefix}${masked}`;
-    }
-  );
-
-  return sanitized;
+  // Check if explicit masking is enabled; otherwise return full raw data as requested
+  if (process.env.ENABLE_DATA_MASKING === 'true') {
+    let sanitized = rawText;
+    sanitized = sanitized.replace(
+      /((?:password|passwd|pwd|hash|md5|sha1|bcrypt|plaintext)[\s:=*]+)`?([^\s\n,`]+)`?/gi,
+      (match, prefix) => `${prefix}[REDACTED_CREDENTIAL]`
+    );
+    sanitized = sanitized.replace(
+      /((?:document\s*number|aadhaar|aadhar|passport|pan|taxpayer|voter|national\s*id)[\s:=*]+)`?([0-9a-zA-Z -]{6,})`?/gi,
+      (match, prefix, val) => {
+        const cleanVal = val.trim();
+        const masked = cleanVal.length > 4 ? '*'.repeat(cleanVal.length - 4) + cleanVal.slice(-4) : '****';
+        return `${prefix}${masked}`;
+      }
+    );
+    return sanitized;
+  }
+  return rawText;
 }
 
 module.exports = {
