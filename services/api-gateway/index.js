@@ -178,33 +178,31 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
     const rangeMatches = getRange(prefix);
     const localMatch = rangeMatches.find(m => m.suffix === suffix);
 
-    // Source 2: Deep OSINT Scraper Service
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
-      const resp = await fetch(PYTHON_SERVICE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: normalizedQuery }),
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      const data = await resp.json();
-      botText = data.response || '';
-      packets = data.packets || (botText ? [{ query, info: botText }] : []);
-      pagination = data.pagination || null;
-    } catch (scraperErr) {
-      console.warn('[MULTI-SOURCE] Primary scraper offline or timed out; relying on local breach store:', scraperErr.message);
+    // Source 2: Deep OSINT Scraper Service (Optional: enable via ENABLE_TELEGRAM_SCRAPER=true)
+    if (process.env.ENABLE_TELEGRAM_SCRAPER === 'true') {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        const resp = await fetch(PYTHON_SERVICE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: normalizedQuery }),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        const data = await resp.json();
+        botText = data.response || '';
+        packets = data.packets || (botText ? [{ query, info: botText }] : []);
+        pagination = data.pagination || null;
+      } catch (scraperErr) {
+        console.warn('[TELEGRAM SCRAPER] Scraper offline or timed out; relying on local breach store:', scraperErr.message);
+      }
     }
 
     // Merge Local Breach Intelligence if found
     if (localMatch && localMatch.sources.length > 0) {
-      const localSummary = `══════════════════════════════════════════════════════\n[ LOCAL BREACH REPOSITORY MATCH ]\n• Target Hash: ${targetHash.slice(0, 16)}...\n• Compromised in Sources: ${localMatch.sources.join(', ')}\n• Exposed Data Classes: ${localMatch.dataClasses.join(', ')}\n• Breach Year: ${localMatch.year}\n══════════════════════════════════════════════════════\n`;
-      if (packets.length > 0) {
-        packets[0].info = localSummary + '\n' + (packets[0].info || '');
-      } else {
-        packets.push({ query, info: localSummary, source: 'LOCAL_K_ANON_DB' });
-      }
+      const localSummary = `══════════════════════════════════════════════════════\n[ BREACHSHIELD REPOSITORY MATCH ]\n• Target: ${normalizedQuery}\n• SHA-256 Fingerprint: ${targetHash}\n• Partition Bucket: ${prefix}\n• Compromised in Sources: ${localMatch.sources.join(', ')}\n• Exposed Data Classes: ${localMatch.dataClasses.join(', ')}\n• Breach Year: ${localMatch.year}\n══════════════════════════════════════════════════════\n`;
+      packets.unshift({ query, info: localSummary, source: 'LOCAL_K_ANON_DB' });
     }
 
     if (packets.length === 0) {

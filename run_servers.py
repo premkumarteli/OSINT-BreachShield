@@ -135,19 +135,25 @@ def main():
     print(f"{CYAN}[LAUNCHER] Node Binary  :{RESET} {node_bin}")
     print(f"{CYAN}[LAUNCHER] NPM Binary   :{RESET} {npm_bin}\n")
 
-    # 1. Start Python FastAPI Service (Port 8001)
-    fastapi_cmd = [python_bin, "-m", "uvicorn", "osint_service:app", "--host", "127.0.0.1", "--port", "8001"]
-    print(f"{MAGENTA}[1/3] Starting Python FastAPI Service on port 8001...{RESET}")
-    p_fastapi = subprocess.Popen(
-        fastapi_cmd,
-        cwd=PYTHON_DIR,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1
-    )
-    processes.append((p_fastapi, "FastAPI (8001)"))
-    threading.Thread(target=stream_log, args=(p_fastapi, "FastAPI", MAGENTA), daemon=True).start()
+    start_telegram = "--telegram" in sys.argv or os.environ.get("ENABLE_TELEGRAM_SCRAPER") == "true"
+
+    # 1. Start Python FastAPI Service (Optional: only if --telegram is passed)
+    if start_telegram:
+        fastapi_cmd = [python_bin, "-m", "uvicorn", "osint_service:app", "--host", "127.0.0.1", "--port", "8001"]
+        print(f"{MAGENTA}[1/3] Starting Python FastAPI Service on port 8001...{RESET}")
+        p_fastapi = subprocess.Popen(
+            fastapi_cmd,
+            cwd=PYTHON_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+        processes.append((p_fastapi, "FastAPI (8001)"))
+        threading.Thread(target=stream_log, args=(p_fastapi, "FastAPI", MAGENTA), daemon=True).start()
+        wait_for_service("http://127.0.0.1:8001/health", "FastAPI (8001)", max_retries=15)
+    else:
+        print(f"{CYAN}[INFO] Telegram Bot Scraper is OFF (relying on Local k-Anonymity & 1,027-Breach Store). Pass --telegram to enable.{RESET}")
 
     # 2. Start Node.js Express Backend (Port 5000)
     node_cmd = [node_bin, "index.js"]
@@ -163,8 +169,7 @@ def main():
     processes.append((p_node, "Node.js (5000)"))
     threading.Thread(target=stream_log, args=(p_node, "NodeJS ", CYAN), daemon=True).start()
 
-    # Wait for backend services to become healthy
-    wait_for_service("http://127.0.0.1:8001/health", "FastAPI (8001)", max_retries=15)
+    # Wait for Node.js backend to become healthy
     wait_for_service("http://localhost:5000/health", "Node.js (5000)", max_retries=15)
 
     # 3. Start React Frontend (Port 3000)
