@@ -72,6 +72,83 @@ app.get('/api/auth/ping', (req, res) => {
   res.json({ ok: true, origin: req.headers.origin || null });
 });
 
+// ---------------- k-Anonymity & Breach Catalog API Layer ----------------
+const path = require('path');
+const fs = require('fs');
+const { getRange, ingestBatch } = require('./ingest/kAnonymityStore');
+
+const CATALOG_FILE = path.join(__dirname, 'data', 'catalog', 'breaches.json');
+const CATALOG_INDEX_FILE = path.join(__dirname, 'data', 'catalog', 'breaches_index.json');
+
+// 1. GET /api/v1/range/:prefix (k-Anonymity Zero-Knowledge Range Query)
+app.get('/api/v1/range/:prefix', (req, res) => {
+  try {
+    const prefix = req.params.prefix;
+    if (!prefix || !/^[0-9A-Fa-f]{5}$/.test(prefix)) {
+      return res.status(400).json({ error: 'Prefix must be exactly a 5-character hexadecimal string.' });
+    }
+    const results = getRange(prefix);
+    // Return standard formatted plaintext stream for HIBP compatibility or JSON
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.json({ success: true, prefix: prefix.toUpperCase(), count: results.length, matches: results });
+    }
+    // Return line-delimited suffix text: SUFFIX:COUNT:SOURCES:CLASSES:YEAR
+    const textStream = results.map(r => `${r.suffix}:${r.count}:${r.sources.join(',')}:${r.dataClasses.join(',')}:${r.year}`).join('\n');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.send(textStream);
+  } catch (err) {
+    console.error('Range query error:', err.message);
+    res.status(500).json({ error: 'Failed to query hash range' });
+  }
+});
+
+// 2. GET /api/v1/breaches (Full Catalog or Domain Filter)
+app.get('/api/v1/breaches', (req, res) => {
+  try {
+    if (!fs.existsSync(CATALOG_FILE)) {
+      return res.json({ success: true, count: 0, breaches: [] });
+    }
+    const catalog = JSON.parse(fs.readFileSync(CATALOG_FILE, 'utf8') || '[]');
+    const domainFilter = req.query.domain ? String(req.query.domain).toLowerCase() : null;
+    const filtered = domainFilter ? catalog.filter(b => (b.domain || '').toLowerCase().includes(domainFilter)) : catalog;
+    res.json({ success: true, count: filtered.length, breaches: filtered });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load breach catalog' });
+  }
+});
+
+// 3. GET /api/v1/breaches/:name (Specific Breach Details)
+app.get('/api/v1/breaches/:name', (req, res) => {
+  try {
+    if (!fs.existsSync(CATALOG_INDEX_FILE)) {
+      return res.status(404).json({ error: 'Breach index not found' });
+    }
+    const index = JSON.parse(fs.readFileSync(CATALOG_INDEX_FILE, 'utf8') || '{}');
+    const targetName = String(req.params.name).toLowerCase();
+    const breach = index.byName ? index.byName[targetName] : null;
+    if (!breach) {
+      return res.status(404).json({ error: 'Breach record not found in catalog' });
+    }
+    res.json({ success: true, breach });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve breach detail' });
+  }
+});
+
+// 4. POST /api/v1/ingest (Ingestion Node API)
+app.post('/api/v1/ingest', (req, res) => {
+  try {
+    const { records = [] } = req.body || {};
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'records array is required' });
+    }
+    const result = ingestBatch(records);
+    res.json({ success: true, ingested: result.ingested });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---------------- Intelligence & Analytics Layer ----------------
 const { analyzeExposure, redactSensitiveData } = require('./analytics/riskEngine');
 const { parseBreachTimeline } = require('./analytics/timelineParser');
