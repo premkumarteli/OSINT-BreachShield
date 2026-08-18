@@ -156,8 +156,10 @@ const { parseBreachTimeline } = require('./analytics/timelineParser');
 // Endpoint for OSINT search with analytics - STRICTLY GUARDED by verifyOtpToken middleware
 app.post('/api/search', verifyOtpToken, async (req, res) => {
   const { query, searchType } = req.body || {};
-  const normalizedQuery = String(query || '').trim().toLowerCase();
-  const verifiedTarget = String(req.verifiedUser?.target || req.verifiedUser?.email || '').trim().toLowerCase();
+  const { normalizeTarget, hashTarget, getRange, getStoredRecords } = require('./ingest/kAnonymityStore');
+
+  const normalizedQuery = normalizeTarget(query);
+  const verifiedTarget = normalizeTarget(req.verifiedUser?.target || req.verifiedUser?.email);
 
   if (!normalizedQuery || normalizedQuery !== verifiedTarget) {
     return res.status(403).json({
@@ -171,7 +173,6 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
     let pagination = null;
 
     // Source 1: Local k-Anonymity & Document Store Check
-    const { hashTarget, getRange, getStoredRecords } = require('./ingest/kAnonymityStore');
     const targetHash = hashTarget(normalizedQuery);
     const prefix = targetHash.slice(0, 5);
     const suffix = targetHash.slice(5);
@@ -381,7 +382,7 @@ app.post('/api/download', verifyOtpToken, async (req, res) => {
 <body>
   <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-      <h1>[ OSINT BREACH INTELLIGENCE REPORT ]</h1>
+      <h1>[ OSINT THREAT INTELLIGENCE REPORT ]</h1>
       <span class="badge">CONFIRMED EXPOSURE</span>
     </div>
     <div class="meta-row">
