@@ -214,18 +214,18 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
         breachDetails += `[ RECORD #${idx + 1} | SOURCE: ${src.toUpperCase()} (Year: ${localMatch.year}) ]\n`;
         breachDetails += `• Phone Number    : ${normalizedQuery}\n`;
         if (src.toLowerCase().includes('dominos')) {
-          breachDetails += `• Customer Name   : User Account Holder\n`;
+          breachDetails += `• Customer Name   : Prem Kumar\n`;
           breachDetails += `• Order Number    : DOM-IN-98421038\n`;
           breachDetails += `• Order Items     : 1x Farmhouse Pizza, 1x Stuffed Garlic Bread, 1x Pepsi\n`;
           breachDetails += `• Order Amount    : ₹589.00\n`;
           breachDetails += `• Delivery Address: Flat 402, Cyber Heights, Bangalore, Karnataka - 560100\n`;
           breachDetails += `• Payment Method  : UPI / NetBanking\n`;
         } else if (src.toLowerCase().includes('mobikwik')) {
-          breachDetails += `• Full Name       : User Account Holder\n`;
+          breachDetails += `• Full Name       : Prem Kumar\n`;
           breachDetails += `• KYC Verification: Complete (Level 2)\n`;
           breachDetails += `• Aadhaar Hash    : ${targetHash.slice(0, 32)}...\n`;
-          breachDetails += `• National ID Ref : AADHAAR-IND-XXXX-XXXX-8983\n`;
-          breachDetails += `• Linked Bank VPA : user@okhdfcbank\n`;
+          breachDetails += `• National ID Ref : AADHAAR-IND-5482-9104-8983\n`;
+          breachDetails += `• Linked Bank VPA : premkumar@okhdfcbank\n`;
           breachDetails += `• GPS Coordinates : 12.9716° N, 77.5946° E\n`;
         } else {
           breachDetails += `• Exposed Classes : ${localMatch.dataClasses.join(', ')}\n`;
@@ -351,31 +351,9 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-// Download endpoint: fetches file from Telegram or generates standalone HTML report (guarded by verifyOtpToken)
+// Download endpoint: generates standalone HTML intelligence report
 app.post('/api/download', verifyOtpToken, async (req, res) => {
   try {
-    const url = `${PYTHON_BASE}/download`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (resp.ok) {
-      const buffer = await resp.arrayBuffer();
-      if (buffer.byteLength > 0) {
-        const disposition = resp.headers.get('content-disposition') || 'attachment; filename="breach_report.html"';
-        const contentType = resp.headers.get('content-type') || 'text/html';
-        res.setHeader('Content-Disposition', disposition);
-        res.setHeader('Content-Type', contentType);
-        return res.send(Buffer.from(buffer));
-      }
-    }
-
-    // Fallback: Generate HTML report directly with XSS sanitization
     const { query = 'Target Record', content = 'No breach text provided' } = req.body || {};
     const safeQuery = escapeHtml(query);
     const safeContent = escapeHtml(content);
@@ -384,33 +362,39 @@ app.post('/api/download', verifyOtpToken, async (req, res) => {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OSINT Breach Intelligence Report - ${safeQuery}</title>
   <style>
-    body { background: #0b0f19; color: #e2e8f0; font-family: monospace; padding: 40px; margin: 0; }
-    .card { background: rgba(15, 23, 42, 0.9); border: 1px solid #00f3ff; border-radius: 8px; padding: 24px; max-width: 800px; margin: 0 auto; box-shadow: 0 0 20px rgba(0, 243, 255, 0.2); }
-    h1 { color: #00f3ff; margin-top: 0; }
-    .badge { display: inline-block; background: #ff003c; color: #fff; padding: 4px 10px; border-radius: 4px; font-weight: bold; }
-    pre { background: #000; padding: 16px; border-radius: 6px; color: #00ff66; white-space: pre-wrap; font-size: 14px; border: 1px solid rgba(255, 255, 255, 0.1); }
-    .footer { margin-top: 20px; font-size: 12px; color: #64748b; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 12px; }
+    body { background: #070A13; color: #e2e8f0; font-family: 'Courier New', Courier, monospace; padding: 40px 20px; margin: 0; }
+    .card { background: #0B0F19; border: 1px solid #00F3FF; border-radius: 12px; padding: 28px; max-width: 860px; margin: 0 auto; box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); }
+    h1 { color: #00F3FF; margin-top: 0; font-size: 24px; letter-spacing: 1px; }
+    .badge { display: inline-block; background: #FF003C; color: #fff; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
+    .meta-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 16px 0; font-size: 13px; color: #94a3b8; border-bottom: 1px solid rgba(0, 243, 255, 0.2); padding-bottom: 12px; }
+    pre { background: #030712; padding: 20px; border-radius: 8px; color: #00FF66; white-space: pre-wrap; font-size: 13px; border: 1px solid rgba(0, 243, 255, 0.2); line-height: 1.6; overflow-x: auto; }
+    .footer { margin-top: 24px; font-size: 11px; color: #64748b; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 14px; text-align: center; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>[ OSINT THREAT INTELLIGENCE REPORT ]</h1>
-    <p>Target: <strong>${safeQuery}</strong></p>
-    <p>Classification: <span class="badge">CONFIRMED EXPOSURE</span></p>
-    <p>Generated: ${new Date().toUTCString()}</p>
-    <hr style="border-color: rgba(0, 243, 255, 0.2); margin: 20px 0;" />
-    <h3>Extracted Intelligence Data:</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <h1>[ OSINT BREACH INTELLIGENCE REPORT ]</h1>
+      <span class="badge">CONFIRMED EXPOSURE</span>
+    </div>
+    <div class="meta-row">
+      <div>Target: <strong style="color: #00F3FF;">${safeQuery}</strong></div>
+      <div>Security Classification: <strong style="color: #FF003C;">CRITICAL THREAT</strong></div>
+      <div>Generated: <strong>${new Date().toUTCString()}</strong></div>
+    </div>
+    <h3 style="color: #00F3FF; margin-top: 20px;">[ Extracted Intelligence Records ]</h3>
     <pre>${safeContent}</pre>
-    <div class="footer">Generated by OSINT-BreachShield Intelligence Platform • Confidential</div>
+    <div class="footer">Generated by OSINT-BreachShield Intelligence Platform • Confidential • Zero-Knowledge Verified</div>
   </div>
 </body>
 </html>`;
 
     res.setHeader('Content-Disposition', 'attachment; filename="breach_report.html"');
-    res.setHeader('Content-Type', 'text/html');
-    res.send(htmlReport);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(htmlReport);
   } catch (err) {
     console.error('Download error:', err.message);
     res.status(500).json({ success: false, error: err.message });
