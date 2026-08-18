@@ -73,7 +73,7 @@ app.get('/api/auth/ping', (req, res) => {
 });
 
 // ---------------- Intelligence & Analytics Layer ----------------
-const { analyzeExposure } = require('./analytics/riskEngine');
+const { analyzeExposure, redactSensitiveData } = require('./analytics/riskEngine');
 const { parseBreachTimeline } = require('./analytics/timelineParser');
 
 // Endpoint for OSINT search with analytics - STRICTLY GUARDED by verifyOtpToken middleware
@@ -103,15 +103,21 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
     const packets = data.packets || (botText ? [{ query, info: botText }] : []);
     const pagination = data.pagination || null;
 
-    // Run Analytics & Timeline Parsers
+    // Run Analytics & Timeline Parsers on raw text to calculate full risk profile
     const fullText = packets.map(p => p.info || '').join('\n\n');
     const exposure = analyzeExposure(fullText, query);
     const timeline = parseBreachTimeline(fullText);
 
+    // Sanitize and redact plaintext credentials before delivering to frontend
+    const sanitizedPackets = packets.map(p => ({
+      ...p,
+      info: redactSensitiveData(p.info || '')
+    }));
+
     res.json({
       success: true,
       data: {
-        packets,
+        packets: sanitizedPackets,
         pagination,
         analytics: {
           exposure,
@@ -155,7 +161,11 @@ app.post('/api/telegram-page', verifyOtpToken, async (req, res) => {
     const botText = (data && data.response) || '';
     const packets = (data && data.packets) || (botText ? [{ info: botText }] : []);
     const pagination = (data && data.pagination) || null;
-    res.json({ success: true, data: packets.length ? { packets, pagination } : null });
+    const sanitizedPackets = packets.map(p => ({
+      ...p,
+      info: redactSensitiveData(p.info || '')
+    }));
+    res.json({ success: true, data: sanitizedPackets.length ? { packets: sanitizedPackets, pagination } : null });
   } catch (err) {
     console.error('Telegram page error:', err.message);
     res.status(500).json({ success: false, error: 'Server is down, try after sometime.' });
@@ -182,7 +192,11 @@ app.post('/api/telegram-prev-page', verifyOtpToken, async (req, res) => {
     const botText = (data && data.response) || '';
     const packets = (data && data.packets) || (botText ? [{ info: botText }] : []);
     const pagination = (data && data.pagination) || null;
-    res.json({ success: true, data: packets.length ? { packets, pagination } : null });
+    const sanitizedPackets = packets.map(p => ({
+      ...p,
+      info: redactSensitiveData(p.info || '')
+    }));
+    res.json({ success: true, data: sanitizedPackets.length ? { packets: sanitizedPackets, pagination } : null });
   } catch (err) {
     console.error('Telegram prev page error:', err.message);
     res.status(500).json({ success: false, error: 'Server is down, try after sometime.' });

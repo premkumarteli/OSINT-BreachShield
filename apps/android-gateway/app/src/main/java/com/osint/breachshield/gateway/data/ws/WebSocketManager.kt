@@ -93,6 +93,18 @@ class WebSocketManager @Inject constructor(
                     return
                 }
                 try {
+                    if (trimmedText.contains("\"AUTH_SUCCESS\"")) {
+                        Log.i(TAG, "Gateway successfully authenticated with server.")
+                        _connectionStatus.value = ConnectionStatus.CONNECTED
+                        return
+                    }
+                    if (trimmedText.contains("\"AUTH_FAILED\"")) {
+                        Log.e(TAG, "Gateway authentication failed: $trimmedText")
+                        _connectionStatus.value = ConnectionStatus.DISCONNECTED
+                        stopHeartbeat()
+                        return
+                    }
+
                     val command = gson.fromJson(trimmedText, SmsCommand::class.java)
                     if (command != null && (command.action == "send_sms" || command.type == "SEND_SMS")) {
                         // Validate required fields

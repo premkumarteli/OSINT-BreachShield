@@ -195,6 +195,17 @@ export default function ResultsPage() {
         setShowWaitHint(false);
 
         if (err.response?.status === 403) {
+          const errMsg = err.response?.data?.error || 'Verification required';
+          if (errMsg.includes('only search the email/phone you verified')) {
+            const errorResult = { error: `⛔ Access Denied: ${errMsg}` };
+            setBreaches([errorResult]);
+            setCurrentPage(0);
+            setResult(errorResult);
+            setLoading(false);
+            setUseBg3(true);
+            setUseBg2(false);
+            return;
+          }
           sessionStorage.removeItem('osint_verified_email');
           navigate('/verify-otp', { state: { email } });
           return;
@@ -254,6 +265,7 @@ export default function ResultsPage() {
       const res = await fetch(`${API_BASE}/api/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ query: email, content })
       });
 
