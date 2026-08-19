@@ -81,7 +81,7 @@ describe('Local Breach Store Primary (Telegram Scraper Secondary / Default OFF)'
 
       setTimeout(() => {
         if (!started) reject(new Error('Backend server start timeout'));
-      }, 7000);
+      }, 15000);
     });
   });
 

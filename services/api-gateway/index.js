@@ -185,11 +185,12 @@ app.post('/api/v1/ingest', requireAdminToken, ingestLimiter, (req, res) => {
 // ---------------- Intelligence & Analytics Layer ----------------
 const { analyzeExposure, redactSensitiveData } = require('./analytics/riskEngine');
 const { parseBreachTimeline } = require('./analytics/timelineParser');
+const { getEnabledSources } = require('./sources/registry');
 
 // Endpoint for OSINT search with analytics - STRICTLY GUARDED by verifyOtpToken middleware
 app.post('/api/search', verifyOtpToken, async (req, res) => {
   const { query, searchType } = req.body || {};
-  const { normalizeTarget, hashTarget, getRange, getStoredRecords } = require('./ingest/kAnonymityStore');
+  const { normalizeTarget, hashTarget } = require('./ingest/kAnonymityStore');
 
   const normalizedQuery = normalizeTarget(query);
   const verifiedTarget = normalizeTarget(req.verifiedUser?.target || req.verifiedUser?.email);
@@ -201,102 +202,62 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
   }
 
   try {
-    let botText = '';
-    let packets = [];
+    const targetHash = hashTarget(normalizedQuery);
+    const packets = [];
     let pagination = null;
 
-    // Source 1 (PRIMARY): Local k-Anonymity & Document Store Check
-    const targetHash = hashTarget(normalizedQuery);
-    const prefix = targetHash.slice(0, 5);
-    const suffix = targetHash.slice(5);
-    const rangeMatches = getRange(prefix);
-    const localMatch = rangeMatches.find(m => m.suffix === suffix);
-    const storedRecords = getStoredRecords(normalizedQuery);
+    // 1. Fetch enabled sources via registry and execute concurrently
+    const sources = getEnabledSources({ pythonServiceUrl: PYTHON_SERVICE_URL });
+    const results = await Promise.allSettled(sources.map(s => s.search(normalizedQuery, targetHash)));
 
-    // Merge Local Breach Intelligence if found with breach metadata breakdown
-    if ((localMatch && localMatch.sources.length > 0) || storedRecords.length > 0) {
-      const matchSources = localMatch ? localMatch.sources : storedRecords.map(r => r.source);
-      const matchClasses = localMatch ? localMatch.dataClasses : Array.from(new Set(storedRecords.flatMap(r => r.dataClasses || [])));
-      const matchYear = (localMatch && localMatch.year) || storedRecords[0]?.year || '2024';
+    const localOrCatalogHits = [];
+    const liveScraperPackets = [];
+
+    // 2. Merge all hits across sources
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value) {
+        const { hits = [], packets: srcPackets = [], pagination: srcPag } = result.value;
+        for (const hit of hits) {
+          if (hit.sourceType === 'LOCAL' || hit.sourceType === 'CATALOG') {
+            localOrCatalogHits.push(hit);
+          }
+        }
+        if (srcPackets.length > 0) {
+          liveScraperPackets.push(...srcPackets);
+        }
+        if (srcPag) {
+          pagination = srcPag;
+        }
+      }
+    }
+
+    // 3. Render Local & Catalog Breach Intelligence repository block if hits exist
+    if (localOrCatalogHits.length > 0) {
+      const allDataClasses = Array.from(new Set(localOrCatalogHits.flatMap(h => h.dataClasses || [])));
+      const prefix = targetHash.slice(0, 5);
 
       let breachDetails = `══════════════════════════════════════════════════════\n` +
         `[ BREACHSHIELD RAW INTELLIGENCE REPOSITORY ]\n` +
         `• Target Identifier: ${normalizedQuery}\n` +
         `• SHA-256 Fingerprint: ${targetHash}\n` +
         `• Partition Bucket: ${prefix}\n` +
-        `• Compromised Records: ${Math.max(matchSources.length, storedRecords.length)}\n` +
-        `• Exposed Data Classes: ${matchClasses.join(', ')}\n` +
+        `• Compromised Records: ${localOrCatalogHits.length}\n` +
+        `• Exposed Data Classes: ${allDataClasses.join(', ')}\n` +
         `══════════════════════════════════════════════════════\n\n`;
 
-      if (storedRecords.length > 0) {
-        storedRecords.forEach((rec, idx) => {
-          breachDetails += `[ RECORD #${idx + 1} | SOURCE: ${String(rec.source || 'BREACH_ARCHIVE').toUpperCase()} (Year: ${rec.year || matchYear}) ]\n`;
-          breachDetails += `• Target          : ${normalizedQuery}\n`;
-          breachDetails += `• Exposed Classes : ${(rec.dataClasses && rec.dataClasses.length ? rec.dataClasses : matchClasses).join(', ')}\n`;
-          breachDetails += `• Discovery Year  : ${rec.year || matchYear}\n\n`;
-        });
-      } else if (localMatch) {
-        localMatch.sources.forEach((src, idx) => {
-          breachDetails += `[ RECORD #${idx + 1} | SOURCE: ${src.toUpperCase()} (Year: ${localMatch.year}) ]\n`;
-          breachDetails += `• Target Phone    : ${normalizedQuery}\n`;
-          breachDetails += `• Exposed Classes : ${localMatch.dataClasses.join(', ')}\n`;
-          breachDetails += `• Discovery Year  : ${localMatch.year}\n\n`;
-        });
-      }
+      localOrCatalogHits.forEach((rec, idx) => {
+        breachDetails += `[ RECORD #${idx + 1} | SOURCE: ${String(rec.source || 'BREACH_ARCHIVE').toUpperCase()} (Year: ${rec.year || '2024'}) ]\n`;
+        breachDetails += `• Target          : ${normalizedQuery}\n`;
+        breachDetails += `• Exposed Classes : ${(rec.dataClasses && rec.dataClasses.length ? rec.dataClasses : allDataClasses).join(', ')}\n`;
+        breachDetails += `• Discovery Year  : ${rec.year || '2024'}\n\n`;
+      });
 
       packets.push({ query, info: breachDetails.trim(), source: 'LOCAL_K_ANON_DB' });
     }
 
-    // Source 2 (SECONDARY / OPT-IN): Deep OSINT Threat Feed Service (Off by default)
-    const enableScraper = process.env.ENABLE_TELEGRAM_SCRAPER === 'true';
-    if (enableScraper) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        const resp = await fetch(PYTHON_SERVICE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: normalizedQuery }),
-          signal: controller.signal
-        });
-        clearTimeout(timeout);
-        const data = await resp.json();
-        botText = data.response || '';
-        const scraperPackets = data.packets || (botText ? [{ query, info: botText }] : []);
-        pagination = data.pagination || null;
-        if (scraperPackets.length > 0) {
-          packets.push(...scraperPackets);
-        }
-
-        // Auto-Cache Live Found Breach directly to Local Database Store
-        if (botText && !/no\s*results?(\s*found)?/i.test(botText)) {
-          const { ingestRecord } = require('./ingest/kAnonymityStore');
-          const exposureCheck = analyzeExposure(botText, normalizedQuery);
-          const dataClasses = [];
-          if (exposureCheck.entities.phoneCount > 0) dataClasses.push('PHONE');
-          if (exposureCheck.entities.passwordCount > 0) dataClasses.push('PASSWORD_HASH');
-          if (exposureCheck.entities.emailCount > 0) dataClasses.push('EMAIL');
-          if (exposureCheck.entities.hasDocument) dataClasses.push('NATIONAL_ID');
-          if (exposureCheck.entities.hasAddress) dataClasses.push('PHYSICAL_ADDRESS');
-
-          ingestRecord(
-            normalizedQuery,
-            'Live_OSINT_Feed',
-            dataClasses.length > 0 ? dataClasses : ['PHONE', 'IDENTITY'],
-            new Date().getFullYear().toString(),
-            {
-              target: normalizedQuery,
-              source: 'Live_OSINT_Feed',
-              dataClasses: dataClasses.length > 0 ? dataClasses : ['PHONE', 'IDENTITY'],
-              exposure_score: exposureCheck.score,
-              threat_level: exposureCheck.riskLevel,
-              discovered_at: new Date().toISOString()
-            }
-          );
-        }
-      } catch (scraperErr) {
-        console.warn('[LIVE OSINT] Scraper offline or timed out; relying on local breach store:', scraperErr.message);
-      }
+    // 4. Append secondary Live OSINT scraper packets if any
+    if (liveScraperPackets.length > 0) {
+      packets.push(...liveScraperPackets);
     }
 
     if (packets.length === 0) {
