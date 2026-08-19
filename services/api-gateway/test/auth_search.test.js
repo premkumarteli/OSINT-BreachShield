@@ -82,7 +82,8 @@ describe('OSINT BreachShield Test Suite', () => {
           NODE_ENV: 'test',
           EMAIL_USER: '',
           EMAIL_PASS: '',
-          OTP_EXPIRY_MINUTES: '5'
+          OTP_EXPIRY_MINUTES: '5',
+          ENABLE_TELEGRAM_SCRAPER: 'true'
         },
         stdio: ['ignore', 'pipe', 'pipe']
       });

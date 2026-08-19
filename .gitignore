@@ -50,6 +50,10 @@ env/
 *.sqlite3
 instance/
 services/api-gateway/instance/
+services/api-gateway/data/records/*.json
+services/api-gateway/data/breach_store/*.dat
+data/records/*.json
+data/breach_store/*.dat
 
 # Web App Build Outputs
 apps/web-dashboard/build/

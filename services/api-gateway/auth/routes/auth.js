@@ -394,7 +394,40 @@ function verifyOtpToken(req, res, next) {
   }
 }
 
+// ---------------- Admin JWT Verification Middleware ----------------
+function requireAdminToken(req, res, next) {
+  try {
+    let token = null;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    } else if (req.cookies?.admin_token) {
+      token = req.cookies.admin_token;
+    } else if (req.cookies?.token) {
+      token = req.cookies.token;
+    } else if (req.headers['x-admin-token']) {
+      token = req.headers['x-admin-token'];
+    }
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized: Admin authentication token required' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (!decoded || decoded.role !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized: Admin privileges required' });
+    }
+
+    req.adminUser = decoded;
+    return next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid or expired admin token' });
+  }
+}
+
 router.verifyOtpToken = verifyOtpToken;
+router.requireAdminToken = requireAdminToken;
 module.exports = router;
 module.exports.verifyOtpToken = verifyOtpToken;
+module.exports.requireAdminToken = requireAdminToken;
 module.exports.router = router;

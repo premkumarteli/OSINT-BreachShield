@@ -53,12 +53,16 @@ process.on('unhandledRejection', (reason) => { console.error('Unhandled rejectio
 // Mount auth router and import verification middleware
 let authRouter;
 let verifyOtpToken = (req, res, next) => res.status(403).json({ error: 'Verification required' });
+let requireAdminToken = (req, res, next) => res.status(401).json({ error: 'Unauthorized: Admin authentication token required' });
 
 try {
   const authModule = require('./auth/routes/auth');
   authRouter = authModule.router || authModule;
   if (typeof authModule.verifyOtpToken === 'function') {
     verifyOtpToken = authModule.verifyOtpToken;
+  }
+  if (typeof authModule.requireAdminToken === 'function') {
+    requireAdminToken = authModule.requireAdminToken;
   }
   app.use('/api/auth', authRouter);
   app.use('/api', authRouter); // Mount at /api for /api/send-otp, /api/verify-otp, etc.
@@ -73,6 +77,14 @@ try {
 } catch (e) {
   console.warn('Gateway router not mounted:', e.message);
 }
+
+// Global Security Middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
 
 // Basic health endpoint so platforms/load balancers can check liveness
 app.get('/health', (req, res) => {
@@ -90,12 +102,23 @@ const { getRange, ingestBatch } = require('./ingest/kAnonymityStore');
 const CATALOG_FILE = path.join(__dirname, 'data', 'catalog', 'breaches.json');
 const CATALOG_INDEX_FILE = path.join(__dirname, 'data', 'catalog', 'breaches_index.json');
 
+// Rate limiter for admin ingestion API (10 requests/min)
+const rateLimit = require('express-rate-limit');
+const ingestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 10,
+  keyGenerator: (req) => req.adminUser?.sub || req.adminUser?.email || req.ip,
+  message: { error: 'Too many ingestion requests. Limit is 10 requests per minute.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // 1. GET /api/v1/range/:prefix (k-Anonymity Zero-Knowledge Range Query)
 app.get('/api/v1/range/:prefix', (req, res) => {
   try {
-    const prefix = req.params.prefix;
-    if (!prefix || !/^[0-9A-Fa-f]{5}$/.test(prefix)) {
-      return res.status(400).json({ error: 'Prefix must be exactly a 5-character hexadecimal string.' });
+    const prefix = (req.params.prefix || '').trim().toUpperCase();
+    if (!/^[0-9A-F]{5}$/.test(prefix)) {
+      return res.status(400).json({ error: 'Prefix must be a 5-character hexadecimal string' });
     }
     const results = getRange(prefix);
     // Return standard formatted plaintext stream for HIBP compatibility or JSON
@@ -145,8 +168,8 @@ app.get('/api/v1/breaches/:name', (req, res) => {
   }
 });
 
-// 4. POST /api/v1/ingest (Ingestion Node API)
-app.post('/api/v1/ingest', (req, res) => {
+// 4. POST /api/v1/ingest (Ingestion Node API - Guarded by requireAdminToken & rate limiter)
+app.post('/api/v1/ingest', requireAdminToken, ingestLimiter, (req, res) => {
   try {
     const { records = [] } = req.body || {};
     if (!Array.isArray(records) || records.length === 0) {
@@ -182,62 +205,13 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
     let packets = [];
     let pagination = null;
 
-    // Source 1: Local k-Anonymity & Document Store Check
+    // Source 1 (PRIMARY): Local k-Anonymity & Document Store Check
     const targetHash = hashTarget(normalizedQuery);
     const prefix = targetHash.slice(0, 5);
     const suffix = targetHash.slice(5);
     const rangeMatches = getRange(prefix);
     const localMatch = rangeMatches.find(m => m.suffix === suffix);
     const storedRecords = getStoredRecords(normalizedQuery);
-
-    // Source 2: Deep OSINT Threat Feed Service (Runs live search, then automatically stores to local database)
-    const enableScraper = process.env.ENABLE_TELEGRAM_SCRAPER !== 'false';
-    if (enableScraper) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        const resp = await fetch(PYTHON_SERVICE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: normalizedQuery }),
-          signal: controller.signal
-        });
-        clearTimeout(timeout);
-        const data = await resp.json();
-        botText = data.response || '';
-        packets = data.packets || (botText ? [{ query, info: botText }] : []);
-        pagination = data.pagination || null;
-
-        // Auto-Cache Live Found Breach directly to Local Database Store
-        if (botText && !/no\s*results?(\s*found)?/i.test(botText)) {
-          const { ingestRecord } = require('./ingest/kAnonymityStore');
-          const exposureCheck = analyzeExposure(botText, normalizedQuery);
-          const dataClasses = [];
-          if (exposureCheck.entities.phoneCount > 0) dataClasses.push('PHONE');
-          if (exposureCheck.entities.passwordCount > 0) dataClasses.push('PASSWORD_HASH');
-          if (exposureCheck.entities.emailCount > 0) dataClasses.push('EMAIL');
-          if (exposureCheck.entities.hasDocument) dataClasses.push('NATIONAL_ID');
-          if (exposureCheck.entities.hasAddress) dataClasses.push('PHYSICAL_ADDRESS');
-
-          ingestRecord(
-            normalizedQuery,
-            'Live_OSINT_Feed',
-            dataClasses.length > 0 ? dataClasses : ['PHONE', 'IDENTITY'],
-            new Date().getFullYear().toString(),
-            {
-              target: normalizedQuery,
-              source: 'Live_OSINT_Feed',
-              dataClasses: dataClasses.length > 0 ? dataClasses : ['PHONE', 'IDENTITY'],
-              exposure_score: exposureCheck.score,
-              threat_level: exposureCheck.riskLevel,
-              discovered_at: new Date().toISOString()
-            }
-          );
-        }
-      } catch (scraperErr) {
-        console.warn('[LIVE OSINT] Scraper offline or timed out; relying on local breach store:', scraperErr.message);
-      }
-    }
 
     // Merge Local Breach Intelligence if found with breach metadata breakdown
     if ((localMatch && localMatch.sources.length > 0) || storedRecords.length > 0) {
@@ -270,7 +244,59 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
         });
       }
 
-      packets.unshift({ query, info: breachDetails.trim(), source: 'LOCAL_K_ANON_DB' });
+      packets.push({ query, info: breachDetails.trim(), source: 'LOCAL_K_ANON_DB' });
+    }
+
+    // Source 2 (SECONDARY / OPT-IN): Deep OSINT Threat Feed Service (Off by default)
+    const enableScraper = process.env.ENABLE_TELEGRAM_SCRAPER === 'true';
+    if (enableScraper) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        const resp = await fetch(PYTHON_SERVICE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: normalizedQuery }),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        const data = await resp.json();
+        botText = data.response || '';
+        const scraperPackets = data.packets || (botText ? [{ query, info: botText }] : []);
+        pagination = data.pagination || null;
+        if (scraperPackets.length > 0) {
+          packets.push(...scraperPackets);
+        }
+
+        // Auto-Cache Live Found Breach directly to Local Database Store
+        if (botText && !/no\s*results?(\s*found)?/i.test(botText)) {
+          const { ingestRecord } = require('./ingest/kAnonymityStore');
+          const exposureCheck = analyzeExposure(botText, normalizedQuery);
+          const dataClasses = [];
+          if (exposureCheck.entities.phoneCount > 0) dataClasses.push('PHONE');
+          if (exposureCheck.entities.passwordCount > 0) dataClasses.push('PASSWORD_HASH');
+          if (exposureCheck.entities.emailCount > 0) dataClasses.push('EMAIL');
+          if (exposureCheck.entities.hasDocument) dataClasses.push('NATIONAL_ID');
+          if (exposureCheck.entities.hasAddress) dataClasses.push('PHYSICAL_ADDRESS');
+
+          ingestRecord(
+            normalizedQuery,
+            'Live_OSINT_Feed',
+            dataClasses.length > 0 ? dataClasses : ['PHONE', 'IDENTITY'],
+            new Date().getFullYear().toString(),
+            {
+              target: normalizedQuery,
+              source: 'Live_OSINT_Feed',
+              dataClasses: dataClasses.length > 0 ? dataClasses : ['PHONE', 'IDENTITY'],
+              exposure_score: exposureCheck.score,
+              threat_level: exposureCheck.riskLevel,
+              discovered_at: new Date().toISOString()
+            }
+          );
+        }
+      } catch (scraperErr) {
+        console.warn('[LIVE OSINT] Scraper offline or timed out; relying on local breach store:', scraperErr.message);
+      }
     }
 
     if (packets.length === 0) {
