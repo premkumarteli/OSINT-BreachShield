@@ -187,6 +187,7 @@ def main():
 
     # 3. Start React Frontend (Port 3000)
     frontend_env = os.environ.copy()
+    frontend_env["PORT"] = "3000"
     frontend_env["BROWSER"] = "none"  # Prevent double browser tab
     print(f"{GREEN}[3/3] Starting React Frontend on port 3000...{RESET}")
     p_react = subprocess.Popen(
