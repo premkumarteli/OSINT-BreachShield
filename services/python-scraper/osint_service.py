@@ -279,33 +279,41 @@ async def send_query(q: Query):
 
                 messages = []
                 try:
-                    # Wait for first bot response message or edit (up to 6.0s)
+                    # Wait for bot response messages (up to 7.0s)
                     start_t = asyncio.get_event_loop().time()
-                    while (asyncio.get_event_loop().time() - start_t) < 6.0:
+                    while (asyncio.get_event_loop().time() - start_t) < 7.0:
                         try:
-                            msg_txt = await asyncio.wait_for(queue.get(), timeout=2.0)
+                            msg_txt = await asyncio.wait_for(queue.get(), timeout=2.5)
                             # If it's just a placeholder like 'searching...', wait for next edit/message
                             if any(p in msg_txt.lower() for p in ['searching', 'please wait', 'processing', 'loading']):
                                 continue
-                            messages.append(msg_txt)
-                            break
+                            if msg_txt not in messages:
+                                messages.append(msg_txt)
+                            # If we received the summary header, continue waiting for the actual data card
+                            if any(kw in msg_txt for kw in ['🔎Request:', '🔬Subjects made:', 'The number of leaks:']) and len(messages) < 2:
+                                continue
+                            # If we received the data payload or a clean 'No results found', break early
+                            if any(kw in msg_txt for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'No results found', '🤷']):
+                                break
                         except asyncio.TimeoutError:
                             # Also poll recent messages in case event was already delivered
                             try:
                                 bot_entity = await client.get_entity(bot_username)
-                                recent_msgs = await client.get_messages(bot_entity, limit=3)
+                                recent_msgs = await client.get_messages(bot_entity, limit=4)
                                 for rm in recent_msgs:
                                     if rm.id > sent_msg.id and rm.text and not any(p in rm.text.lower() for p in ['searching', 'please wait']):
-                                        messages.append(rm.text)
-                                        break
-                                if messages:
+                                        if rm.text not in messages:
+                                            messages.append(rm.text)
+                                if any(any(kw in m for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'No results found', '🤷']) for m in messages):
                                     break
                             except Exception:
                                 pass
 
-                    # If no specific message was captured, collect whatever arrived
-                    if not messages and not queue.empty():
-                        messages.append(await queue.get())
+                    # If no specific message was captured, collect whatever arrived in queue
+                    while not queue.empty():
+                        extra = await queue.get()
+                        if extra not in messages:
+                            messages.append(extra)
 
                 except Exception as ex:
                     print(f"[Query collector warning] {ex}")
@@ -320,21 +328,23 @@ async def send_query(q: Query):
                 if not messages:
                     try:
                         bot_entity = await client.get_entity(bot_username)
-                        recent_msgs = await client.get_messages(bot_entity, limit=3)
+                        recent_msgs = await client.get_messages(bot_entity, limit=4)
                         for rm in recent_msgs:
                             if rm.text and rm.id > sent_msg.id:
-                                messages.append(rm.text)
-                                break
+                                if rm.text not in messages:
+                                    messages.append(rm.text)
                     except Exception:
                         pass
 
                 if not messages:
                     return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
 
+                # Filter out paywall notices if valid data exists alongside it
+                valid_data_messages = [m for m in messages if not any(kw in m.lower() for kw in ['subscription is over', 'trial period lasted', '/shop', '/referral', '/mirrors'])]
+                if valid_data_messages:
+                    messages = valid_data_messages
+
                 full_text = "\n\n".join(messages)
-                is_paywall = any(kw in full_text.lower() for kw in ['subscription is over', 'trial period lasted', 'subscription on the store', '/shop', '/referral', '/mirrors'])
-                if is_paywall or not messages:
-                    return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
 
                 # Try quick pagination update
                 try:
