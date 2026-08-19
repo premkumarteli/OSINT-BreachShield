@@ -9,6 +9,8 @@
 
 const { LocalKAnonSource } = require('./LocalKAnonSource');
 const { BreachCatalogSource } = require('./BreachCatalogSource');
+const { HudsonRockSource } = require('./HudsonRockSource');
+const { HIBPApiSource } = require('./HIBPApiSource');
 const { TelegramScraperSource } = require('./TelegramScraperSource');
 
 /**
@@ -20,10 +22,12 @@ const { TelegramScraperSource } = require('./TelegramScraperSource');
 function getEnabledSources(options = {}) {
   const sources = [
     new LocalKAnonSource(),
-    new BreachCatalogSource()
+    new BreachCatalogSource(),
+    new HudsonRockSource(),
+    new HIBPApiSource()
   ];
 
-  // Secondary source — opt-in via ENABLE_TELEGRAM_SCRAPER=true (default OFF)
+  // Secondary live OSINT scraper — opt-in via ENABLE_TELEGRAM_SCRAPER=true (default OFF)
   if (process.env.ENABLE_TELEGRAM_SCRAPER === 'true') {
     sources.push(new TelegramScraperSource(options.pythonServiceUrl));
   }
@@ -35,5 +39,7 @@ module.exports = {
   getEnabledSources,
   LocalKAnonSource,
   BreachCatalogSource,
+  HudsonRockSource,
+  HIBPApiSource,
   TelegramScraperSource
 };

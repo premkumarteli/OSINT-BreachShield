@@ -1,6 +1,6 @@
 const { describe, it, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
-const { getEnabledSources, LocalKAnonSource, BreachCatalogSource, TelegramScraperSource } = require('../sources/registry');
+const { getEnabledSources, LocalKAnonSource, BreachCatalogSource, HudsonRockSource, HIBPApiSource, TelegramScraperSource } = require('../sources/registry');
 
 describe('BreachSource Registry (sources/registry.js)', () => {
   const originalEnv = process.env.ENABLE_TELEGRAM_SCRAPER;
@@ -13,13 +13,15 @@ describe('BreachSource Registry (sources/registry.js)', () => {
     }
   });
 
-  it('5.1: getEnabledSources() returns only Local and Catalog sources by default (ENABLE_TELEGRAM_SCRAPER unset)', () => {
+  it('5.1: getEnabledSources() returns Local, Catalog, HudsonRock, and HIBP sources by default (ENABLE_TELEGRAM_SCRAPER unset)', () => {
     delete process.env.ENABLE_TELEGRAM_SCRAPER;
     const sources = getEnabledSources();
     
-    assert.equal(sources.length, 2, 'Should have exactly 2 active sources by default');
+    assert.equal(sources.length, 4, 'Should have exactly 4 active sources by default');
     assert.ok(sources.some(s => s instanceof LocalKAnonSource), 'LocalKAnonSource is registered');
     assert.ok(sources.some(s => s instanceof BreachCatalogSource), 'BreachCatalogSource is registered');
+    assert.ok(sources.some(s => s instanceof HudsonRockSource), 'HudsonRockSource is registered');
+    assert.ok(sources.some(s => s instanceof HIBPApiSource), 'HIBPApiSource is registered');
     assert.ok(!sources.some(s => s instanceof TelegramScraperSource), 'TelegramScraperSource is NOT registered by default');
   });
 
@@ -27,9 +29,11 @@ describe('BreachSource Registry (sources/registry.js)', () => {
     process.env.ENABLE_TELEGRAM_SCRAPER = 'true';
     const sources = getEnabledSources({ pythonServiceUrl: 'http://127.0.0.1:8001/query' });
     
-    assert.equal(sources.length, 3, 'Should have 3 active sources when scraper is enabled');
+    assert.equal(sources.length, 5, 'Should have 5 active sources when scraper is enabled');
     assert.ok(sources.some(s => s instanceof LocalKAnonSource), 'LocalKAnonSource is registered');
     assert.ok(sources.some(s => s instanceof BreachCatalogSource), 'BreachCatalogSource is registered');
+    assert.ok(sources.some(s => s instanceof HudsonRockSource), 'HudsonRockSource is registered');
+    assert.ok(sources.some(s => s instanceof HIBPApiSource), 'HIBPApiSource is registered');
     assert.ok(sources.some(s => s instanceof TelegramScraperSource), 'TelegramScraperSource is registered');
   });
 
@@ -45,5 +49,11 @@ describe('BreachSource Registry (sources/registry.js)', () => {
     assert.ok(catRes && typeof catRes === 'object');
     assert.equal(catRes.sourceName, 'BreachCatalogSource');
     assert.ok(Array.isArray(catRes.hits));
+
+    const hr = new HudsonRockSource();
+    assert.equal(hr.sourceName, 'HudsonRock_Infostealer_Intel');
+    
+    const hibp = new HIBPApiSource();
+    assert.equal(hibp.sourceName, 'HaveIBeenPwned_Range_API');
   });
 });
