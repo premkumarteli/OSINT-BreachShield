@@ -140,7 +140,7 @@ function redactSensitiveData(rawText = '', verifiedTarget = '') {
 
   // 1. Passwords, hashes, and credentials
   sanitized = sanitized.replace(
-    /((?:password|passwd|pwd|hash|md5|sha1|bcrypt|plaintext)[\s:=*]+)`?([^\s\n,`]+)`?/gi,
+    /((?:password|passwd|pwd|pass|hash|md5|sha1|bcrypt|plaintext(?:\s*(?:pass|password|hash))?)[\s:=*]+)`?([^\s\n,`]+)`?/gi,
     (match, prefix) => `${prefix}[REDACTED_CREDENTIAL]`
   );
 
