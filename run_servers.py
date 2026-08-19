@@ -24,6 +24,19 @@ PYTHON_DIR = os.path.join(BASE_DIR, 'services', 'python-scraper')
 BACKEND_DIR = os.path.join(BASE_DIR, 'services', 'api-gateway')
 FRONTEND_DIR = os.path.join(BASE_DIR, 'apps', 'web-dashboard')
 
+# Load unified root .env into os.environ
+env_file = os.path.join(BASE_DIR, '.env')
+if os.path.exists(env_file):
+    with open(env_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                k, v = line.split('=', 1)
+                k = k.strip()
+                v = v.strip().strip("'").strip('"')
+                if k not in os.environ:
+                    os.environ[k] = v
+
 # Colors for terminal output
 CYAN = '\033[96m'
 GREEN = '\033[92m'

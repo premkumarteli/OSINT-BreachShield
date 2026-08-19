@@ -3,8 +3,20 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 
-// Load .env if the module exists; don't crash if it's not installed in the environment
-try { require('dotenv').config(); } catch (e) { console.warn('dotenv not found; continuing without .env'); }
+const path = require('path');
+const fs = require('fs');
+
+// Load .env from root or local directory
+try {
+  const rootEnv = path.resolve(__dirname, '..', '..', '.env');
+  if (fs.existsSync(rootEnv)) {
+    require('dotenv').config({ path: rootEnv });
+  } else {
+    require('dotenv').config();
+  }
+} catch (e) {
+  console.warn('dotenv not found; continuing without .env');
+}
 
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'https://osint-breach-python.onrender.com/query';
 const PYTHON_BASE = PYTHON_SERVICE_URL.replace(/\/query$/, '');
@@ -73,8 +85,6 @@ app.get('/api/auth/ping', (req, res) => {
 });
 
 // ---------------- k-Anonymity & Breach Catalog API Layer ----------------
-const path = require('path');
-const fs = require('fs');
 const { getRange, ingestBatch } = require('./ingest/kAnonymityStore');
 
 const CATALOG_FILE = path.join(__dirname, 'data', 'catalog', 'breaches.json');
