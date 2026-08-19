@@ -32,11 +32,13 @@ class BreachCatalogSource extends BreachSource {
         
         if (domain && indexData.byDomain && indexData.byDomain[domain]) {
           const match = indexData.byDomain[domain];
-          const year = match.BreachDate ? match.BreachDate.split('-')[0] : '2024';
+          const rawDate = match.breachDate || match.BreachDate || '';
+          const year = rawDate ? rawDate.split('-')[0] : '2024';
+          const dc = match.dataClasses || match.DataClasses;
           hits.push({
-            source: match.Title || match.Name || domain,
+            source: match.title || match.Title || match.name || match.Name || domain,
             year: year,
-            dataClasses: Array.isArray(match.DataClasses) ? match.DataClasses : ['EMAIL'],
+            dataClasses: Array.isArray(dc) ? dc : ['EMAIL'],
             sourceType: 'CATALOG',
             raw: null
           });
