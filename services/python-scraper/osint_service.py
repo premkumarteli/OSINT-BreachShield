@@ -268,8 +268,12 @@ async def send_query(q: Query):
                 # Reset pagination state
                 pagination_state.update({'current': None, 'total': None, 'last_text_hash': None, 'last_msg_id': None, 'seen_hashes': set()})
                 
+                clean_target = q.query.strip()
+                if re.match(r'^[6-9]\d{9}$', clean_target):
+                    clean_target = f"+91{clean_target}"
+
                 try:
-                    sent_msg = await client.send_message(bot_username, q.query)
+                    sent_msg = await client.send_message(bot_username, clean_target)
                 except Exception:
                     return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
 

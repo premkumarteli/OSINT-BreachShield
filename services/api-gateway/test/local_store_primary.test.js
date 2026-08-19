@@ -52,8 +52,8 @@ describe('Local Breach Store Primary (Telegram Scraper Secondary / Default OFF)'
           NODE_ENV: 'test',
           EMAIL_USER: '',
           EMAIL_PASS: '',
-          OTP_EXPIRY_MINUTES: '5'
-          // ENABLE_TELEGRAM_SCRAPER is explicitly UNSET
+          OTP_EXPIRY_MINUTES: '5',
+          ENABLE_TELEGRAM_SCRAPER: 'false'
         },
         stdio: ['ignore', 'pipe', 'pipe']
       });
