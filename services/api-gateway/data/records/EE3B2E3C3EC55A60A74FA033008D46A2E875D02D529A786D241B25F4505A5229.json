@@ -1,0 +1,24 @@
+[
+  {
+    "source": "Live_OSINT_Feed",
+    "year": "2026",
+    "dataClasses": [
+      "PHONE",
+      "PASSWORD_HASH",
+      "NATIONAL_ID"
+    ],
+    "fields": {
+      "target": "t1_search_1787128872313_yehl5@example.com",
+      "source": "Live_OSINT_Feed",
+      "dataClasses": [
+        "PHONE",
+        "PASSWORD_HASH",
+        "NATIONAL_ID"
+      ],
+      "exposure_score": 85,
+      "threat_level": "CRITICAL",
+      "discovered_at": "2026-08-19T08:41:12.869Z"
+    },
+    "ingestedAt": "2026-08-19T08:41:12.872Z"
+  }
+]

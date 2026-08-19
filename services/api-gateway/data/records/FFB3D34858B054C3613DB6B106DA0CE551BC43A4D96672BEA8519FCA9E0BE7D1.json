@@ -1,0 +1,18 @@
+[
+  {
+    "source": "Live_OSINT_Feed",
+    "year": "2026",
+    "dataClasses": [
+      "PHONE"
+    ],
+    "fields": {
+      "target": "+918928868564",
+      "source": "Live_OSINT_Feed",
+      "threat_details": "🔎Request: +918928868564\n🔬Subjects made: 1\n📁Number of results: 2\n💦The number of leaks: 1\n⌛︎Search time: 0.016 seconds\n\n🆓︎Please note that you use the free version of the bot. Buying a subscription reduces a waste of tokens by 10 times.\n\n🪞 Mirror (in case of removal of the bot): @PRODOXINGDNDUFI_bot",
+      "exposure_score": 25,
+      "threat_level": "MEDIUM",
+      "discovered_at": "2026-08-19T06:12:40.421Z"
+    },
+    "ingestedAt": "2026-08-19T06:12:40.427Z"
+  }
+]

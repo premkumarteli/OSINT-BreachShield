@@ -217,20 +217,19 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
             {
               target: normalizedQuery,
               source: 'Live_OSINT_Feed',
-              threat_details: botText,
+              dataClasses: dataClasses.length > 0 ? dataClasses : ['PHONE', 'IDENTITY'],
               exposure_score: exposureCheck.score,
               threat_level: exposureCheck.riskLevel,
               discovered_at: new Date().toISOString()
             }
           );
-          console.log(`[AUTO-INGEST] Real breach discovered on internet for ${normalizedQuery} -> Saved to local database!`);
         }
       } catch (scraperErr) {
         console.warn('[LIVE OSINT] Scraper offline or timed out; relying on local breach store:', scraperErr.message);
       }
     }
 
-    // Merge Local Breach Intelligence if found with full genuine record breakdown
+    // Merge Local Breach Intelligence if found with breach metadata breakdown
     if ((localMatch && localMatch.sources.length > 0) || storedRecords.length > 0) {
       const matchSources = localMatch ? localMatch.sources : storedRecords.map(r => r.source);
       const matchClasses = localMatch ? localMatch.dataClasses : Array.from(new Set(storedRecords.flatMap(r => r.dataClasses || [])));
@@ -249,15 +248,8 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
         storedRecords.forEach((rec, idx) => {
           breachDetails += `[ RECORD #${idx + 1} | SOURCE: ${String(rec.source || 'BREACH_ARCHIVE').toUpperCase()} (Year: ${rec.year || matchYear}) ]\n`;
           breachDetails += `• Target          : ${normalizedQuery}\n`;
-          if (rec.fields && typeof rec.fields === 'object') {
-            for (const [key, val] of Object.entries(rec.fields)) {
-              if (val !== undefined && val !== null && val !== '') {
-                const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                breachDetails += `• ${label.padEnd(16)}: ${val}\n`;
-              }
-            }
-          }
-          breachDetails += `\n`;
+          breachDetails += `• Exposed Classes : ${(rec.dataClasses && rec.dataClasses.length ? rec.dataClasses : matchClasses).join(', ')}\n`;
+          breachDetails += `• Discovery Year  : ${rec.year || matchYear}\n\n`;
         });
       } else if (localMatch) {
         localMatch.sources.forEach((src, idx) => {
@@ -281,9 +273,10 @@ app.post('/api/search', verifyOtpToken, async (req, res) => {
     const timeline = parseBreachTimeline(fullText);
 
     // Sanitize and redact plaintext credentials before delivering to frontend
+    const verifiedTarget = req.verifiedUser?.target || req.verifiedUser?.email || query;
     const sanitizedPackets = packets.map(p => ({
       ...p,
-      info: redactSensitiveData(p.info || '')
+      info: redactSensitiveData(p.info || '', verifiedTarget)
     }));
 
     res.json({
@@ -333,9 +326,10 @@ app.post('/api/telegram-page', verifyOtpToken, async (req, res) => {
     const botText = (data && data.response) || '';
     const packets = (data && data.packets) || (botText ? [{ info: botText }] : []);
     const pagination = (data && data.pagination) || null;
+    const targetUser = req.verifiedUser?.target || req.verifiedUser?.email;
     const sanitizedPackets = packets.map(p => ({
       ...p,
-      info: redactSensitiveData(p.info || '')
+      info: redactSensitiveData(p.info || '', targetUser)
     }));
     res.json({ success: true, data: sanitizedPackets.length ? { packets: sanitizedPackets, pagination } : null });
   } catch (err) {
@@ -364,9 +358,10 @@ app.post('/api/telegram-prev-page', verifyOtpToken, async (req, res) => {
     const botText = (data && data.response) || '';
     const packets = (data && data.packets) || (botText ? [{ info: botText }] : []);
     const pagination = (data && data.pagination) || null;
+    const targetUser = req.verifiedUser?.target || req.verifiedUser?.email;
     const sanitizedPackets = packets.map(p => ({
       ...p,
-      info: redactSensitiveData(p.info || '')
+      info: redactSensitiveData(p.info || '', targetUser)
     }));
     res.json({ success: true, data: sanitizedPackets.length ? { packets: sanitizedPackets, pagination } : null });
   } catch (err) {
@@ -448,6 +443,7 @@ if (require.main === module) {
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`OSINT backend running on port ${PORT}`);
     console.log(`Gateway WebSocket relay active at ws://0.0.0.0:${PORT}/ws/gateway`);
+    console.log('Auto-ingest stores breach metadata only; raw threat data is never persisted to disk.');
     console.log('CORS allowed origins:', ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS.join(', ') : '(localhost:3000 default)');
   });
 }

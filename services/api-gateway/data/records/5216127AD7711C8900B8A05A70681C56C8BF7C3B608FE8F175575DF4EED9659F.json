@@ -1,0 +1,36 @@
+[
+  {
+    "source": "Live_OSINT_Feed",
+    "year": "2026",
+    "dataClasses": [
+      "PHONE",
+      "PASSWORD_HASH",
+      "PHYSICAL_ADDRESS"
+    ],
+    "fields": {
+      "target": "+917337771210",
+      "source": "Live_OSINT_Feed",
+      "threat_details": "[ OSINT TARGET: +917337771210 ]\n[ RECORD 1 / 2 - HIGH RISK EXPOSURE ]\n--------------------------------------------------\nTARGET: +917337771210\nPASSWORD: P@ssw0rd2024!\nHASH: 5baa61e4c9b93f3f0682250b6cf8331b7ee68d80 (SHA-1)\nLINKED PHONE: +919876543210\nBREACH SOURCE: Canva (2019), Collection #1 (2019)\nLOCATION: Bengaluru, Karnataka, India\n--------------------------------------------------\n[ RECORD 2 / 2 - DOMINOS LEAK ]\nNAME: Target Identity Record\nEMAIL: +917337771210\nBREACH SOURCE: Dominos India (2021)\nADDRESS: Indiranagar, Bangalore, Karnataka - 560038\n--------------------------------------------------",
+      "exposure_score": 80,
+      "threat_level": "CRITICAL",
+      "discovered_at": "2026-08-18T19:45:02.986Z"
+    },
+    "ingestedAt": "2026-08-18T19:45:02.988Z"
+  },
+  {
+    "source": "Live_OSINT_Feed",
+    "year": "2026",
+    "dataClasses": [
+      "PHONE"
+    ],
+    "fields": {
+      "target": "+917337771210",
+      "source": "Live_OSINT_Feed",
+      "threat_details": "🔎Request: +917337771210\n🔬Subjects made: 1\n📁Number of results: 4\n💦The number of leaks: 2\n⌛︎Search time: 0.0 seconds\n\n🆓︎Please note that you use the free version of the bot. Buying a subscription reduces a waste of tokens by 10 times.\n\n🪞 Mirror (in case of removal of the bot): @Evillook_bot",
+      "exposure_score": 25,
+      "threat_level": "MEDIUM",
+      "discovered_at": "2026-08-19T06:21:49.096Z"
+    },
+    "ingestedAt": "2026-08-19T06:21:49.113Z"
+  }
+]

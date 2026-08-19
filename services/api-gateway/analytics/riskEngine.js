@@ -125,29 +125,74 @@ function analyzeExposure(rawText = '', query = '') {
 }
 
 /**
- * Redacts plaintext passwords and sensitive national identifiers from breach text
- * before sending to client, protecting privacy while preserving breach metadata.
+ * Redacts plaintext passwords, national IDs, addresses, parent names, and exposed emails
+ * from breach text before sending to client, enforcing privacy-preserving data masking by default.
  */
-function redactSensitiveData(rawText = '') {
+function redactSensitiveData(rawText = '', verifiedTarget = '') {
   if (!rawText || typeof rawText !== 'string') return '';
-  // Check if explicit masking is enabled; otherwise return full raw data as requested
-  if (process.env.ENABLE_DATA_MASKING === 'true') {
-    let sanitized = rawText;
-    sanitized = sanitized.replace(
-      /((?:password|passwd|pwd|hash|md5|sha1|bcrypt|plaintext)[\s:=*]+)`?([^\s\n,`]+)`?/gi,
-      (match, prefix) => `${prefix}[REDACTED_CREDENTIAL]`
-    );
-    sanitized = sanitized.replace(
-      /((?:document\s*number|aadhaar|aadhar|passport|pan|taxpayer|voter|national\s*id)[\s:=*]+)`?([0-9a-zA-Z -]{6,})`?/gi,
-      (match, prefix, val) => {
-        const cleanVal = val.trim();
-        const masked = cleanVal.length > 4 ? '*'.repeat(cleanVal.length - 4) + cleanVal.slice(-4) : '****';
-        return `${prefix}${masked}`;
-      }
-    );
-    return sanitized;
+  // Data masking is ON by default for privacy and security.
+  // It can only be explicitly bypassed in development environments via DISABLE_DATA_MASKING=true.
+  if (process.env.DISABLE_DATA_MASKING === 'true') {
+    return rawText;
   }
-  return rawText;
+
+  let sanitized = rawText;
+
+  // 1. Passwords, hashes, and credentials
+  sanitized = sanitized.replace(
+    /((?:password|passwd|pwd|hash|md5|sha1|bcrypt|plaintext)[\s:=*]+)`?([^\s\n,`]+)`?/gi,
+    (match, prefix) => `${prefix}[REDACTED_CREDENTIAL]`
+  );
+
+  // 2. National IDs, Aadhaar, Passport, PAN, Taxpayer/Voter IDs
+  sanitized = sanitized.replace(
+    /((?:document\s*number|aadhaar|aadhar|passport|pan|taxpayer|voter|national\s*id)[\s:=*]+)`?([0-9a-zA-Z -]{6,})`?/gi,
+    (match, prefix, val) => {
+      const cleanVal = val.trim();
+      const masked = cleanVal.length > 4 ? '*'.repeat(cleanVal.length - 4) + cleanVal.slice(-4) : '****';
+      return `${prefix}${masked}`;
+    }
+  );
+
+  // 3. Physical Addresses (e.g. Adres:, Address:, Delivery Address:, etc.)
+  sanitized = sanitized.replace(
+    /(^|\n)([ \t]*(?:•[ \t]*)?(?:adres|address|delivery\s*address|residential\s*address)[\s:=]+)([^\n]+)/gi,
+    (match, linePrefix, label, val) => {
+      const cleanVal = val.trim();
+      if (!cleanVal || cleanVal.startsWith('[REDACTED')) return match;
+      return `${linePrefix}${label}[REDACTED_ADDRESS]`;
+    }
+  );
+
+  // 4. Father's / Parent's Name Fields
+  sanitized = sanitized.replace(
+    /(^|\n)([ \t]*(?:•[ \t]*)?(?:father(?:'s)?(?:\s*name)?|parent(?:'s)?(?:\s*name)?|name\s*of\s*(?:the\s*)?father)[\s:=]+)([^\n]+)/gi,
+    (match, linePrefix, label, val) => {
+      const cleanVal = val.trim();
+      if (!cleanVal || cleanVal.startsWith('[REDACTED')) return match;
+      return `${linePrefix}${label}[REDACTED_NAME]`;
+    }
+  );
+
+  // 5. Email addresses when not the verified user's own target
+  const targetLower = String(verifiedTarget || '').trim().toLowerCase();
+  sanitized = sanitized.replace(
+    /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+    (email) => {
+      if (targetLower && email.toLowerCase() === targetLower) {
+        return email;
+      }
+      const parts = email.split('@');
+      const user = parts[0];
+      const domain = parts[1];
+      if (user.length <= 2) {
+        return `*@${domain}`;
+      }
+      return `${user[0]}${'*'.repeat(Math.max(1, user.length - 2))}${user[user.length - 1]}@${domain}`;
+    }
+  );
+
+  return sanitized;
 }
 
 module.exports = {
