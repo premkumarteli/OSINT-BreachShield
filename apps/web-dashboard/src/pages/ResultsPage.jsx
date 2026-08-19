@@ -241,6 +241,7 @@ export default function ResultsPage() {
   // Terminal typewriter effect upon result/page change
   useEffect(() => {
     if (!result) return undefined;
+    try {
       const text = (result.packets || [])
         .map(p => p.info || (`[ TARGET: ${email} ]\n[ MOBILE: ${p.mobile || 'N/A'} ]\n[ NAME: ${p.name || 'N/A'} ]\n[ ADDRESS: ${p.address || 'N/A'} ]\n`))
         .filter(Boolean)
