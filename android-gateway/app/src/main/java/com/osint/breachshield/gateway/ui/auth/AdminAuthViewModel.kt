@@ -1,12 +1,19 @@
 package com.osint.breachshield.gateway.ui.auth
 
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.osint.breachshield.gateway.data.api.AdminSendOtpRequest
 import com.osint.breachshield.gateway.data.api.AdminVerifyOtpRequest
 import com.osint.breachshield.gateway.data.api.BreachShieldApi
+import com.osint.breachshield.gateway.data.api.RegistrationRequest
 import com.osint.breachshield.gateway.data.prefs.PreferenceManager
+import com.osint.breachshield.gateway.service.GatewayForegroundService
+import com.osint.breachshield.gateway.util.DeviceUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +29,8 @@ sealed class AuthUiState {
 @HiltViewModel
 class AdminAuthViewModel @Inject constructor(
     private val api: BreachShieldApi,
-    private val preferenceManager: PreferenceManager
+    private val preferenceManager: PreferenceManager,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.EmailEntry)
@@ -101,6 +109,36 @@ class AdminAuthViewModel @Inject constructor(
                 val res = api.verifyAdminOtp(AdminVerifyOtpRequest(_email.value.trim(), _otp.value.trim()))
                 if (res.success && !res.token.isNullOrBlank()) {
                     preferenceManager.saveAdminAuth(_email.value.trim(), res.token)
+
+                    // Auto-register this phone as SMS Gateway if not registered yet
+                    if (!preferenceManager.isRegistered()) {
+                        try {
+                            val regReq = RegistrationRequest(
+                                deviceId = preferenceManager.getDeviceId(),
+                                deviceName = "${DeviceUtils.getManufacturer()} ${DeviceUtils.getModel()}",
+                                manufacturer = DeviceUtils.getManufacturer(),
+                                model = DeviceUtils.getModel(),
+                                androidVersion = DeviceUtils.getAndroidVersion(),
+                                androidId = DeviceUtils.getAndroidId(context),
+                                simReady = DeviceUtils.isSimReady(context)
+                            )
+                            val regRes = api.registerDevice(regReq)
+                            if (regRes.success && !regRes.gatewayToken.isNullOrBlank()) {
+                                preferenceManager.saveRegistrationData(preferenceManager.getServerUrl(), regRes.gatewayToken)
+                            }
+                        } catch (e: Exception) {}
+                    }
+
+                    // Start Gateway background service
+                    try {
+                        val intent = Intent(context, GatewayForegroundService::class.java)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(intent)
+                        } else {
+                            context.startService(intent)
+                        }
+                    } catch (e: Exception) {}
+
                     _uiState.value = AuthUiState.Success
                 } else {
                     _errorMessage.value = res.error ?: "Invalid or expired admin verification code."

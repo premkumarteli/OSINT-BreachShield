@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,9 @@ fun GatewaysScreen(
     val gateways by viewModel.gateways.collectAsState()
     val smsMetrics by viewModel.smsMetrics.collectAsState()
     val recentSmsLogs by viewModel.recentSmsLogs.collectAsState()
+    val isRegistered by viewModel.isThisDeviceRegistered.collectAsState()
+    val isRegistering by viewModel.isRegisteringDevice.collectAsState()
+    val actionMessage by viewModel.actionMessage.collectAsState()
 
     val onlineCount = gateways.count { it.status == "ONLINE" }
 
@@ -62,11 +66,67 @@ fun GatewaysScreen(
             }
         }
 
+        // Local Device SMS Service Activation Card
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "This Device (Local SIM Relay)",
+                            color = SlateTextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = if (isRegistered) "Active SMS Relay Service" else "Tap to connect SIM card to backend",
+                            color = SlateTextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                    StatusBadge(status = if (isRegistered) "ONLINE" else "STANDBY")
+                }
+
+                if (!isRegistered || actionMessage != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = viewModel::registerThisDeviceAsGateway,
+                        enabled = !isRegistering,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentCyan,
+                            contentColor = ObsidianBg
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isRegistering) {
+                            CircularProgressIndicator(color = ObsidianBg, modifier = Modifier.size(16.dp))
+                        } else {
+                            Text("Activate Device as SMS Gateway", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+                }
+
+                if (actionMessage != null) {
+                    Text(
+                        text = actionMessage ?: "",
+                        color = MatrixGreen,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+            }
+        }
+
         // Gateways List
         if (gateways.isEmpty()) {
             item {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Text("No SMS gateway hardware devices registered.", color = SlateTextSecondary, fontSize = 13.sp)
+                    Text("No remote SMS gateway hardware devices registered.", color = SlateTextSecondary, fontSize = 13.sp)
                 }
             }
         } else {
@@ -110,7 +170,7 @@ fun GatewaysScreen(
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
-                    Divider(color = GlassBorderColor)
+                    HorizontalDivider(color = GlassBorderColor)
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
