@@ -16,7 +16,6 @@ import javax.inject.Singleton
 class PreferenceManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    // 1. Declare sharedPreferences FIRST so it is available to init block
     private val sharedPreferences: SharedPreferences by lazy {
         try {
             val masterKey = MasterKey.Builder(context)
@@ -39,8 +38,12 @@ class PreferenceManager @Inject constructor(
     private val _registrationStatus = MutableStateFlow(false)
     val registrationStatus = _registrationStatus.asStateFlow()
 
+    private val _adminAuthStatus = MutableStateFlow(false)
+    val adminAuthStatus = _adminAuthStatus.asStateFlow()
+
     init {
         _registrationStatus.value = isRegistered()
+        _adminAuthStatus.value = isAdminLoggedIn()
     }
 
     fun getDeviceId(): String {
@@ -60,20 +63,49 @@ class PreferenceManager @Inject constructor(
         _registrationStatus.value = true
     }
 
-    fun getServerUrl(): String? = sharedPreferences.getString(KEY_SERVER_URL, null)
+    fun saveAdminAuth(email: String, adminToken: String) {
+        sharedPreferences.edit()
+            .putString(KEY_ADMIN_EMAIL, email)
+            .putString(KEY_ADMIN_TOKEN, adminToken)
+            .apply()
+        _adminAuthStatus.value = true
+    }
+
+    fun getServerUrl(): String = sharedPreferences.getString(KEY_SERVER_URL, "http://10.0.2.2:5000") ?: "http://10.0.2.2:5000"
+
+    fun setServerUrl(url: String) {
+        sharedPreferences.edit().putString(KEY_SERVER_URL, url).apply()
+    }
 
     fun getGatewayToken(): String? = sharedPreferences.getString(KEY_GATEWAY_TOKEN, null)
 
+    fun getAdminToken(): String? = sharedPreferences.getString(KEY_ADMIN_TOKEN, null)
+
+    fun getAdminEmail(): String? = sharedPreferences.getString(KEY_ADMIN_EMAIL, null)
+
     fun isRegistered(): Boolean = !sharedPreferences.getString(KEY_GATEWAY_TOKEN, null).isNullOrBlank()
+
+    fun isAdminLoggedIn(): Boolean = !sharedPreferences.getString(KEY_ADMIN_TOKEN, null).isNullOrBlank()
+
+    fun clearAdminAuth() {
+        sharedPreferences.edit()
+            .remove(KEY_ADMIN_TOKEN)
+            .remove(KEY_ADMIN_EMAIL)
+            .apply()
+        _adminAuthStatus.value = false
+    }
 
     fun clear() {
         sharedPreferences.edit().clear().apply()
         _registrationStatus.value = false
+        _adminAuthStatus.value = false
     }
 
     companion object {
         private const val KEY_DEVICE_ID = "device_id"
         private const val KEY_SERVER_URL = "server_url"
         private const val KEY_GATEWAY_TOKEN = "gateway_token"
+        private const val KEY_ADMIN_TOKEN = "admin_jwt_token"
+        private const val KEY_ADMIN_EMAIL = "admin_email"
     }
 }

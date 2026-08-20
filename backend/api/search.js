@@ -18,6 +18,11 @@ router.post('/search', verifyOtpToken, async (req, res) => {
   const verifiedTarget = req.verifiedUser?.target || req.verifiedUser?.email;
 
   try {
+    const { registerOrTouchSession } = require('../services/sessionTracker');
+    registerOrTouchSession(verifiedTarget, req.ip, req.headers['user-agent'], '/results');
+  } catch (_) {}
+
+  try {
     const result = await executeSearch(query, verifiedTarget, { pythonServiceUrl: PYTHON_SERVICE_URL });
     return res.json({
       success: true,

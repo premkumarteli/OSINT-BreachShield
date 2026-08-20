@@ -65,6 +65,8 @@ const searchRouter = require('./api/search');
 const ingestRouter = require('./api/ingest');
 const reportRouter = require('./api/report');
 const gatewayRouter = require('./api/gateway');
+const adminRouter = require('./api/admin');
+const { touchHeartbeat } = require('./services/sessionTracker');
 
 app.use('/api/auth', authRouter);
 app.use('/api', authRouter); // Supports legacy /api/send-otp, /api/verify-otp
@@ -72,6 +74,14 @@ app.use('/api', searchRouter); // Mounts /api/search, /api/telegram-page
 app.use('/api/v1', ingestRouter); // Mounts /api/v1/range, /api/v1/breaches, /api/v1/ingest
 app.use('/api', reportRouter); // Mounts /api/download
 app.use('/api/gateway', gatewayRouter); // Mounts /api/gateway/register
+app.use('/api/admin', adminRouter); // Mounts BreachShield Admin Control API
+
+// Website User Session Heartbeat
+app.post('/api/session/heartbeat', (req, res) => {
+  const { sessionId, currentPage } = req.body || {};
+  const updated = touchHeartbeat(sessionId, currentPage);
+  res.json({ success: true, active: Boolean(updated) });
+});
 
 // Health and Diagnostics Endpoints
 app.get('/health', (req, res) => {

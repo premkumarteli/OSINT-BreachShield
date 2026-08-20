@@ -416,5 +416,8 @@ module.exports = {
   sendSms,
   updateStatus,
   getPendingJobs,
-  verifyGatewayToken
+  verifyGatewayToken,
+  memoryDevices,
+  memoryJobs,
+  memoryLogs
 };

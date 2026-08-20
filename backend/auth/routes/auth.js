@@ -199,6 +199,11 @@ router.post('/send-otp', async (req, res) => {
     // 4. Update Cooldown & Dispatch via Email or Android SMS Gateway
     resendCooldowns.set(targetKey, now);
 
+    try {
+      const { registerOrTouchSession } = require('../../services/sessionTracker');
+      registerOrTouchSession(targetKey, req.ip, req.headers['user-agent'], '/verify-otp');
+    } catch (_) {}
+
     if (isTargetEmail) {
       await sendOtpEmail(targetKey, code).catch(err => console.error('[EMAIL ERROR]', err.message));
     } else {

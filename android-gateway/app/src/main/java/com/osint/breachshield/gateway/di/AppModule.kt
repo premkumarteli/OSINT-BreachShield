@@ -12,6 +12,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -28,13 +30,32 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(preferenceManager: PreferenceManager): OkHttpClient {
         val logging = HttpLoggingInterceptor { message ->
             android.util.Log.d("OkHttp", message)
         }.apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
+
+        val dynamicHostInterceptor = Interceptor { chain ->
+            var request = chain.request()
+            val rawServerUrl = preferenceManager.getServerUrl()
+            if (rawServerUrl.isNotBlank() && rawServerUrl.startsWith("http")) {
+                val newUrl = rawServerUrl.toHttpUrlOrNull()
+                if (newUrl != null) {
+                    val updatedHttpUrl = request.url.newBuilder()
+                        .scheme(newUrl.scheme)
+                        .host(newUrl.host)
+                        .port(newUrl.port)
+                        .build()
+                    request = request.newBuilder().url(updatedHttpUrl).build()
+                }
+            }
+            chain.proceed(request)
+        }
+
         return OkHttpClient.Builder()
+            .addInterceptor(dynamicHostInterceptor)
             .addInterceptor(logging)
             .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
@@ -57,13 +78,9 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideBreachShieldApi(okHttpClient: OkHttpClient, preferenceManager: PreferenceManager): BreachShieldApi {
-        val rawUrl = preferenceManager.getServerUrl() ?: "http://localhost"
-        val serverUrl = if (rawUrl.isBlank() || !rawUrl.startsWith("http")) "http://localhost" else rawUrl
-        val baseUrl = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
-        
+    fun provideBreachShieldApi(okHttpClient: OkHttpClient): BreachShieldApi {
         return Retrofit.Builder()
-            .baseUrl(baseUrl)
+            .baseUrl("http://localhost:5000/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

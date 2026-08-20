@@ -52,6 +52,10 @@ instance/
 backend/instance/
 data/records/*.json
 data/breach_store/*.dat
+data/sessions.json
+data/alerts.json
+data/audit_logs.json
+data/*.db
 
 # Web App Build Outputs
 frontend/build/

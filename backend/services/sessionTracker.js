@@ -1,0 +1,208 @@
+/**
+ * @file sessionTracker.js
+ * @description Authoritative SQLite/filesystem-backed session tracking engine with in-memory caching,
+ * heartbeat timeout evaluation, and IP privacy masking.
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
+const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+
+// In-memory active cache
+let activeSessions = new Map();
+let sessionHistory = [];
+
+// Initialize persistence
+function loadPersistedData() {
+  try {
+    if (fs.existsSync(SESSIONS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8') || '{}');
+      if (Array.isArray(data.active)) {
+        activeSessions = new Map(data.active.map(s => [s.sessionId, s]));
+      }
+      if (Array.isArray(data.history)) {
+        sessionHistory = data.history;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load persisted sessions, initializing fresh memory store:', e.message);
+  }
+}
+
+function savePersistedData() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const data = {
+      active: Array.from(activeSessions.values()),
+      history: sessionHistory.slice(-500) // Keep last 500 historical sessions
+    };
+    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    console.warn('Failed to persist session data:', e.message);
+  }
+}
+
+loadPersistedData();
+
+/**
+ * Mask IP address for administrative privacy (e.g., 192.168.1.42 -> 192.168.••.42)
+ */
+function maskIp(ip) {
+  if (!ip) return '•••.•••.•••.•••';
+  const cleanIp = ip.replace(/^::ffff:/, '').trim();
+  if (cleanIp.includes('.')) {
+    const parts = cleanIp.split('.');
+    if (parts.length === 4) {
+      return `${parts[0]}.${parts[1]}.••.${parts[3]}`;
+    }
+  }
+  if (cleanIp.includes(':')) {
+    const parts = cleanIp.split(':');
+    return `${parts[0]}:${parts[1]}:••:••`;
+  }
+  return '•••.•••.•••.•••';
+}
+
+/**
+ * Parse basic client metadata from User-Agent
+ */
+function parseClientInfo(ua) {
+  if (!ua) return { device: 'Desktop', browser: 'Web Browser', os: 'Unknown OS' };
+  let device = 'Desktop';
+  if (/mobile|android|iphone|ipad/i.test(ua)) {
+    device = /ipad|tablet/i.test(ua) ? 'Tablet' : 'Mobile';
+  }
+
+  let os = 'Unknown OS';
+  if (/windows/i.test(ua)) os = 'Windows';
+  else if (/macintosh|mac os/i.test(ua)) os = 'macOS';
+  else if (/android/i.test(ua)) os = 'Android';
+  else if (/iphone|ipad|ios/i.test(ua)) os = 'iOS';
+  else if (/linux/i.test(ua)) os = 'Linux';
+
+  let browser = 'Browser';
+  if (/edg\//i.test(ua)) browser = 'Edge';
+  else if (/chrome|crios/i.test(ua)) browser = 'Chrome';
+  else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
+  else if (/safari/i.test(ua)) browser = 'Safari';
+
+  return { device, browser, os };
+}
+
+/**
+ * Register or refresh a user session
+ */
+function registerOrTouchSession(userTarget, ip, userAgent, currentPage = '/') {
+  const target = (userTarget || 'Anonymous Visitor').trim();
+  const sessionId = `sess_${Buffer.from(target + (ip || '')).toString('hex').slice(0, 16)}`;
+  const now = Date.now();
+  const { device, browser, os } = parseClientInfo(userAgent);
+  const maskedIp = maskIp(ip);
+
+  let session = activeSessions.get(sessionId);
+  if (session) {
+    session.lastActivity = now;
+    session.currentPage = currentPage;
+    session.state = 'ONLINE';
+  } else {
+    session = {
+      sessionId,
+      userTarget: target,
+      maskedIp,
+      device,
+      browser,
+      os,
+      currentPage,
+      startTime: now,
+      lastActivity: now,
+      state: 'ONLINE'
+    };
+    activeSessions.set(sessionId, session);
+  }
+
+  savePersistedData();
+  return session;
+}
+
+/**
+ * Heartbeat update for an existing session
+ */
+function touchHeartbeat(sessionId, currentPage) {
+  if (!sessionId) return null;
+  const session = activeSessions.get(sessionId);
+  if (session) {
+    session.lastActivity = Date.now();
+    if (currentPage) session.currentPage = currentPage;
+    session.state = 'ONLINE';
+    savePersistedData();
+    return session;
+  }
+  return null;
+}
+
+/**
+ * Evaluate and return all active sessions with status:
+ * < 2 min: ONLINE
+ * 2-15 min: IDLE
+ * > 15 min: EXPIRED (migrated to history)
+ */
+function getActiveSessions() {
+  const now = Date.now();
+  const activeList = [];
+  const expiredIds = [];
+
+  for (const [id, session] of activeSessions.entries()) {
+    const diff = now - session.lastActivity;
+    if (diff < 120 * 1000) {
+      session.state = 'ONLINE';
+      activeList.push(session);
+    } else if (diff <= 900 * 1000) {
+      session.state = 'IDLE';
+      activeList.push(session);
+    } else {
+      // Expired: Archive to history
+      expiredIds.push(id);
+      sessionHistory.unshift({
+        sessionId: session.sessionId,
+        userTarget: session.userTarget,
+        maskedIp: session.maskedIp,
+        device: session.device,
+        browser: session.browser,
+        os: session.os,
+        startTime: session.startTime,
+        endTime: session.lastActivity,
+        durationSeconds: Math.max(1, Math.round((session.lastActivity - session.startTime) / 1000))
+      });
+    }
+  }
+
+  for (const id of expiredIds) {
+    activeSessions.delete(id);
+  }
+
+  if (expiredIds.length > 0) {
+    savePersistedData();
+  }
+
+  return activeList.sort((a, b) => b.lastActivity - a.lastActivity);
+}
+
+/**
+ * Return historical completed sessions
+ */
+function getSessionHistory(limit = 50) {
+  getActiveSessions(); // Flush expired into history
+  return sessionHistory.slice(0, limit);
+}
+
+module.exports = {
+  registerOrTouchSession,
+  touchHeartbeat,
+  getActiveSessions,
+  getSessionHistory,
+  maskIp
+};
