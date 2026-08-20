@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ fun BreachIntelligenceScreen(
     viewModel: MoreViewModel = hiltViewModel()
 ) {
     val breachData by viewModel.breachData.collectAsState()
+    val statusMessage by viewModel.statusMessage.collectAsState()
 
     Scaffold(
         topBar = {
@@ -56,6 +58,27 @@ fun BreachIntelligenceScreen(
                             Text("Operational", color = MatrixGreen, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                         StatusBadge(status = breachData?.indexStatus ?: "HEALTHY")
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Button(
+                        onClick = viewModel::triggerBreachSync,
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentCyan, contentColor = ObsidianBg),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("⚡ Trigger Intelligence Re-Index", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    if (statusMessage != null) {
+                        Text(
+                            text = statusMessage ?: "",
+                            color = MatrixGreen,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
                     }
                 }
             }

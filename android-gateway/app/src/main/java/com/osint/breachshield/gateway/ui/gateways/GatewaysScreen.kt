@@ -20,6 +20,7 @@ import com.osint.breachshield.gateway.ui.components.GlassCard
 import com.osint.breachshield.gateway.ui.components.StatusBadge
 import com.osint.breachshield.gateway.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GatewaysScreen(
     onSelectGateway: (String) -> Unit,
@@ -30,9 +31,81 @@ fun GatewaysScreen(
     val recentSmsLogs by viewModel.recentSmsLogs.collectAsState()
     val isRegistered by viewModel.isThisDeviceRegistered.collectAsState()
     val isRegistering by viewModel.isRegisteringDevice.collectAsState()
+    val isSendingTestSms by viewModel.isSendingTestSms.collectAsState()
     val actionMessage by viewModel.actionMessage.collectAsState()
 
+    var showTestSmsDialog by remember { mutableStateOf(false) }
+    var testPhoneInput by remember { mutableStateOf("+918722611983") }
+    var testMessageInput by remember { mutableStateOf("BreachShield Test SMS verification via physical SIM.") }
+
     val onlineCount = gateways.count { it.status == "ONLINE" }
+
+    // Test SMS Modal Dialog
+    if (showTestSmsDialog) {
+        AlertDialog(
+            onDismissRequest = { showTestSmsDialog = false },
+            title = {
+                Text(
+                    "SEND TEST SMS MESSAGE",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentCyan
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Target Phone Number", color = SlateTextSecondary, fontSize = 12.sp)
+                    OutlinedTextField(
+                        value = testPhoneInput,
+                        onValueChange = { testPhoneInput = it },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentCyan,
+                            unfocusedBorderColor = GlassBorderColor,
+                            focusedTextColor = SlateTextPrimary,
+                            unfocusedTextColor = SlateTextPrimary
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text("SMS Body Content", color = SlateTextSecondary, fontSize = 12.sp)
+                    OutlinedTextField(
+                        value = testMessageInput,
+                        onValueChange = { testMessageInput = it },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentCyan,
+                            unfocusedBorderColor = GlassBorderColor,
+                            focusedTextColor = SlateTextPrimary,
+                            unfocusedTextColor = SlateTextPrimary
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.sendTestSms(testPhoneInput, testMessageInput)
+                        showTestSmsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentCyan, contentColor = ObsidianBg),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Dispatch SMS Now", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTestSmsDialog = false }) {
+                    Text("Cancel", color = SlateTextSecondary)
+                }
+            },
+            containerColor = Color(0xFF0F172A),
+            shape = RoundedCornerShape(18.dp)
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -90,23 +163,31 @@ fun GatewaysScreen(
                     StatusBadge(status = if (isRegistered) "ONLINE" else "STANDBY")
                 }
 
-                if (!isRegistered || actionMessage != null) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Button(
-                        onClick = viewModel::registerThisDeviceAsGateway,
-                        enabled = !isRegistering,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = AccentCyan,
-                            contentColor = ObsidianBg
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (isRegistering) {
-                            CircularProgressIndicator(color = ObsidianBg, modifier = Modifier.size(16.dp))
-                        } else {
-                            Text("Activate Device as SMS Gateway", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (!isRegistered) {
+                        Button(
+                            onClick = viewModel::registerThisDeviceAsGateway,
+                            enabled = !isRegistering,
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentCyan, contentColor = ObsidianBg),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Activate Device", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         }
+                    }
+
+                    Button(
+                        onClick = { showTestSmsDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B), contentColor = MatrixGreen),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("✉ Send Test SMS", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                 }
 

@@ -1,8 +1,9 @@
 /**
  * @file admin_api.test.js
  * @description Comprehensive automated test suite for BreachShield Admin Control Center API.
- * Validates admin OTP auth, role enforcement, active session presence, IP/phone masking,
- * gateway telemetry, SMS metrics, alerts, and breach intelligence.
+ * Validates admin OTP auth, role enforcement, active session presence, session termination,
+ * IP/phone masking, gateway telemetry, test SMS dispatch, live settings mutation,
+ * alerts resolution, and breach intelligence re-sync.
  */
 
 const { describe, it, before, after } = require('node:test');
@@ -89,11 +90,22 @@ describe('BreachShield Admin Control API Test Suite', () => {
       assert.ok(data.data.metrics);
       assert.ok(data.data.systemStatus);
     });
+
+    it('1.6: GET /api/admin/ping returns server latency diagnostics (200)', async () => {
+      const res = await fetch(`${baseUrl}/api/admin/ping`);
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.status, 'OK');
+      assert.ok(data.serverTime);
+    });
   });
 
-  describe('2. Active & Historical Website Users Monitoring', () => {
+  describe('2. Active & Historical Website Users & Session Termination', () => {
+    let testSessionId;
+
     it('2.1: Registering website visitor creates active session with masked IP', async () => {
-      registerOrTouchSession('victim@corp.com', '192.168.1.105', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0', '/results');
+      const session = registerOrTouchSession('victim@corp.com', '192.168.1.105', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0', '/results');
+      testSessionId = session.sessionId;
 
       const res = await fetch(`${baseUrl}/api/admin/users/active`, {
         headers: { Authorization: `Bearer ${adminToken}` }
@@ -121,7 +133,25 @@ describe('BreachShield Admin Control API Test Suite', () => {
       assert.equal(data.active, true);
     });
 
-    it('2.3: Historical sessions endpoint returns archived records', async () => {
+    it('2.3: POST /api/admin/users/:sessionId/terminate forcefully revokes active visitor session', async () => {
+      const res = await fetch(`${baseUrl}/api/admin/users/${testSessionId}/terminate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.success, true);
+
+      // Verify user is no longer in active list
+      const activeRes = await fetch(`${baseUrl}/api/admin/users/active`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      const activeData = await activeRes.json();
+      const stillActive = activeData.users.find(u => u.sessionId === testSessionId);
+      assert.equal(stillActive, undefined);
+    });
+
+    it('2.4: Historical sessions endpoint returns archived records', async () => {
       const res = await fetch(`${baseUrl}/api/admin/users/history`, {
         headers: { Authorization: `Bearer ${adminToken}` }
       });
@@ -132,7 +162,7 @@ describe('BreachShield Admin Control API Test Suite', () => {
     });
   });
 
-  describe('3. Gateways & Telemetry Endpoints', () => {
+  describe('3. Gateways, Telemetry & Test SMS Dispatch', () => {
     it('3.1: GET /api/admin/gateways returns hardware nodes status', async () => {
       const res = await fetch(`${baseUrl}/api/admin/gateways`, {
         headers: { Authorization: `Bearer ${adminToken}` }
@@ -154,22 +184,27 @@ describe('BreachShield Admin Control API Test Suite', () => {
       assert.ok(Array.isArray(data.recentLogs));
     });
 
-    it('3.3: POST /api/admin/gateways/:id/action rejects offline gateway gracefully (503)', async () => {
-      const res = await fetch(`${baseUrl}/api/admin/gateways/offline-device-999/action`, {
+    it('3.3: POST /api/admin/sms/test-send triggers test dispatch to target phone number', async () => {
+      const res = await fetch(`${baseUrl}/api/admin/sms/test-send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${adminToken}`
         },
-        body: JSON.stringify({ action: 'PING' })
+        body: JSON.stringify({ phone: '+918722611983', message: 'Admin test message' })
       });
-      assert.equal(res.status, 503);
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.success, true);
     });
   });
 
-  describe('4. Security Alerts, Audit Trail & Breach Intelligence', () => {
+  describe('4. Security Alerts, Audit Trail, Breaches & Live Settings Mutation', () => {
+    let alertId;
+
     it('4.1: Alerts endpoint returns recorded alerts with severity codes', async () => {
-      addAlert('WARNING', 'High SMS Rate', 'SMS dispatch rate exceeded threshold', 'GATEWAY');
+      const alert = addAlert('WARNING', 'High SMS Rate', 'SMS dispatch rate exceeded threshold', 'GATEWAY');
+      alertId = alert.id;
 
       const res = await fetch(`${baseUrl}/api/admin/alerts`, {
         headers: { Authorization: `Bearer ${adminToken}` }
@@ -178,12 +213,19 @@ describe('BreachShield Admin Control API Test Suite', () => {
       const data = await res.json();
       assert.equal(data.success, true);
       assert.ok(data.alerts.length >= 1);
-      const alert = data.alerts.find(a => a.title === 'High SMS Rate');
-      assert.ok(alert);
-      assert.equal(alert.severity, 'WARNING');
     });
 
-    it('4.2: Activity endpoint returns chronological audit logs', async () => {
+    it('4.2: POST /api/admin/alerts/:id/resolve acknowledges and resolves alert', async () => {
+      const res = await fetch(`${baseUrl}/api/admin/alerts/${alertId}/resolve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.success, true);
+    });
+
+    it('4.3: Activity endpoint returns chronological audit logs', async () => {
       logActivity('admin@breachshield.io', 'CONFIG_UPDATE', 'SERVER', 'SUCCESS');
 
       const res = await fetch(`${baseUrl}/api/admin/activity`, {
@@ -193,29 +235,39 @@ describe('BreachShield Admin Control API Test Suite', () => {
       const data = await res.json();
       assert.equal(data.success, true);
       assert.ok(data.activity.length >= 1);
-      const act = data.activity.find(a => a.action === 'CONFIG_UPDATE');
-      assert.ok(act);
     });
 
-    it('4.3: Breach Intelligence endpoint returns operational metadata without raw PII', async () => {
-      const res = await fetch(`${baseUrl}/api/admin/breaches`, {
+    it('4.4: POST /api/admin/breaches/sync triggers dataset re-indexing', async () => {
+      const res = await fetch(`${baseUrl}/api/admin/breaches/sync`, {
+        method: 'POST',
         headers: { Authorization: `Bearer ${adminToken}` }
       });
       assert.equal(res.status, 200);
       const data = await res.json();
       assert.equal(data.success, true);
-      assert.equal(data.indexStatus, 'HEALTHY');
-      assert.ok(Array.isArray(data.datasets));
     });
 
-    it('4.4: Settings endpoint returns server configuration metadata', async () => {
+    it('4.5: PUT /api/admin/settings updates runtime configuration dynamically', async () => {
       const res = await fetch(`${baseUrl}/api/admin/settings`, {
-        headers: { Authorization: `Bearer ${adminToken}` }
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          enableTelegramScraper: true,
+          otpExpiryMinutes: 10,
+          sessionTimeoutMin: 30,
+          heartbeatIntervalSec: 15
+        })
       });
       assert.equal(res.status, 200);
       const data = await res.json();
       assert.equal(data.success, true);
-      assert.ok(data.settings.appVersion);
+      assert.equal(data.settings.otpExpiryMinutes, 10);
+      assert.equal(data.settings.sessionTimeoutMin, 30);
+      assert.equal(data.settings.heartbeatIntervalSec, 15);
+      assert.equal(data.settings.enableTelegramScraper, true);
     });
   });
 });

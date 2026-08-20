@@ -1,7 +1,7 @@
 /**
  * @file sessionTracker.js
  * @description Authoritative SQLite/filesystem-backed session tracking engine with in-memory caching,
- * heartbeat timeout evaluation, and IP privacy masking.
+ * heartbeat timeout evaluation, IP privacy masking, active session termination, and target blacklisting.
  */
 
 const fs = require('fs');
@@ -9,10 +9,12 @@ const path = require('path');
 
 const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+const BLACKLIST_FILE = path.join(DATA_DIR, 'blacklist.json');
 
 // In-memory active cache
 let activeSessions = new Map();
 let sessionHistory = [];
+let blacklist = new Set();
 
 // Initialize persistence
 function loadPersistedData() {
@@ -25,6 +27,10 @@ function loadPersistedData() {
       if (Array.isArray(data.history)) {
         sessionHistory = data.history;
       }
+    }
+    if (fs.existsSync(BLACKLIST_FILE)) {
+      const list = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8') || '[]');
+      blacklist = new Set(list);
     }
   } catch (e) {
     console.warn('Failed to load persisted sessions, initializing fresh memory store:', e.message);
@@ -41,6 +47,7 @@ function savePersistedData() {
       history: sessionHistory.slice(-500) // Keep last 500 historical sessions
     };
     fs.writeFileSync(SESSIONS_FILE, JSON.stringify(data, null, 2), 'utf8');
+    fs.writeFileSync(BLACKLIST_FILE, JSON.stringify(Array.from(blacklist), null, 2), 'utf8');
   } catch (e) {
     console.warn('Failed to persist session data:', e.message);
   }
@@ -98,54 +105,109 @@ function parseClientInfo(ua) {
  */
 function registerOrTouchSession(userTarget, ip, userAgent, currentPage = '/') {
   const target = (userTarget || 'Anonymous Visitor').trim();
-  const sessionId = `sess_${Buffer.from(target + (ip || '')).toString('hex').slice(0, 16)}`;
-  const now = Date.now();
+  const rawIp = (ip || '').replace(/^::ffff:/, '').trim();
   const { device, browser, os } = parseClientInfo(userAgent);
-  const maskedIp = maskIp(ip);
+  const now = Date.now();
 
-  let session = activeSessions.get(sessionId);
-  if (session) {
-    session.lastActivity = now;
-    session.currentPage = currentPage;
-    session.state = 'ONLINE';
-  } else {
-    session = {
-      sessionId,
-      userTarget: target,
-      maskedIp,
-      device,
-      browser,
-      os,
-      currentPage,
-      startTime: now,
-      lastActivity: now,
-      state: 'ONLINE'
-    };
-    activeSessions.set(sessionId, session);
+  // Look for existing active session for this target
+  for (const session of activeSessions.values()) {
+    if (session.userTarget.toLowerCase() === target.toLowerCase()) {
+      session.lastActivity = now;
+      session.currentPage = currentPage;
+      session.ip = rawIp;
+      session.maskedIp = maskIp(rawIp);
+      savePersistedData();
+      return session;
+    }
   }
 
+  // Create new session
+  const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const newSession = {
+    sessionId,
+    userTarget: target,
+    ip: rawIp,
+    maskedIp: maskIp(rawIp),
+    device,
+    browser,
+    os,
+    currentPage,
+    startTime: now,
+    lastActivity: now,
+    state: 'ONLINE'
+  };
+
+  activeSessions.set(sessionId, newSession);
   savePersistedData();
-  return session;
+  return newSession;
 }
 
 /**
- * Heartbeat update for an existing session
+ * Handle heartbeat from client
  */
 function touchHeartbeat(sessionId, currentPage) {
-  if (!sessionId) return null;
+  if (!sessionId) return false;
   const session = activeSessions.get(sessionId);
   if (session) {
     session.lastActivity = Date.now();
     if (currentPage) session.currentPage = currentPage;
     session.state = 'ONLINE';
     savePersistedData();
-    return session;
+    return true;
   }
-  return null;
+  return false;
 }
 
 /**
- * Evaluate and return all active sessions with status:
+ * Terminate/Revoke an active session
+ */
+function terminateSession(sessionId) {
+  if (!sessionId) return false;
+  const session = activeSessions.get(sessionId);
+  if (session) {
+    sessionHistory.unshift({
+      sessionId: session.sessionId,
+      userTarget: session.userTarget,
+      maskedIp: session.maskedIp,
+      device: session.device,
+      browser: session.browser,
+      os: session.os,
+      startTime: session.startTime,
+      endTime: Date.now(),
+      durationSeconds: Math.max(1, Math.round((Date.now() - session.startTime) / 1000)),
+      terminatedByAdmin: true
+    });
+    activeSessions.delete(sessionId);
+    savePersistedData();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Blacklist / Unblacklist target
+ */
+function blacklistTarget(target) {
+  if (!target) return false;
+  blacklist.add(String(target).toLowerCase().trim());
+  savePersistedData();
+  return true;
+}
+
+function unblacklistTarget(target) {
+  if (!target) return false;
+  blacklist.delete(String(target).toLowerCase().trim());
+  savePersistedData();
+  return true;
+}
+
+function isBlacklisted(target) {
+  if (!target) return false;
+  return blacklist.has(String(target).toLowerCase().trim());
+}
+
+/**
+ * Authoritative Evaluation:
  * < 2 min: ONLINE
  * 2-15 min: IDLE
  * > 15 min: EXPIRED (migrated to history)
@@ -202,6 +264,10 @@ function getSessionHistory(limit = 50) {
 module.exports = {
   registerOrTouchSession,
   touchHeartbeat,
+  terminateSession,
+  blacklistTarget,
+  unblacklistTarget,
+  isBlacklisted,
   getActiveSessions,
   getSessionHistory,
   maskIp

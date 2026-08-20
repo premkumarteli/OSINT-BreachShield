@@ -38,13 +38,15 @@ class GatewayViewModel @Inject constructor(
     private val _isRegisteringDevice = MutableStateFlow(false)
     val isRegisteringDevice = _isRegisteringDevice.asStateFlow()
 
+    private val _isSendingTestSms = MutableStateFlow(false)
+    val isSendingTestSms = _isSendingTestSms.asStateFlow()
+
     private val _actionMessage = MutableStateFlow<String?>(null)
     val actionMessage = _actionMessage.asStateFlow()
 
     val isThisDeviceRegistered = preferenceManager.registrationStatus
 
     init {
-        // Auto-register this device if not registered yet
         if (!preferenceManager.isRegistered()) {
             registerThisDeviceAsGateway()
         } else {
@@ -83,6 +85,31 @@ class GatewayViewModel @Inject constructor(
                 _actionMessage.value = "Registration error: ${e.localizedMessage}"
             } finally {
                 _isRegisteringDevice.value = false
+            }
+        }
+    }
+
+    fun sendTestSms(phone: String, message: String) {
+        val token = preferenceManager.getAdminToken() ?: return
+        if (phone.isBlank()) {
+            _actionMessage.value = "Please enter a valid phone number."
+            return
+        }
+
+        viewModelScope.launch {
+            _isSendingTestSms.value = true
+            try {
+                val res = api.sendTestSms("Bearer $token", TestSmsRequest(phone.trim(), message.trim()))
+                if (res.success) {
+                    _actionMessage.value = "Test SMS dispatched to $phone!"
+                    refreshAll()
+                } else {
+                    _actionMessage.value = res.error ?: "Failed to dispatch test SMS."
+                }
+            } catch (e: Exception) {
+                _actionMessage.value = "Error: ${e.localizedMessage}"
+            } finally {
+                _isSendingTestSms.value = false
             }
         }
     }

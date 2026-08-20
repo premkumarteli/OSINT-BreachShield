@@ -8,6 +8,10 @@ interface BreachShieldApi {
     @POST("/api/gateway/register")
     suspend fun registerDevice(@Body request: RegistrationRequest): RegistrationResponse
 
+    // Diagnostic Ping
+    @GET("/api/admin/ping")
+    suspend fun ping(): PingResponse
+
     // Admin Authentication
     @POST("/api/admin/auth/send-otp")
     suspend fun sendAdminOtp(@Body request: AdminSendOtpRequest): AdminApiResponse<Unit>
@@ -23,6 +27,18 @@ interface BreachShieldApi {
     @GET("/api/admin/users/active")
     suspend fun getActiveUsers(@Header("Authorization") token: String): ActiveUsersResponse
 
+    @POST("/api/admin/users/{sessionId}/terminate")
+    suspend fun terminateUserSession(
+        @Header("Authorization") token: String,
+        @Path("sessionId") sessionId: String
+    ): AdminApiResponse<Unit>
+
+    @POST("/api/admin/users/blacklist")
+    suspend fun blacklistUserTarget(
+        @Header("Authorization") token: String,
+        @Body request: BlacklistRequest
+    ): AdminApiResponse<Unit>
+
     @GET("/api/admin/users/history")
     suspend fun getUserHistory(@Header("Authorization") token: String, @Query("limit") limit: Int = 50): UserHistoryResponse
 
@@ -37,13 +53,25 @@ interface BreachShieldApi {
         @Body request: GatewayActionRequest
     ): AdminApiResponse<Unit>
 
-    // SMS Telemetry
+    // SMS Telemetry & Test Dispatch
     @GET("/api/admin/sms")
     suspend fun getSmsTelemetry(@Header("Authorization") token: String): SmsTelemetryResponse
+
+    @POST("/api/admin/sms/test-send")
+    suspend fun sendTestSms(
+        @Header("Authorization") token: String,
+        @Body request: TestSmsRequest
+    ): AdminApiResponse<Unit>
 
     // Alerts, Activity & Breaches
     @GET("/api/admin/alerts")
     suspend fun getAlerts(@Header("Authorization") token: String): AlertsResponse
+
+    @POST("/api/admin/alerts/{id}/resolve")
+    suspend fun resolveAlert(
+        @Header("Authorization") token: String,
+        @Path("id") alertId: String
+    ): AdminApiResponse<Unit>
 
     @GET("/api/admin/activity")
     suspend fun getActivity(@Header("Authorization") token: String): ActivityResponse
@@ -51,9 +79,18 @@ interface BreachShieldApi {
     @GET("/api/admin/breaches")
     suspend fun getBreaches(@Header("Authorization") token: String): BreachesResponse
 
-    // System Settings
+    @POST("/api/admin/breaches/sync")
+    suspend fun syncBreaches(@Header("Authorization") token: String): AdminApiResponse<Unit>
+
+    // System Settings (Read & Dynamic Update)
     @GET("/api/admin/settings")
     suspend fun getSettings(@Header("Authorization") token: String): SettingsResponse
+
+    @PUT("/api/admin/settings")
+    suspend fun updateSettings(
+        @Header("Authorization") token: String,
+        @Body request: UpdateSettingsRequest
+    ): SettingsResponse
 }
 
 // ----------------- Data Models -----------------
@@ -72,6 +109,13 @@ data class RegistrationResponse(
     val success: Boolean,
     val gatewayToken: String?,
     val message: String? = null
+)
+
+data class PingResponse(
+    val success: Boolean,
+    val status: String,
+    val serverTime: Long,
+    val uptime: Long
 )
 
 data class AdminSendOtpRequest(val email: String)
@@ -134,6 +178,11 @@ data class ActiveUserItem(
     val state: String
 )
 
+data class BlacklistRequest(
+    val target: String,
+    val reason: String? = null
+)
+
 data class UserHistoryResponse(
     val success: Boolean,
     val count: Int,
@@ -176,6 +225,11 @@ data class GatewayItem(
 
 data class GatewayActionRequest(val action: String)
 
+data class TestSmsRequest(
+    val phone: String,
+    val message: String
+)
+
 data class SmsTelemetryResponse(
     val success: Boolean,
     val metrics: SmsMetrics,
@@ -209,7 +263,8 @@ data class AlertItem(
     val title: String,
     val description: String,
     val source: String,
-    val timestamp: Long
+    val timestamp: Long,
+    val acknowledged: Boolean = false
 )
 
 data class ActivityResponse(
@@ -243,7 +298,8 @@ data class DatasetItem(
 
 data class SettingsResponse(
     val success: Boolean,
-    val settings: AppSettingsDto
+    val settings: AppSettingsDto,
+    val message: String? = null
 )
 
 data class AppSettingsDto(
@@ -251,5 +307,20 @@ data class AppSettingsDto(
     val environment: String,
     val heartbeatIntervalSec: Int,
     val sessionTimeoutMin: Int,
+    val otpExpiryMinutes: Int = 5,
+    val enableTelegramScraper: Boolean = true,
+    val fallbackToEmail: Boolean = true,
+    val maintenanceMode: Boolean = false,
+    val smsOtpTemplate: String = "Your BreachShield OTP is {OTP}. Valid for 5 minutes.",
     val appVersion: String
+)
+
+data class UpdateSettingsRequest(
+    val enableTelegramScraper: Boolean? = null,
+    val fallbackToEmail: Boolean? = null,
+    val maintenanceMode: Boolean? = null,
+    val otpExpiryMinutes: Int? = null,
+    val sessionTimeoutMin: Int? = null,
+    val heartbeatIntervalSec: Int? = null,
+    val smsOtpTemplate: String? = null
 )

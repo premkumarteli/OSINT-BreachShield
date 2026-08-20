@@ -3,6 +3,7 @@ package com.osint.breachshield.gateway.ui.users
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.osint.breachshield.gateway.data.api.ActiveUserItem
+import com.osint.breachshield.gateway.data.api.BlacklistRequest
 import com.osint.breachshield.gateway.data.api.BreachShieldApi
 import com.osint.breachshield.gateway.data.api.UserHistoryItem
 import com.osint.breachshield.gateway.data.prefs.PreferenceManager
@@ -35,6 +36,9 @@ class UsersViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
+    private val _actionFeedback = MutableStateFlow<String?>(null)
+    val actionFeedback = _actionFeedback.asStateFlow()
+
     init {
         fetchUsers()
     }
@@ -66,5 +70,39 @@ class UsersViewModel @Inject constructor(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun terminateSession(sessionId: String) {
+        val token = preferenceManager.getAdminToken() ?: return
+        viewModelScope.launch {
+            try {
+                val res = api.terminateUserSession("Bearer $token", sessionId)
+                if (res.success) {
+                    _actionFeedback.value = "User session $sessionId terminated."
+                    fetchUsers()
+                }
+            } catch (e: Exception) {
+                _actionFeedback.value = "Failed to terminate: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun blacklistTarget(target: String) {
+        val token = preferenceManager.getAdminToken() ?: return
+        viewModelScope.launch {
+            try {
+                val res = api.blacklistUserTarget("Bearer $token", BlacklistRequest(target, "Administrative block"))
+                if (res.success) {
+                    _actionFeedback.value = "Target $target blacklisted."
+                    fetchUsers()
+                }
+            } catch (e: Exception) {
+                _actionFeedback.value = "Failed to blacklist: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun clearFeedback() {
+        _actionFeedback.value = null
     }
 }

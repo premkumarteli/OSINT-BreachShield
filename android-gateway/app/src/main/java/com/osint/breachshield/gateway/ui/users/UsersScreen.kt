@@ -32,21 +32,20 @@ fun UsersScreen(
     val currentTab by viewModel.currentTab.collectAsState()
     val activeUsers by viewModel.activeUsers.collectAsState()
     val userHistory by viewModel.userHistory.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val actionFeedback by viewModel.actionFeedback.collectAsState()
 
     var selectedActiveUser by remember { mutableStateOf<ActiveUserItem?>(null) }
 
-    // User Detail Bottom Sheet Dialog
+    // User Detail & Interactive Management Dialog
     if (selectedActiveUser != null) {
         val user = selectedActiveUser!!
         AlertDialog(
             onDismissRequest = { selectedActiveUser = null },
             title = {
                 Text(
-                    "USER SESSION DETAILS",
+                    "USER SESSION MANAGEMENT",
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = AccentCyan
                 )
@@ -54,16 +53,49 @@ fun UsersScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Target: ${user.userTarget}", color = SlateTextPrimary, fontWeight = FontWeight.Bold)
-                    Text("State: ${user.state}", color = if (user.state == "ONLINE") MatrixGreen else WarningAmber)
-                    Text("Client: ${user.browser} on ${user.os} (${user.device})", color = SlateTextSecondary)
-                    Text("Masked IP: ${user.maskedIp}", color = SlateTextSecondary, fontFamily = FontFamily.Monospace)
-                    Text("Current Page: ${user.currentPage}", color = SlateTextSecondary)
+                    Text("State: ${user.state}", color = if (user.state == "ONLINE") MatrixGreen else WarningAmber, fontWeight = FontWeight.SemiBold)
+                    Text("Client: ${user.browser} on ${user.os} (${user.device})", color = SlateTextSecondary, fontSize = 12.sp)
+                    Text("Masked IP: ${user.maskedIp}", color = SlateTextSecondary, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                    Text("Current Page: ${user.currentPage}", color = SlateTextSecondary, fontSize = 12.sp)
                     Text("Session ID: ${user.sessionId}", color = SlateTextMuted, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = GlassBorderColor)
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text("ADMINISTRATIVE ACTIONS", color = SlateTextMuted, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+
+                    // Terminate Session Button
+                    Button(
+                        onClick = {
+                            viewModel.terminateSession(user.sessionId)
+                            selectedActiveUser = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CriticalRed, contentColor = Color.White),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Terminate Session Immediately", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    // Blacklist Target Button
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.blacklistTarget(user.userTarget)
+                            selectedActiveUser = null
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = WarningAmber),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, WarningAmber),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Blacklist Target Email/Phone", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { selectedActiveUser = null }) {
-                    Text("Close", color = AccentCyan)
+                    Text("Close", color = SlateTextSecondary)
                 }
             },
             containerColor = Color(0xFF0F172A),
@@ -101,6 +133,27 @@ fun UsersScreen(
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace
                     )
+                }
+            }
+        }
+
+        // Action Feedback Toast Banner
+        if (actionFeedback != null) {
+            item {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColor = AccentCyan
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(actionFeedback ?: "", color = AccentCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        IconButton(onClick = viewModel::clearFeedback) {
+                            Text("✕", color = SlateTextSecondary, fontSize = 12.sp)
+                        }
+                    }
                 }
             }
         }
@@ -210,9 +263,10 @@ fun UsersScreen(
                                 )
                             }
                             Text(
-                                text = "›",
-                                color = SlateTextMuted,
-                                fontSize = 18.sp,
+                                text = "Manage ›",
+                                color = AccentCyan,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(start = 8.dp)
                             )
                         }

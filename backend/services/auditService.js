@@ -78,9 +78,23 @@ function getAlerts(limit = 50) {
   return alerts.slice(0, limit);
 }
 
+function resolveAlert(alertId, resolvedBy = 'ADMIN') {
+  const alert = alerts.find(a => a.id === alertId);
+  if (alert) {
+    alert.acknowledged = true;
+    alert.resolvedAt = Date.now();
+    alert.resolvedBy = resolvedBy;
+    saveData();
+    logActivity(resolvedBy, 'RESOLVE_ALERT', alert.title, 'SUCCESS', { alertId });
+    return true;
+  }
+  return false;
+}
+
 module.exports = {
   logActivity,
   addAlert,
+  resolveAlert,
   getAuditLogs,
   getAlerts
 };
