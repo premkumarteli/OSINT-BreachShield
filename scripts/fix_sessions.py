@@ -3,8 +3,8 @@ import os
 
 paths = [
     'osint_bot_session.session',
-    'services/python-scraper/osint_bot_session.session',
-    'services/python-scraper/osint_service_session.session'
+    'scraper/osint_bot_session.session',
+    'scraper/osint_service_session.session'
 ]
 
 for p in paths:
@@ -37,3 +37,5 @@ for p in paths:
             print(f"Error on {p}: {e}")
         finally:
             conn.close()
+h}')
+

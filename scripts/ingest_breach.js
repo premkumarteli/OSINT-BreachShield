@@ -1,7 +1,7 @@
 const fs = require('fs');
 const readline = require('readline');
 const path = require('path');
-const { ingestRecord, ingestBatch } = require('../services/api-gateway/ingest/kAnonymityStore');
+const { ingestRecord, ingestBatch } = require('../backend/ingest/kAnonymityStore');
 
 /**
  * Stream Ingestion CLI: Ingests raw breach files (CSV, TXT, Combo-lists)
