@@ -71,7 +71,7 @@ class PreferenceManager @Inject constructor(
         _adminAuthStatus.value = true
     }
 
-    fun getServerUrl(): String = sharedPreferences.getString(KEY_SERVER_URL, "http://10.0.2.2:5000") ?: "http://10.0.2.2:5000"
+    fun getServerUrl(): String = sharedPreferences.getString(KEY_SERVER_URL, "http://10.18.86.96:5000") ?: "http://10.18.86.96:5000"
 
     fun setServerUrl(url: String) {
         sharedPreferences.edit().putString(KEY_SERVER_URL, url).apply()

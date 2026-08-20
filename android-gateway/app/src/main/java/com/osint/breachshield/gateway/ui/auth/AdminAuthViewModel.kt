@@ -43,6 +43,14 @@ class AdminAuthViewModel @Inject constructor(
     private val _cooldownSeconds = MutableStateFlow(0)
     val cooldownSeconds = _cooldownSeconds.asStateFlow()
 
+    private val _serverUrl = MutableStateFlow(preferenceManager.getServerUrl())
+    val serverUrl = _serverUrl.asStateFlow()
+
+    fun onServerUrlChange(newUrl: String) {
+        _serverUrl.value = newUrl
+        preferenceManager.setServerUrl(newUrl.trim())
+    }
+
     fun onEmailChange(newEmail: String) {
         _email.value = newEmail
         _errorMessage.value = null

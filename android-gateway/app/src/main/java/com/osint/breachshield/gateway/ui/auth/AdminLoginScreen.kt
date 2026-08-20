@@ -27,10 +27,12 @@ fun AdminLoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val email by viewModel.email.collectAsState()
+    val serverUrl by viewModel.serverUrl.collectAsState()
     val otp by viewModel.otp.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val cooldownSeconds by viewModel.cooldownSeconds.collectAsState()
+    var showServerConfig by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
@@ -82,17 +84,46 @@ fun AdminLoginScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (uiState is AuthUiState.EmailEntry) {
-                    Text(
-                        text = "Administrator Access",
-                        color = SlateTextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Administrator Access",
+                            color = SlateTextPrimary,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(onClick = { showServerConfig = !showServerConfig }) {
+                            Text(if (showServerConfig) "▲" else "⚙", color = AccentCyan, fontSize = 16.sp)
+                        }
+                    }
+
+                    if (showServerConfig) {
+                        OutlinedTextField(
+                            value = serverUrl,
+                            onValueChange = viewModel::onServerUrlChange,
+                            label = { Text("Backend Server URL") },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentCyan,
+                                unfocusedBorderColor = GlassBorderColor,
+                                focusedTextColor = AccentCyan,
+                                unfocusedTextColor = SlateTextPrimary
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp)
+                        )
+                    }
+
                     Text(
                         text = "Enter your configured administrator email to receive a 6-digit authentication token.",
                         color = SlateTextSecondary,
                         fontSize = 13.sp,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+                        modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
                     )
 
                     OutlinedTextField(
