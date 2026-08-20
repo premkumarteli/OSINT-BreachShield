@@ -36,9 +36,12 @@ router.post('/auth/send-otp', async (req, res) => {
   try {
     const { email } = req.body || {};
     const configuredAdminEmail = (process.env.ADMIN_EMAIL || 'admin@breachshield.io').trim().toLowerCase();
+    const smtpEmail = (process.env.EMAIL_USER || '').trim().toLowerCase();
     const targetEmail = (email || '').trim().toLowerCase();
 
-    if (!targetEmail || (targetEmail !== configuredAdminEmail && targetEmail !== 'admin@example.com')) {
+    const allowedAdminEmails = [configuredAdminEmail, 'admin@example.com', 'admin@breachshield.io', smtpEmail].filter(Boolean);
+
+    if (!targetEmail || !allowedAdminEmails.includes(targetEmail)) {
       return res.status(403).json({ error: 'Unauthorized administrator email identifier.' });
     }
 
