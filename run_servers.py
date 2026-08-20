@@ -20,9 +20,9 @@ import subprocess
 import threading
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PYTHON_DIR = os.path.join(BASE_DIR, 'services', 'python-scraper')
-BACKEND_DIR = os.path.join(BASE_DIR, 'services', 'api-gateway')
-FRONTEND_DIR = os.path.join(BASE_DIR, 'apps', 'web-dashboard')
+PYTHON_DIR = os.path.join(BASE_DIR, 'scraper')
+BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
+FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
 
 # Load unified root .env into os.environ
 env_file = os.path.join(BASE_DIR, '.env')

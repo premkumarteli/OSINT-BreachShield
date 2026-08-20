@@ -11,7 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ingestRecord } = require('../services/api-gateway/ingest/kAnonymityStore');
+const { ingestRecord } = require('../backend/ingest/kAnonymityStore');
 
 const args = process.argv.slice(2);
 let file = null;

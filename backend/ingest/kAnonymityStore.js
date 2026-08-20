@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const STORE_DIR = path.join(__dirname, '..', 'data', 'breach_store');
-const RECORDS_DIR = path.join(__dirname, '..', 'data', 'records');
+const STORE_DIR = path.join(__dirname, '..', '..', 'data', 'breach_store');
+const RECORDS_DIR = path.join(__dirname, '..', '..', 'data', 'records');
 
 // Ensure store and records directories exist
 if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });

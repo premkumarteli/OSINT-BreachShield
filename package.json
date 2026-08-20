@@ -3,11 +3,11 @@
   "version": "2.0.0",
   "private": true,
   "scripts": {
-    "build": "npm --prefix apps/web-dashboard run build",
+    "build": "npm --prefix frontend run build",
     "dev": "python run_servers.py",
-    "test": "npm --prefix services/api-gateway test && npm --prefix apps/web-dashboard test -- --watchAll=false",
-    "install:all": "npm --prefix services/api-gateway install && npm --prefix apps/web-dashboard install",
-    "postinstall": "npm --prefix services/api-gateway install && npm --prefix apps/web-dashboard install"
+    "test": "npm --prefix backend test && npm --prefix frontend test -- --watchAll=false",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "postinstall": "npm --prefix backend install && npm --prefix frontend install"
   },
   "dependencies": {
     "body-parser": "^2.2.0",

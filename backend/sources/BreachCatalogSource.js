@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const { BreachSource } = require('./BreachSource');
 
-const CATALOG_INDEX_FILE = path.join(__dirname, '..', 'data', 'catalog', 'breaches_index.json');
+const CATALOG_INDEX_FILE = path.join(__dirname, '..', '..', 'data', 'catalog', 'breaches_index.json');
 
 class BreachCatalogSource extends BreachSource {
   constructor() {
