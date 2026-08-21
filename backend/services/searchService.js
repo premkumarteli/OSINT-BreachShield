@@ -5,8 +5,8 @@
 
 const { normalizeTarget, hashTarget } = require('../ingest/kAnonymityStore');
 const { getEnabledSources } = require('../sources/registry');
-const { analyzeExposure, redactSensitiveData } = require('./riskService');
-const { parseBreachTimeline } = require('./timelineService');
+const { analyzeExposure, redactSensitiveData } = require('../analytics/riskEngine');
+const { parseBreachTimeline } = require('../analytics/timelineParser');
 
 /**
  * Executes a concurrent multi-source breach intelligence lookup.
@@ -99,8 +99,35 @@ async function executeSearch(query, verifiedTarget, options = {}) {
     info: redactSensitiveData(p.info || '', normalizedVerified || query)
   }));
 
+  // Build structured records for modern card presentation
+  const records = localOrCatalogHits.map((hit, idx) => {
+    const srcName = hit.source || 'Breach Archive';
+    const isMalware = srcName.toLowerCase().includes('hudsonrock') || srcName.toLowerCase().includes('stealer');
+    const isDomain = srcName.toLowerCase().includes('domain');
+    let category = 'Database Spill';
+    if (isMalware) category = 'Infostealer Malware';
+    else if (isDomain) category = 'Domain Incident History';
+    else if (srcName.toLowerCase().includes('hibp')) category = 'Public Breach Archive';
+
+    return {
+      id: idx + 1,
+      source: srcName,
+      title: srcName.replace(/^HudsonRock_/, '').replace(/_/g, ' '),
+      year: hit.year || '2024',
+      category,
+      sourceType: hit.sourceType || 'LOCAL',
+      dataClasses: Array.isArray(hit.dataClasses) && hit.dataClasses.length ? hit.dataClasses : ['IDENTITY'],
+      details: isMalware 
+        ? 'Account credentials harvested via infostealer malware infection on active workstation.' 
+        : isDomain
+        ? 'Historical security incident reported on associated email domain.'
+        : 'Credentials and identifier recorded in compromised repository archive.'
+    };
+  });
+
   return {
     packets: sanitizedPackets,
+    records,
     pagination,
     analytics: {
       exposure,

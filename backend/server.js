@@ -60,11 +60,11 @@ process.on('uncaughtException', (err) => { console.error('Uncaught exception:', 
 process.on('unhandledRejection', (reason) => { console.error('Unhandled rejection:', reason); });
 
 // Mount Clean API Sub-Routers
-const authRouter = require('./api/auth');
+const authRouter = require('./auth/routes/auth');
 const searchRouter = require('./api/search');
 const ingestRouter = require('./api/ingest');
 const reportRouter = require('./api/report');
-const gatewayRouter = require('./api/gateway');
+const gatewayRouter = require('./gateway/routes/gatewayRoutes');
 const adminRouter = require('./api/admin');
 const { touchHeartbeat } = require('./services/sessionTracker');
 

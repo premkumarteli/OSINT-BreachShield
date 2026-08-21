@@ -37,20 +37,41 @@ function loadPersistedData() {
   }
 }
 
-function savePersistedData() {
+let persistTimer = null;
+let isPersisting = false;
+
+function schedulePersist(delayMs = 200) {
+  if (persistTimer) return;
+  persistTimer = setTimeout(async () => {
+    persistTimer = null;
+    await flushPersistedData();
+  }, delayMs);
+}
+
+async function flushPersistedData() {
+  if (isPersisting) return;
+  isPersisting = true;
   try {
     if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+      await fs.promises.mkdir(DATA_DIR, { recursive: true });
     }
     const data = {
       active: Array.from(activeSessions.values()),
-      history: sessionHistory.slice(-500) // Keep last 500 historical sessions
+      history: sessionHistory.slice(-500)
     };
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(data, null, 2), 'utf8');
-    fs.writeFileSync(BLACKLIST_FILE, JSON.stringify(Array.from(blacklist), null, 2), 'utf8');
+    await Promise.all([
+      fs.promises.writeFile(SESSIONS_FILE, JSON.stringify(data, null, 2), 'utf8'),
+      fs.promises.writeFile(BLACKLIST_FILE, JSON.stringify(Array.from(blacklist), null, 2), 'utf8')
+    ]);
   } catch (e) {
-    console.warn('Failed to persist session data:', e.message);
+    console.warn('Failed to asynchronously persist session data:', e.message);
+  } finally {
+    isPersisting = false;
   }
+}
+
+function savePersistedData() {
+  schedulePersist();
 }
 
 loadPersistedData();

@@ -146,6 +146,80 @@ async function getDevices(req, res) {
 }
 
 /**
+ * Internal helper to queue and dispatch an SMS job without HTTP request objects.
+ */
+async function queueSmsJob(phoneNumber, message, deviceId = null, customRequestId = null) {
+  if (!phoneNumber || !message) {
+    throw new Error('Missing required fields: phoneNumber and message');
+  }
+
+  // If deviceId not specified, choose the most recently seen ONLINE device or active WebSocket socket
+  let targetDeviceId = deviceId;
+  if (!targetDeviceId) {
+    try {
+      const [activeDevice] = await db.query(`
+        SELECT device_id FROM gateway_devices 
+        WHERE status = 'ONLINE' AND sim_ready = 1 
+        ORDER BY last_seen DESC LIMIT 1;
+      `);
+      targetDeviceId = activeDevice?.device_id;
+    } catch (_) {}
+
+    if (!targetDeviceId) {
+      const { activeSockets } = require('../gatewayWs');
+      if (activeSockets && activeSockets.size > 0) {
+        targetDeviceId = Array.from(activeSockets.keys())[0];
+      }
+    }
+
+    if (!targetDeviceId) {
+      const memActive = Array.from(memoryDevices.values()).find(d => d.status === 'ONLINE');
+      targetDeviceId = memActive?.deviceId || Array.from(memoryDevices.keys())[0];
+    }
+  }
+
+  if (!targetDeviceId) {
+    return {
+      success: false,
+      error: 'No active Android SMS Gateway devices currently available'
+    };
+  }
+
+  const requestId = customRequestId || `sms_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const jobRecord = {
+    requestId,
+    deviceId: targetDeviceId,
+    phoneNumber,
+    message,
+    status: 'PENDING',
+    createdAt: new Date()
+  };
+
+  try {
+    const insertSql = `
+      INSERT INTO sms_jobs (request_id, device_id, phone_number, message, status, created_at)
+      VALUES (?, ?, ?, ?, 'PENDING', NOW());
+    `;
+    await db.query(insertSql, [requestId, targetDeviceId, phoneNumber, message]);
+  } catch (dbErr) {
+    memoryJobs.set(requestId, jobRecord);
+  }
+
+  // Attempt real-time WebSocket dispatch if phone is currently connected
+  try {
+    const { sendSmsToGateway } = require('../gatewayWs');
+    sendSmsToGateway(targetDeviceId, requestId, phoneNumber, message);
+  } catch (_) {}
+
+  return {
+    success: true,
+    requestId,
+    deviceId: targetDeviceId,
+    status: 'PENDING'
+  };
+}
+
+/**
  * 3. POST /api/gateway/send-sms
  * Queue an SMS dispatch command for a targeted device.
  */
@@ -160,69 +234,19 @@ async function sendSms(req, res) {
       });
     }
 
-    // If deviceId not specified, choose the most recently seen ONLINE device or active WebSocket socket
-    let targetDeviceId = deviceId;
-    if (!targetDeviceId) {
-      try {
-        const [activeDevice] = await db.query(`
-          SELECT device_id FROM gateway_devices 
-          WHERE status = 'ONLINE' AND sim_ready = 1 
-          ORDER BY last_seen DESC LIMIT 1;
-        `);
-        targetDeviceId = activeDevice?.device_id;
-      } catch (_) {}
-
-      if (!targetDeviceId) {
-        const { activeSockets } = require('../gatewayWs');
-        if (activeSockets && activeSockets.size > 0) {
-          targetDeviceId = Array.from(activeSockets.keys())[0];
-        }
-      }
-
-      if (!targetDeviceId) {
-        const memActive = Array.from(memoryDevices.values()).find(d => d.status === 'ONLINE');
-        targetDeviceId = memActive?.deviceId || Array.from(memoryDevices.keys())[0];
-      }
-    }
-
-    if (!targetDeviceId) {
+    const result = await queueSmsJob(phoneNumber, message, deviceId, customRequestId);
+    if (!result.success) {
       return res.status(503).json({
         success: false,
-        error: 'No active Android SMS Gateway devices currently available'
+        error: result.error
       });
     }
 
-    const requestId = customRequestId || `sms_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-    const jobRecord = {
-      requestId,
-      deviceId: targetDeviceId,
-      phoneNumber,
-      message,
-      status: 'PENDING',
-      createdAt: new Date()
-    };
-
-    try {
-      const insertSql = `
-        INSERT INTO sms_jobs (request_id, device_id, phone_number, message, status, created_at)
-        VALUES (?, ?, ?, ?, 'PENDING', NOW());
-      `;
-      await db.query(insertSql, [requestId, targetDeviceId, phoneNumber, message]);
-    } catch (dbErr) {
-      memoryJobs.set(requestId, jobRecord);
-    }
-
-    // Attempt real-time WebSocket dispatch if phone is currently connected
-    try {
-      const { sendSmsToGateway } = require('../gatewayWs');
-      sendSmsToGateway(targetDeviceId, requestId, phoneNumber, message);
-    } catch (_) {}
-
     return res.status(200).json({
       success: true,
-      requestId,
-      deviceId: targetDeviceId,
-      status: 'PENDING',
+      requestId: result.requestId,
+      deviceId: result.deviceId,
+      status: result.status,
       message: 'SMS command queued for gateway dispatch'
     });
   } catch (err) {
@@ -414,6 +438,7 @@ module.exports = {
   registerDevice,
   getDevices,
   sendSms,
+  queueSmsJob,
   updateStatus,
   getPendingJobs,
   verifyGatewayToken,

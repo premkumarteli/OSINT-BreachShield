@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const gatewayController = require('../controllers/gatewayController');
-const { verifyOtpToken } = require('../../auth/routes/auth');
+const { verifyOtpToken } = require('../../middleware/authGuard');
 
 // Rate limiter for registration: 5 requests per minute per IP
 const registerLimiter = rateLimit({

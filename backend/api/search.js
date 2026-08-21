@@ -6,8 +6,8 @@
 const express = require('express');
 const { verifyOtpToken } = require('../middleware/authGuard');
 const { executeSearch } = require('../services/searchService');
-const { redactSensitiveData, analyzeExposure } = require('../services/riskService');
-const { parseBreachTimeline } = require('../services/timelineService');
+const { redactSensitiveData, analyzeExposure } = require('../analytics/riskEngine');
+const { parseBreachTimeline } = require('../analytics/timelineParser');
 
 const router = express.Router();
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'https://osint-breach-python.onrender.com/query';

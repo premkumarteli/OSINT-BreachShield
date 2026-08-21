@@ -1,131 +1,114 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import api from '../lib/api';
 import bgVideo1 from '../bg1.mp4';
 import '../App.css';
 import '../auth.css';
 
 export default function VerifyOtpPage() {
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const email = (location.state?.email || sessionStorage.getItem('osint_target_email') || '').trim().toLowerCase();
+  const targetEmail = location.state?.email || sessionStorage.getItem('osint_target_email') || '';
 
   const [otp, setOtp] = useState('');
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes (300s)
-  const [cooldown, setCooldown] = useState(30);  // 30s resend cooldown
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [apiError, setApiError] = useState('');
+  const [cooldown, setCooldown] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(300);
 
-  const inputRef = useRef(null);
-
-  // Route guard: Redirect to / if no email is provided
+  // 30-second resend cooldown timer
   useEffect(() => {
-    if (!email) {
-      navigate('/', { replace: true });
-    }
-  }, [email, navigate]);
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
-  // Main 5-minute countdown timer
+  // 5-minute expiry timer
   useEffect(() => {
     if (timeLeft <= 0) return;
     const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  // 30s resend cooldown timer
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const cdTimer = setInterval(() => {
-      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(cdTimer);
-  }, [cooldown]);
-
-  // Auto-focus OTP input on mount
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, []);
-
-  const formatTimer = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
+  if (!targetEmail) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleOtpChange = (e) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 6);
     setOtp(val);
-    setError('');
+    setApiError('');
   };
 
   const handleVerify = async (e) => {
     if (e) e.preventDefault();
-    if (otp.length !== 6 || loading || timeLeft <= 0) return;
+    if (otp.length !== 6) return;
 
     setLoading(true);
-    setError('');
-    setSuccessMsg('');
+    setApiError('');
 
     try {
       const res = await api.post('/api/auth/verify-otp', {
-        email,
-        otp
+        email: targetEmail,
+        otp: otp.trim()
       });
 
-      if (res.data && res.data.success !== false) {
+      if (res.data && res.data.success) {
         if (res.data.token) {
           sessionStorage.setItem('osint_token', res.data.token);
-          api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
         }
-        sessionStorage.setItem('osint_verified_email', email);
-        navigate('/results', { state: { email, verified: true } });
+        sessionStorage.setItem('osint_verified_email', targetEmail);
+        navigate('/results', { state: { email: targetEmail, verified: true } });
       } else {
-        setError(res.data?.error || 'Verification failed. Please try again.');
+        setApiError(res.data?.error || 'Invalid verification code.');
       }
     } catch (err) {
-      let errMsg = err.response?.data?.error || err.message || 'Invalid or expired OTP';
-      if (err.response?.data?.attemptsRemaining !== undefined) {
-        errMsg += ` (${err.response.data.attemptsRemaining} attempts remaining)`;
+      const errData = err.response?.data;
+      const baseErr = errData?.error || err.message || 'Verification failed. Please try again.';
+      if (errData?.attemptsRemaining !== undefined && errData.attemptsRemaining > 0) {
+        setApiError(`Invalid or expired OTP (${errData.attemptsRemaining} attempts remaining)`);
+      } else {
+        setApiError(baseErr);
       }
-      setError(errMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendOtp = async () => {
+  const handleResend = async () => {
     if (cooldown > 0 || resending) return;
 
     setResending(true);
-    setError('');
-    setSuccessMsg('');
+    setApiError('');
 
     try {
-      const res = await api.post('/api/auth/send-otp', { email });
+      const res = await api.post('/api/auth/send-otp', { email: targetEmail });
       if (res.data && res.data.success !== false) {
-        setTimeLeft(300);
         setCooldown(30);
+        setTimeLeft(300);
         setOtp('');
-        setSuccessMsg(`New 6-digit access code dispatched to ${email}`);
-        if (inputRef.current) inputRef.current.focus();
       } else {
-        setError(res.data?.error || 'Failed to resend OTP.');
+        setApiError(res.data?.error || 'Failed to resend OTP.');
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to resend OTP. Please try again.');
+      const errMsg = err.response?.data?.error || err.message || 'Failed to resend OTP.';
+      setApiError(errMsg);
     } finally {
       setResending(false);
     }
   };
 
-  if (!email) return null;
+  const formatTime = (sec) => {
+    const mins = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${mins}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   return (
     <div className="auth-screen">
@@ -134,80 +117,69 @@ export default function VerifyOtpPage() {
       </video>
 
       <div className="hero" aria-hidden="false">
-        <h1 className="hero-title">OSINT SEARCH</h1>
-        <div className="hero-credit">Developed by <strong>PhishBreach Guardians</strong></div>
+        <h1 className="hero-title">AUTHENTICATION REQUIRED</h1>
+        <div className="hero-credit">Identity verification for <strong>{targetEmail}</strong></div>
       </div>
 
-      <div className="auth-card" role="region" aria-label="OTP Verification">
-        <h2 className="auth-title">[ EMAIL VERIFICATION ]</h2>
-        <div className="auth-subtitle">
-          Single-use access code transmitted to:<br />
-          <strong style={{ color: '#00eaff' }}>{email}</strong>{' '}
-          (<Link to="/" className="neon-link" style={{ fontSize: '0.8rem' }}>Change Email</Link>)
-        </div>
-
-        {error && (
-          <div className="auth-alert error-alert">
-            ⚠ {error}
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="auth-alert success-alert">
-            ✓ {successMsg}
-          </div>
-        )}
-
-        <form onSubmit={handleVerify} className="otp-verification-box">
-          <div className="otp-header">
-            <span className="otp-title">ENTER 6-DIGIT CODE:</span>
-            <span className={`otp-timer ${timeLeft < 60 ? 'timer-urgent' : ''}`} aria-label="Countdown Timer">
-              ⏱ {formatTimer(timeLeft)}
-            </span>
-          </div>
-
-          <div className="input-group">
+      <div className="search-card" role="region" aria-label="otp-verification-card">
+        <form onSubmit={handleVerify} style={{ width: '100%' }}>
+          <div className="search-row centered">
             <input
-              ref={inputRef}
-              className="glass-input otp-large-input"
+              className="search-input otp-digit-input"
               type="text"
               inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="••••••"
+              placeholder="Enter 6-Digit OTP"
               value={otp}
               onChange={handleOtpChange}
-              disabled={loading || timeLeft <= 0}
               aria-label="otp-input"
+              aria-busy={loading}
+              disabled={loading}
+              autoFocus
+              maxLength={6}
             />
-          </div>
-
-          <button
-            type="submit"
-            className="neon-btn verify-btn"
-            disabled={otp.length !== 6 || loading || timeLeft <= 0}
-            style={{ width: '100%', marginTop: '4px' }}
-            aria-label="verify-otp-button"
-          >
-            {loading ? '[ VERIFYING... ]' : '[ VERIFY OTP ✓ ]'}
-          </button>
-
-          <div className="resend-row">
-            <span>Didn't receive code?</span>
             <button
-              type="button"
-              className="link-btn resend-btn"
-              onClick={handleResendOtp}
-              disabled={cooldown > 0 || resending}
-              aria-label="resend-otp-button"
+              type="submit"
+              className="search-btn"
+              disabled={loading || otp.length !== 6}
+              aria-label="verify-otp-button"
             >
-              {cooldown > 0 ? `Resend in ${cooldown}s` : (resending ? 'Sending...' : 'Resend OTP ⚡')}
+              {loading ? '[ VERIFYING... ]' : '[ AUTHORIZE SCAN ⚡ ]'}
             </button>
           </div>
         </form>
 
-        <div className="auth-switch">
-          <Link to="/" className="neon-link">← Back to Search</Link>
+        <div className="otp-meta-row">
+          <span className="otp-expiry-hint" aria-label="Countdown Timer">
+            ⏳ Code expires in: <strong>{formatTime(timeLeft)}</strong>
+          </span>
+          <button
+            type="button"
+            className="otp-resend-btn"
+            disabled={cooldown > 0 || resending}
+            onClick={handleResend}
+            aria-label="resend-otp-button"
+          >
+            {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
+          </button>
+        </div>
+
+        {apiError && (
+          <div className="auth-alert error-alert" style={{ width: '100%', maxWidth: '640px', marginTop: '12px' }}>
+            ⚠ {apiError}
+          </div>
+        )}
+
+        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+          <button
+            type="button"
+            className="change-target-btn"
+            onClick={() => {
+              sessionStorage.removeItem('osint_target_email');
+              navigate('/');
+            }}
+          >
+            ← Enter a different email
+          </button>
         </div>
       </div>
     </div>

@@ -207,26 +207,22 @@ router.post('/send-otp', async (req, res) => {
     if (isTargetEmail) {
       await sendOtpEmail(targetKey, code).catch(err => console.error('[EMAIL ERROR]', err.message));
     } else {
-      // Send SMS via Android Gateway
+      // Send SMS via Android Gateway (or log in dev if no phone is connected)
       try {
-        const gatewayController = require('../../gateway/controllers/gatewayController');
+        const { queueSmsJob } = require('../../gateway/controllers/gatewayController');
         const formattedPhone = rawTarget.startsWith('+') ? rawTarget : (rawTarget.length === 10 ? `+91${rawTarget}` : `+${rawTarget}`);
-        const template = process.env.SMS_OTP_TEMPLATE || 'You breach otp is valid for 5 min\n{OTP}';
+        const template = process.env.SMS_OTP_TEMPLATE || 'Your OSINT BreachShield OTP is {OTP}. Valid for 5 minutes.';
         const smsMessage = template.replace('{OTP}', code);
         
-        // Emulate req/res for gatewayController
-        const mockReq = {
-          body: {
-            phoneNumber: formattedPhone,
-            message: smsMessage,
-            requestId: `otp_${Date.now()}`
-          }
-        };
-        const mockRes = {
-          status: () => ({ json: () => {} })
-        };
-        await gatewayController.sendSms(mockReq, mockRes);
-        console.log(`[SMS OTP DISPATCHED] To: ${formattedPhone} | Code: ${code}`);
+        const smsRes = await queueSmsJob(formattedPhone, smsMessage);
+        if (smsRes.success) {
+          console.log(`[SMS OTP DISPATCHED] To: ${formattedPhone} | Code: ${code} (Device: ${smsRes.deviceId})`);
+        } else {
+          console.log(`\n======================================================`);
+          console.log(`[SMS OTP (DEV FALLBACK)] To: ${formattedPhone} | Code: ${code}`);
+          console.log(`[SMS NOTE] ${smsRes.error}`);
+          console.log(`======================================================\n`);
+        }
       } catch (smsErr) {
         console.error('[SMS DISPATCH ERROR]', smsErr.message);
       }

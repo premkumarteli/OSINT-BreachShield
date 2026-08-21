@@ -26,14 +26,37 @@ function loadData() {
   }
 }
 
-function saveData() {
+let auditPersistTimer = null;
+let isAuditPersisting = false;
+
+function scheduleAuditPersist(delayMs = 200) {
+  if (auditPersistTimer) return;
+  auditPersistTimer = setTimeout(async () => {
+    auditPersistTimer = null;
+    await flushAuditData();
+  }, delayMs);
+}
+
+async function flushAuditData() {
+  if (isAuditPersisting) return;
+  isAuditPersisting = true;
   try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(AUDIT_FILE, JSON.stringify(auditLogs.slice(-500), null, 2), 'utf8');
-    fs.writeFileSync(ALERTS_FILE, JSON.stringify(alerts.slice(-200), null, 2), 'utf8');
+    if (!fs.existsSync(DATA_DIR)) {
+      await fs.promises.mkdir(DATA_DIR, { recursive: true });
+    }
+    await Promise.all([
+      fs.promises.writeFile(AUDIT_FILE, JSON.stringify(auditLogs.slice(-500), null, 2), 'utf8'),
+      fs.promises.writeFile(ALERTS_FILE, JSON.stringify(alerts.slice(-200), null, 2), 'utf8')
+    ]);
   } catch (e) {
-    console.warn('Failed to save audit/alerts:', e.message);
+    console.warn('Failed to asynchronously save audit/alerts:', e.message);
+  } finally {
+    isAuditPersisting = false;
   }
+}
+
+function saveData() {
+  scheduleAuditPersist();
 }
 
 loadData();

@@ -1,10 +1,9 @@
 /**
  * @file HIBPApiSource.js
- * @description Real-time HaveIBeenPwned (HIBP) k-Anonymity intelligence source.
- * Verifies if hash ranges match verified global public compromise feeds without disclosing plaintext.
+ * @description Real-time HaveIBeenPwned (HIBP) Breached Account intelligence source.
+ * Queries the official HIBP API v3 when HIBP_API_KEY is configured in environment.
  */
 
-const crypto = require('crypto');
 const { BreachSource } = require('./BreachSource');
 
 class HIBPApiSource extends BreachSource {
@@ -13,52 +12,60 @@ class HIBPApiSource extends BreachSource {
   }
 
   /**
-   * Check HIBP Zero-Knowledge k-Anonymity range API.
+   * Check HIBP Breached Account API for verified email compromises.
    * @param {string} normalizedTarget - Normalized email/phone
    * @param {string} targetHash - Full SHA-256 string
    */
   async search(normalizedTarget, targetHash) {
     const hits = [];
-    
-    try {
-      // Generate SHA-1 prefix for k-anonymity lookup on HIBP
-      const sha1 = crypto.createHash('sha1').update(normalizedTarget).digest('hex').toUpperCase();
-      const prefix = sha1.substring(0, 5);
-      const suffix = sha1.substring(5);
+    const apiKey = (process.env.HIBP_API_KEY || '').trim();
 
+    // Only search emails on HIBP
+    if (!normalizedTarget.includes('@')) {
+      return { sourceName: this.sourceName, hits };
+    }
+
+    if (!apiKey) {
+      // HIBP Breached Account API requires an API key in v3.
+      // If unconfigured, skip cleanly without throwing false positives.
+      return { sourceName: this.sourceName, hits };
+    }
+
+    try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 6000);
-      const resp = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
-        headers: {
-          'User-Agent': 'BreachShield-OSINT-Checker/2.0',
-          'Add-Padding': 'true' // HIBP mathematical padding for maximum privacy
-        },
-        signal: controller.signal
-      });
+      const resp = await fetch(
+        `https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(normalizedTarget)}?truncateResponse=false`,
+        {
+          headers: {
+            'hibp-api-key': apiKey,
+            'user-agent': 'BreachShield-OSINT-Checker/2.0'
+          },
+          signal: controller.signal
+        }
+      );
       clearTimeout(timeout);
 
-      if (resp.ok) {
-        const text = await resp.text();
-        const lines = text.split('\n');
-        for (const line of lines) {
-          const [hashSuffix, count] = line.trim().split(':');
-          if (hashSuffix && hashSuffix.toUpperCase() === suffix) {
-            const countNum = parseInt(count, 10) || 1;
-            if (countNum > 0) {
-              hits.push({
-                source: 'HaveIBeenPwned_Global_Archive',
-                year: '2024',
-                dataClasses: ['PASSWORD_HASH', 'IDENTITY', 'CREDENTIALS'],
-                sourceType: 'LOCAL',
-                raw: null
-              });
-              break;
-            }
+      if (resp.status === 200) {
+        const breaches = await resp.json();
+        if (Array.isArray(breaches)) {
+          for (const b of breaches) {
+            const rawDate = b.BreachDate || b.AddedDate || '';
+            const year = rawDate ? rawDate.split('-')[0] : '2024';
+            hits.push({
+              source: `HIBP_${b.Title || b.Name || 'Breach'}`,
+              year,
+              dataClasses: Array.isArray(b.DataClasses) ? b.DataClasses : ['IDENTITY'],
+              sourceType: 'LOCAL',
+              raw: null
+            });
           }
         }
+      } else if (resp.status === 404) {
+        // 404 indicates no breaches found on HIBP for this account
       }
     } catch (err) {
-      console.warn('[HIBPApiSource] HIBP range check skipped/timed out:', err.message);
+      console.warn('[HIBPApiSource] HIBP API check skipped/timed out:', err.message);
     }
 
     return {

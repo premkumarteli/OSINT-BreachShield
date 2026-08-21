@@ -48,19 +48,17 @@
 ```text
 OSINT-BreachShield/
 │
-├── apps/
-│   ├── web-dashboard/             # React 18 Web UI (Search, OTP Auth, Interactive Gauge)
-│   └── android-gateway/           # Native Android Kotlin App (Foreground Service & SMS Relay)
+├── frontend/                      # React 18 Web UI (Search, OTP Auth, Threat Level Gauge)
+├── backend/                       # Node.js Express Server, WebSocket Gateway & Breach Analytics
+├── scraper/                       # Python FastAPI Scraper & Telethon Threat Feed Engine
+├── android-gateway/               # Native Android Kotlin App (SMS OTP Hardware Relay)
 │
-├── services/
-│   ├── api-gateway/               # Node.js Express Server & WebSocket Dispatcher
-│   └── python-scraper/            # Python FastAPI Scraper & Telethon Telegram Client
-│
+├── data/                          # Breach catalogs, partition stores & session records
 ├── docs/                          # Architecture diagrams, testing guides & presentations
 ├── scripts/                       # Deployment, automation & maintenance scripts
 │
 ├── run_servers.py                 # 🚀 Unified 1-command development launcher
-├── package.json                   # Monorepo task runner
+├── package.json                   # Root monorepo task runner
 └── README.md                      # Project documentation
 ```
 
@@ -94,7 +92,7 @@ This single command starts:
 
 The **BreachShield Gateway** Android app turns any physical Android phone into a secure, hardware-isolated SMS OTP relay:
 
-1. Open `apps/android-gateway` in **Android Studio**.
+1. Open `android-gateway` in **Android Studio**.
 2. Connect your Android phone via USB or Wireless ADB.
 3. Build and install (`gradlew assembleDebug`).
 4. On first launch:

@@ -12,13 +12,12 @@ from dotenv import load_dotenv
 # Load .env file from local directory or parents
 dotenv_paths = [
     os.path.join(os.path.dirname(__file__), '.env'),
-    os.path.join(os.path.dirname(__file__), '..', 'api-gateway', '.env'),
-    os.path.join(os.path.dirname(__file__), '..', '..', '.env'),
+    os.path.join(os.path.dirname(__file__), '..', '.env'),
+    os.path.join(os.path.dirname(__file__), '..', 'backend', '.env'),
 ]
 for p in dotenv_paths:
     if os.path.exists(p):
         load_dotenv(p)
-        break
 
 api_id_raw = os.environ.get('TG_API_ID')
 api_hash = os.environ.get('TG_API_HASH')

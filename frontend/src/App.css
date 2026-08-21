@@ -21,8 +21,25 @@ body {
   font-family: 'Fira Mono', 'Consolas', 'Courier New', monospace;
   background: #050806; /* near-black */
   color: var(--text-accent);
-  height: 100vh;
-  overflow: hidden; /* keep global scroll out */
+  min-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Custom Cyber Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 10, 20, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 234, 255, 0.35);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 234, 255, 0.7);
 }
 
 /* subtle scan lines */
