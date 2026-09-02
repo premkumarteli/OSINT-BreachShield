@@ -60,7 +60,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="auth-screen">
+    <div className="dashboard">
       <video className="bg-video" autoPlay muted loop playsInline aria-hidden>
         <source src={bgVideo1} type="video/mp4" />
       </video>
@@ -73,11 +73,11 @@ export default function SearchPage() {
       </div>
 
       <div className="search-card" role="search">
-        <form onSubmit={handleGenerateOtp} style={{ width: '100%' }}>
+        <form onSubmit={handleGenerateOtp} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className={`search-row centered ${loading ? 'search-anim' : ''}`}>
             <input
               className="search-input"
-              type="email"
+              type="text"
               placeholder="Enter email to check breaches (e.g. test@example.com)"
               value={email}
               onChange={handleInputChange}

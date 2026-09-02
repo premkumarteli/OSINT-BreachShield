@@ -78,3 +78,7 @@ apps/android-gateway/.artifacts/
 *.key
 *.pepk
 *.p12
+
+# Archives
+*.zip
+

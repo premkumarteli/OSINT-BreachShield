@@ -104,7 +104,7 @@ export default function ResultsPage() {
   };
 
   return (
-    <div className="auth-screen results-screen">
+    <div className="dashboard results-screen">
       <video className="bg-video" autoPlay muted loop playsInline aria-hidden>
         <source src={bgVideo2} type="video/mp4" />
       </video>

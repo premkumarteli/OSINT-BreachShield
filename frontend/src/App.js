@@ -1,11 +1,10 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import './App.css';
 import bgVideo1 from './bg1.mp4';
 import bgVideo2 from './bg2.mp4';
 import bgVideo3 from './bg3.mp4';
-import BreachTimeline from './components/BreachTimeline';
+import UserMenu from './components/UserMenu';
 
 // Prefer env var, fallback to local backend for dev
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
@@ -13,6 +12,7 @@ if (!process.env.REACT_APP_API_BASE) {
   // eslint-disable-next-line no-console
   console.warn('REACT_APP_API_BASE not set; defaulting to', API_BASE);
 }
+
 function App() {
   const location = useLocation?.() || { pathname: window?.location?.pathname || '' };
   const globalBgActive = (typeof window !== 'undefined') && Boolean(window.__GLOBAL_BG_ACTIVE);
@@ -51,13 +51,16 @@ function App() {
   const bg1Ref = useRef(null);
   const bg3Ref = useRef(null);
   const [useBg2, setUseBg2] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [bg2Failed, setBg2Failed] = useState(false);
   const [useBg3, setUseBg3] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [bg3Failed, setBg3Failed] = useState(false);
   const [overlayActive, setOverlayActive] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [showWaitHint, setShowWaitHint] = useState(false);
   // Derived UI state: hide certain UI while searching (bg3 phase)
+  // eslint-disable-next-line no-unused-vars
   const isSearchingUI = Boolean((showSearchingAnimation || loading || useBg3) && !result);
   // keep track of a fallback timer that shows a safe result after 20s
   const fallbackTimerRef = useRef(null);
@@ -72,7 +75,7 @@ function App() {
 
   // Initialize validation on component mount
   useEffect(() => {
-    setIsValidInput(false); // Start with invalid state until user inputs valid data
+    setIsValidInput(false);
   }, []);
 
   // Helper: detect and normalize "no results" responses into a friendly message
@@ -84,11 +87,8 @@ function App() {
       typeof txt === 'string' && /no\s*results?(\s*found)?/i.test(txt);
 
     const safeMsg = '  Your data is safe — no results found.';
-
-    // Create a shallow copy to avoid mutating original
     const copy = { ...data, packets: data.packets.map(p => ({ ...(p || {}) })) };
 
-    // If any packet advertises no results, override its info with safe message
     copy.packets = copy.packets.map((p) => {
       if (p && isNoResultText(p.info)) {
         return { ...p, info: safeMsg };
@@ -99,27 +99,6 @@ function App() {
     return copy;
   };
 
-  // Sanitize server/fetch errors so HTML responses or raw parse errors don't show raw HTML or 'Unexpected token' messages
-  const sanitizeError = async (err, res) => {
-    try {
-      if (res && typeof res.text === 'function') {
-        const ct = res.headers.get('content-type') || '';
-        if (!/application\/json/i.test(ct)) {
-          const txt = await res.text();
-          if (/^\s*<(!doctype|html)/i.test(txt)) return 'Server returned an HTML error. Please try again later.';
-          return txt.length > 240 ? txt.slice(0, 240) + '...' : txt || 'Unexpected server response';
-        }
-      }
-    } catch (e) {
-      // ignore
-    }
-    const m = err && err.message ? String(err.message) : '';
-    if (/^\s*</.test(m) || m.toLowerCase().includes('<!doctype') || m.toLowerCase().includes('unexpected token')) {
-      return 'Server returned an unexpected response. Try again later.';
-    }
-    return m || 'An unknown error occurred.';
-  };
-
   // Validation functions
   const validateInput = (value, type) => {
     switch (type) {
@@ -127,66 +106,40 @@ function App() {
         if (!value.includes('@') || value.indexOf('@') === 0 || value.indexOf('@') === value.length - 1) {
           return 'Type a correct email address';
         }
-        // Basic email format check
         const emailParts = value.split('@');
         if (emailParts.length !== 2 || !emailParts[1].includes('.')) {
           return 'Type a correct email address';
         }
         return '';
       case 'Mobile':
-        // Allow various mobile number formats
-        if (value.length === 0) {
-          return 'Type a correct number';
-        }
-        
-        // If it starts with +91, validate Indian format
+        if (value.length === 0) return 'Type a correct number';
         if (value.startsWith('+91')) {
           const phoneNumber = value.slice(3);
-          if (phoneNumber.length === 0) {
-            return 'Type a correct number';
-          }
-          if (!/^\d+$/.test(phoneNumber)) {
-            return 'Type a correct number';
-          }
-          if (phoneNumber.length < 10 || phoneNumber.length > 10) {
+          if (phoneNumber.length !== 10 || !/^\d+$/.test(phoneNumber)) {
             return 'Type a correct number';
           }
           return '';
         }
-        
-        // For other formats, just check if it contains numbers
-        if (!/\d/.test(value)) {
-          return 'Type a correct number';
-        }
-        
+        if (!/\d/.test(value)) return 'Type a correct number';
         return '';
       case 'Other':
-        return ''; // No validation for Other
+        return '';
       default:
         return '';
     }
   };
 
   const handleInputChange = (value) => {
-    // Allow users to modify the input freely
     setQuery(value);
-    
-    // Validate input
     const error = validateInput(value, searchType);
     setValidationError(error);
     setIsValidInput(!error && value.trim() !== '');
-
-    // No OTP state to reset
   };
 
   const handleSearchTypeChange = (type) => {
     setSearchType(type);
     setValidationError('');
-  // No OTP to reset
-    
-    // Set appropriate default value based on type
     if (type === 'Mobile') {
-      // Pre-fill with +91 as a suggestion, but users can change it
       setQuery('+91');
       setIsValidInput(false);
     } else {
@@ -241,26 +194,23 @@ function App() {
   useEffect(() => {
     if (!result) return undefined;
     try {
-      // Combine all packet information across all multi-source intelligence feeds
       const text = (result.packets || [])
         .map(p => p.info || (`[ MOBILE: ${p.mobile || 'N/A'} ]\n[ NAME: ${p.name || 'N/A'} ]\n[ ADDRESS: ${p.address || 'N/A'} ]\n`))
         .filter(Boolean)
         .join('\n\n');
-      // If this page index was visited before, show instantly and skip typing
       if (visitedPagesRef.current.has(currentPage)) {
         stopTyping();
         setTerminalText(text || '');
         return undefined;
       }
-      // First visit to this page: type once, and mark as visited immediately
       visitedPagesRef.current.add(currentPage);
       const startDelay = setTimeout(() => startTyping(text), 250);
       return () => { clearTimeout(startDelay); stopTyping(); };
     } catch (e) { /* ignore */ }
     return undefined;
-  }, [result, currentPage]); // Trigger when result or page index changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, currentPage]);
 
-  // cleanup timers on unmount
   useEffect(() => {
     return () => {
       stopTyping();
@@ -276,7 +226,6 @@ function App() {
     };
   }, []);
 
-  // when results are shown, activate overlay to blur/dim the background
   useEffect(() => {
     if (result) {
       setOverlayActive(true);
@@ -290,6 +239,11 @@ function App() {
     setResult(null);
     setTerminalText('');
     setShowSearch(true);
+    setStep('input');
+    setOtp('');
+    setOtpError('');
+    setQuery('');
+    setIsValidInput(false);
     setLoading(false);
     setShowSearchingAnimation(false);
     setUseBg2(false);
@@ -306,9 +260,6 @@ function App() {
       waitHintTimerRef.current = null;
     }
     setShowWaitHint(false);
-    setStep('input');
-    setOtp('');
-    setOtpError('');
     setBreaches([]);
     setCurrentPage(0);
     setLoadingNextPage(false);
@@ -317,33 +268,18 @@ function App() {
     if (visitedPagesRef.current) visitedPagesRef.current.clear();
   };
 
-  // View mode switcher: 'terminal' or 'timeline'
-  const [viewMode, setViewMode] = useState('terminal');
-
-  // Trigger backend to click 'Download' and stream file back
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      const currentToken = token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('osint_token') : '');
-      const preferredPacket = (result?.packets && result.packets[1] !== undefined) ? result.packets[1] : result?.packets?.[0];
-      const content = terminalText || preferredPacket?.info || JSON.stringify(result || {});
-      const res = await fetch(`${API_BASE}/api/download`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
-        },
-        credentials: 'include',
-        body: JSON.stringify({ query, content })
-      });
+      const res = await fetch(`${API_BASE}/api/download`, { method: 'POST' });
       if (!res.ok) {
         const t = await res.text();
-        setResult(prev => ({ ...prev, error: `❌ Download failed: ${t || res.status}` }));
+        setResult(prev => ({ ...prev, error: `Download failed: ${t || res.status}` }));
         return;
       }
       const cd = res.headers.get('Content-Disposition') || '';
       const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(cd);
-      const filename = decodeURIComponent(match?.[1] || match?.[2] || 'breach_report.html');
+      const filename = decodeURIComponent(match?.[1] || match?.[2] || 'result.html');
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -354,70 +290,63 @@ function App() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      setResult(prev => ({ ...prev, error: `❌ Download error: ${e.message}` }));
+      setResult(prev => ({ ...prev, error: `Download error: ${e.message}` }));
     } finally { setDownloading(false); }
   };
 
-  // Step 1: Dispatch OTP to Target Email or Phone
+  // Step 1: Send OTP to target
   const handleGenerateOtp = async (e) => {
     if (e) e.preventDefault();
-    if (!isValidInput) return;
+    if (!query || !isValidInput || otpLoading) return;
     setOtpLoading(true);
     setOtpError('');
+
     try {
       const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target: query.trim(),
-          email: query.trim().toLowerCase(),
-          phone: query.trim(),
-          searchType: searchType.toLowerCase()
-        })
+        body: JSON.stringify({ email: query, target: query, type: searchType })
       });
       const data = await res.json();
-      if (data && data.success !== false) {
+      if (!res.ok || data.success === false) {
+        setOtpError(data.error || 'Failed to send verification code.');
+      } else {
         setStep('otp');
         setTimeLeft(300);
         setCooldown(30);
         setOtp('');
-      } else {
-        setOtpError(data?.error || 'Failed to send OTP.');
       }
     } catch (err) {
-      setOtpError('Failed to dispatch verification code. Please try again.');
+      setOtpError('Failed to send verification code. Please check server connection.');
     } finally {
       setOtpLoading(false);
     }
   };
 
-  // Step 2: Verify OTP and Immediately Execute Breach Search
+  // Step 2: Verify OTP code and execute authorized search
   const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
-    if (!otp || otp.length !== 6 || otpLoading || timeLeft <= 0) return;
+    if (otp.length !== 6 || otpLoading) return;
     setOtpLoading(true);
     setOtpError('');
+
     try {
       const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target: query.trim(),
-          email: query.trim().toLowerCase(),
-          phone: query.trim(),
-          otp: otp.trim()
-        })
+        body: JSON.stringify({ email: query, target: query, otp })
       });
       const data = await res.json();
-      if (data && data.success !== false) {
-        const receivedToken = data.token;
-        setToken(receivedToken);
-        sessionStorage.setItem('osint_token', receivedToken);
-        sessionStorage.setItem('osint_verified_email', query.trim().toLowerCase());
-        setStep('results');
-        executeSearchWithToken(receivedToken);
+      if (!res.ok || !data.success) {
+        setOtpError(data.error || 'Invalid or expired verification code.');
       } else {
-        setOtpError(data?.error || 'Invalid or expired verification code.');
+        const authToken = data.token || '';
+        if (authToken) {
+          setToken(authToken);
+          sessionStorage.setItem('osint_token', authToken);
+        }
+        setStep('results');
+        handleSearch(authToken);
       }
     } catch (err) {
       setOtpError('Verification failed. Please try again.');
@@ -426,64 +355,45 @@ function App() {
     }
   };
 
-  // Step 3: Execute Breach Scan with Verified JWT Token
-  const executeSearchWithToken = async (activeToken) => {
-    const searchToken = activeToken || token || sessionStorage.getItem('osint_token') || '';
-    if (typedKeysRef.current) typedKeysRef.current.clear();
-    if (visitedPagesRef.current) visitedPagesRef.current.clear();
-    
+  // Step 3: Execute authorized search query
+  const handleSearch = async (overrideToken) => {
+    const currentToken = overrideToken || token || sessionStorage.getItem('osint_token') || '';
     setLoading(true);
+    setResult(null);
     setShowSearchingAnimation(true);
-    setShowWaitHint(false);
-    setUseBg2(false);
-    setBg2Failed(false);
     setUseBg3(true);
-    setBg3Failed(false);
-    searchingRef.current = true;
-    
-    if (fallbackTimerRef.current) { clearTimeout(fallbackTimerRef.current); fallbackTimerRef.current = null; }
-    if (waitHintTimerRef.current) { clearTimeout(waitHintTimerRef.current); waitHintTimerRef.current = null; }
-    waitHintTimerRef.current = setTimeout(() => {
-      if (searchingRef.current) setShowWaitHint(true);
-    }, 8000);
-    
-    if (bg3Ref.current) {
-      try {
-        bg3Ref.current.currentTime = 0;
-        bg3Ref.current.muted = true;
-        bg3Ref.current.play().then(() => setBg3Failed(false)).catch(() => setBg3Failed(true));
-      } catch (e) { setBg3Failed(true); }
-    }
 
     try {
       const headers = {
         'Content-Type': 'application/json',
-        ...(searchToken ? { 'Authorization': `Bearer ${searchToken}` } : {})
+        ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
       };
+
       const res = await fetch(`${API_BASE}/api/search`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ query: query.trim(), osintType, searchType })
+        credentials: 'include',
+        body: JSON.stringify({ query, osintType, searchType, token: currentToken })
       });
 
       const data = await res.json();
-      
+
       if (!res.ok || (data && !data.success)) {
         if (res.status === 403) {
-          setStep('otp');
-          setOtpError('Email verification required. Please enter your OTP.');
+          setStep('input');
+          setOtpError('Email verification required. Please generate a code.');
           setShowSearchingAnimation(false);
           setLoading(false);
-          setUseBg3(false);
           return;
         }
         throw new Error(data?.error || `Server error: ${res.status}`);
       }
-      
-      const resultDataRaw = data && data.data ? data.data : { packets: [{}, { info: 'No records found.' }] };
+
+      const resultDataRaw = data && data.data ? data.data : { packets: [{}, { info: 'Try another query.' }] };
       const resultData = normalizeResultData(resultDataRaw);
       if (data && data.data && data.data.pagination) {
-        const { total } = data.data.pagination;
+        // eslint-disable-next-line no-unused-vars
+        const { current, total } = data.data.pagination;
         if (total && total > 1) setTotalPages(total);
         else setTotalPages(null);
       } else { setTotalPages(null); }
@@ -492,7 +402,7 @@ function App() {
       if (fallbackTimerRef.current) { clearTimeout(fallbackTimerRef.current); fallbackTimerRef.current = null; }
       if (waitHintTimerRef.current) { clearTimeout(waitHintTimerRef.current); waitHintTimerRef.current = null; }
       setShowWaitHint(false);
-      
+
       setBreaches([resultData]);
       setCurrentPage(0);
       setResult(resultData);
@@ -500,15 +410,26 @@ function App() {
       setUseBg3(false);
       setUseBg2(true);
       try { if (bg2Ref.current) { bg2Ref.current.currentTime = 0; bg2Ref.current.play().catch(()=>{}); } } catch(e){}
-      
-      prefetchNextPages(1, searchToken);
+      prefetchNextPages(1, currentToken);
     } catch (err) {
       searchingRef.current = false;
       if (fallbackTimerRef.current) { clearTimeout(fallbackTimerRef.current); fallbackTimerRef.current = null; }
       if (waitHintTimerRef.current) { clearTimeout(waitHintTimerRef.current); waitHintTimerRef.current = null; }
       setShowWaitHint(false);
 
-      const errorResult = { error: `❌ ${err.message || 'Server error occurred while scanning.'}` };
+      let errorMessage = '❌ Server is down, please try after sometime.';
+      try {
+        const sanitized = await (async () => {
+          const m = err && err.message ? String(err.message) : '';
+          if (/^\s*</.test(m) || m.toLowerCase().includes('unexpected token') || m.toLowerCase().includes('<!doctype')) {
+            return 'Server returned an unexpected response (HTML). Please try again later.';
+          }
+          return m || errorMessage;
+        })();
+        if (sanitized) errorMessage = sanitized;
+      } catch (e) { /* ignore */ }
+
+      const errorResult = { error: errorMessage };
       setBreaches([errorResult]);
       setCurrentPage(0);
       setResult(errorResult);
@@ -519,71 +440,48 @@ function App() {
     setLoading(false);
   };
 
-  // Background prefetch: sequentially request /api/telegram-page and cache pages
-  const prefetchNextPages = async (startIndex = 1) => {
-    // Don't prefetch if already fetching
-    const MAX_PREFETCH = 10; // safety cap to avoid runaway requests
-    let pageCount = startIndex;
-    // Track seen pages to prevent duplicates and loops
-    const seen = new Set((breaches || []).map(b => JSON.stringify(b)));
+  const prefetchNextPages = async (startIndex = 1, currentToken) => {
+    const seen = new Set();
+    const tokenToUse = currentToken || token || sessionStorage.getItem('osint_token') || '';
 
-    for (; pageCount <= MAX_PREFETCH; pageCount += 1) {
+    for (let pageIdx = startIndex; pageIdx < 10; pageIdx += 1) {
       try {
-        const currentToken = token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('osint_token') : '');
         const res = await fetch(`${API_BASE}/api/telegram-page`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+            ...(tokenToUse ? { 'Authorization': `Bearer ${tokenToUse}` } : {})
           },
           credentials: 'include'
         });
 
-        if (!res.ok) {
-          // Stop prefetching if backend indicates no more pages
-          console.debug('Prefetch stopped: non-ok response', res.status);
-          break;
-        }
-
         const data = await res.json();
-        const pageDataRaw = data && data.data ? data.data : null;
-        const pageData = pageDataRaw ? normalizeResultData(pageDataRaw) : null;
+        if (!res.ok || !data || !data.data) break;
+
+        const pageDataRaw = data.data;
+        const pageData = normalizeResultData(pageDataRaw);
         if (data && data.data && data.data.pagination && data.data.pagination.total > 1) {
           setTotalPages(data.data.pagination.total);
         } else if (data && data.data && data.data.pagination && data.data.pagination.total <= 1) {
           setTotalPages(null);
         }
 
-        // If response has no useful data, stop prefetching
-        if (!pageData || (pageData.packets && pageData.packets.length === 0)) {
-          console.debug('Prefetch stopped: empty pageData');
-          break;
-        }
+        if (!pageData || (pageData.packets && pageData.packets.length === 0)) break;
 
-        // Avoid duplicates: if already seen anywhere, stop prefetching
         const key = JSON.stringify(pageData);
-        if (seen.has(key)) {
-          console.debug('Prefetch stopped: duplicate page encountered');
-          break;
-        }
+        if (seen.has(key)) break;
         seen.add(key);
-        // Append to breaches using state updater to avoid stale closure
-        setBreaches(prev => [...prev, pageData]);
 
-        // small delay to avoid hammering the backend
+        setBreaches(prev => [...prev, pageData]);
         await new Promise(r => setTimeout(r, 200));
       } catch (err) {
-        console.debug('Prefetch stopped due to error', err);
         break;
       }
     }
   };
 
-  // Handle next page pagination
   const handleNextPage = async () => {
     if (loadingNextPage) return;
-
-    // If we already have a cached next page, use it
     const nextIndex = currentPage + 1;
     if (breaches && breaches[nextIndex]) {
       setCurrentPage(nextIndex);
@@ -593,8 +491,7 @@ function App() {
 
     setLoadingNextPage(true);
     try {
-      console.log('Requesting next page from backend (cache miss)...');
-      const currentToken = token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('osint_token') : '');
+      const currentToken = token || sessionStorage.getItem('osint_token') || '';
       const res = await fetch(`${API_BASE}/api/telegram-page`, {
         method: 'POST',
         headers: {
@@ -604,16 +501,8 @@ function App() {
         credentials: 'include'
       });
 
-      console.log('Response status:', res.status);
       const data = await res.json();
-      console.log('Response data:', data);
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${data.error || 'Unknown error'}`);
-      }
-
-      // If backend returns null data (no more pages), don't append duplicates
-      if (!data || !data.data) {
+      if (!res.ok || !data || !data.data) {
         setResult(prev => ({ ...prev, error: 'No more pages available.' }));
         setLoadingNextPage(false);
         return;
@@ -627,7 +516,6 @@ function App() {
         setTotalPages(null);
       }
 
-      // Stop if duplicate of any previous page
       setBreaches(prev => {
         const isDup = prev.some(p => JSON.stringify(p) === JSON.stringify(nextPageData));
         if (isDup) {
@@ -640,30 +528,23 @@ function App() {
         return updated;
       });
     } catch (err) {
-      console.error('Next page error:', err);
-      const errorResult = { error: `❌ Failed to fetch next page: ${err.message}` };
-      setResult(errorResult);
+      setResult({ error: `❌ Failed to fetch next page: ${err.message}` });
     }
-
     setLoadingNextPage(false);
   };
 
-  // Handle previous page navigation - use local cache if available, otherwise call API
   const handlePrevPage = async () => {
     if (loadingPrevPage) return;
-    
-    // If we have a cached previous page, use it
     if (currentPage > 0) {
       const prevPageIndex = currentPage - 1;
       setCurrentPage(prevPageIndex);
       setResult(breaches[prevPageIndex]);
       return;
     }
-    
-    // Otherwise, try calling the API for previous page
+
     setLoadingPrevPage(true);
     try {
-      const currentToken = token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('osint_token') : '');
+      const currentToken = token || sessionStorage.getItem('osint_token') || '';
       const res = await fetch(`${API_BASE}/api/telegram-prev-page`, {
         method: 'POST',
         headers: {
@@ -673,102 +554,80 @@ function App() {
         credentials: 'include'
       });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${data.error || 'Unknown error'}`);
-  }
+      const data = await res.json();
+      if (!res.ok || !data || !data.data) {
+        setResult(prev => ({ ...prev, error: 'No previous pages available.' }));
+        setLoadingPrevPage(false);
+        return;
+      }
 
-  // If backend returns null data (no previous pages), don't prepend duplicates
-  if (!data || !data.data) {
-    setResult(prev => ({ ...prev, error: 'No previous pages available.' }));
-    setLoadingPrevPage(false);
-    return;
-  }
+      const prevPageDataRaw = data.data;
+      const prevPageData = normalizeResultData(prevPageDataRaw);
+      if (data && data.data && data.data.pagination && data.data.pagination.total > 1) {
+        setTotalPages(data.data.pagination.total);
+      } else if (data && data.data && data.data.pagination && data.data.pagination.total <= 1) {
+        setTotalPages(null);
+      }
 
-  const prevPageDataRaw = data.data;
-  const prevPageData = normalizeResultData(prevPageDataRaw);
-  if (data && data.data && data.data.pagination && data.data.pagination.total > 1) {
-    setTotalPages(data.data.pagination.total);
-  } else if (data && data.data && data.data.pagination && data.data.pagination.total <= 1) {
-    setTotalPages(null);
-  }
-      
-      // Insert at the beginning of breaches array and adjust indices
       const newBreaches = [prevPageData, ...breaches];
       setBreaches(newBreaches);
-      setCurrentPage(0); // We're now at the first (newly added) page
+      setCurrentPage(0);
       setResult(prevPageData);
     } catch (err) {
-      console.error('Previous page error:', err);
-      const errorResult = { error: `❌ Failed to fetch previous page: ${err.message}` };
-      setResult(errorResult);
+      setResult({ error: `❌ Failed to fetch previous page: ${err.message}` });
     }
-    
     setLoadingPrevPage(false);
   };
 
   return (
     <div className="dashboard">
-  {!shouldHideLocalBackground && (
-      <video
-        ref={bg1Ref}
-        className={`bg-video ${useBg2 && bg2Failed ? 'bg-fallback-zoom' : ''}`}
-        autoPlay
-        muted
-        loop
-        playsInline
-        onCanPlay={() => console.debug('bg video: canplay')}
-        aria-hidden
-      >
-        <source src={bgVideo1} type="video/mp4" />
-      </video>
+      {!isSearchingUI && <UserMenu />}
+
+      {!shouldHideLocalBackground && (
+        <video
+          ref={bg1Ref}
+          className={`bg-video ${useBg2 && bg2Failed ? 'bg-fallback-zoom' : ''}`}
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-hidden
+        >
+          <source src={bgVideo1} type="video/mp4" />
+        </video>
       )}
 
-      {/* Searching background (bg3) - zoom animation while waiting for response */}
-  {!shouldHideLocalBackground && (
-      <video
-        ref={bg3Ref}
-        className={`bg-video bg3 ${useBg3 ? 'visible zoom' : ''}`}
-        muted
-        playsInline
-        autoPlay
-        loop
-        preload="auto"
-        onCanPlay={() => { try { bg3Ref.current.play().catch(()=>{}); } catch(e){} }}
-        onEnded={() => { try { if (bg3Ref.current) { bg3Ref.current.currentTime = 0; bg3Ref.current.play().catch(()=>{}); } } catch(e){} }}
-        onPause={() => { try { if (bg3Ref.current && !bg3Ref.current.ended) { bg3Ref.current.play().catch(()=>{}); } } catch(e){} }}
-        onError={(e) => { console.error('bg3 error', e); setBg3Failed(true); }}
-        aria-hidden
-      >
-        <source src={bgVideo3} type="video/mp4" />
-      </video>
+      {!shouldHideLocalBackground && (
+        <video
+          ref={bg3Ref}
+          className={`bg-video bg3 ${useBg3 ? 'visible zoom' : ''}`}
+          muted
+          playsInline
+          autoPlay
+          loop
+          preload="auto"
+          aria-hidden
+        >
+          <source src={bgVideo3} type="video/mp4" />
+        </video>
       )}
 
-  {!shouldHideLocalBackground && (
-      <video
-        ref={bg2Ref}
-        className={`bg-video bg2 ${useBg2 ? 'visible zoom' : ''}`}
-        muted
-        playsInline
-        autoPlay
-        loop
-        preload="auto"
-        onCanPlay={() => { try { bg2Ref.current.play().catch(()=>{}); } catch(e){} }}
-        onEnded={() => {
-          // defensive restart for browsers that stop autoplay after a short time
-          try { if (bg2Ref.current) { bg2Ref.current.currentTime = 0; bg2Ref.current.play().catch(()=>{}); } } catch(e){}
-        }}
-        onPause={() => {
-          try { if (bg2Ref.current && !bg2Ref.current.ended) { bg2Ref.current.play().catch(()=>{}); } } catch(e){}
-        }}
-        onError={(e) => { console.error('bg2 error', e); setBg2Failed(true); }}
-        aria-hidden
-      >
-        <source src={bgVideo2} type="video/mp4" />
-      </video>
+      {!shouldHideLocalBackground && (
+        <video
+          ref={bg2Ref}
+          className={`bg-video bg2 ${useBg2 ? 'visible zoom' : ''}`}
+          muted
+          playsInline
+          autoPlay
+          loop
+          preload="auto"
+          aria-hidden
+        >
+          <source src={bgVideo2} type="video/mp4" />
+        </video>
       )}
 
-      <div className={`video-overlay ${overlayActive ? 'active' : ''}`} aria-hidden="true"></div>
+      <div className={`video-overlay ${overlayActive ? 'active' : ''}`} aria-hidden="true" />
 
       {showSearch && !loading && !result && (
         <div className="hero" aria-hidden="false">
@@ -779,39 +638,43 @@ function App() {
 
       {showSearch && !loading && !result && step === 'input' && (
         <div className="search-card" role="search">
-          <div className={`search-row centered ${loading ? 'search-anim' : ''}`}>
-            <select 
-              className="search-type-select"
-              value={searchType}
-              onChange={e => handleSearchTypeChange(e.target.value)}
-              disabled={loading || otpLoading}
-              aria-label="search-type-select"
-            >
-              <option value="Email">Email</option>
-              <option value="Mobile">Phone Number</option>
-            </select>
-            <input
-              className="search-input"
-              type="text"
-              placeholder={searchType === 'Email' ? "Enter email to check breaches (e.g. user@example.com)" : "Enter phone number with country code (e.g. +918722611983)"}
-              value={query}
-              onChange={e => handleInputChange(e.target.value)}
-              onFocus={() => setOverlayActive(true)}
-              onBlur={() => setOverlayActive(false)}
-              aria-label="search-input"
-              aria-busy={loading}
-              disabled={loading || otpLoading}
-              autoFocus
-            />
-            <button 
-              className="search-btn" 
-              onClick={handleGenerateOtp} 
-              disabled={loading || otpLoading || !isValidInput} 
-              aria-label="generate-otp-button"
-            >
-              {otpLoading ? '[ SENDING… ]' : '[ GENERATE OTP ⚡ ]'}
-            </button>
-          </div>
+          <form onSubmit={handleGenerateOtp} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className={`search-row centered ${loading ? 'search-anim' : ''}`}>
+              <select 
+                className="search-type-select"
+                value={searchType}
+                onChange={e => handleSearchTypeChange(e.target.value)}
+                disabled={loading || otpLoading}
+                aria-label="search-type-select"
+              >
+                <option value="Email">Email</option>
+                <option value="Mobile">Mobile</option>
+                <option value="Other">Other</option>
+              </select>
+              <input
+                className="search-input"
+                type="text"
+                placeholder={searchType === 'Email' ? "Enter email (e.g. test@example.com)" :
+                  searchType === 'Mobile' ? "Enter mobile (e.g. +919876543210)" :
+                  "Enter any query (e.g. name, account)"}
+                value={query}
+                onChange={e => handleInputChange(e.target.value)}
+                onFocus={() => setOverlayActive(true)}
+                onBlur={() => setOverlayActive(false)}
+                aria-label="search-input"
+                disabled={loading || otpLoading}
+                autoFocus
+              />
+              <button 
+                type="submit"
+                className="search-btn" 
+                disabled={loading || otpLoading || !isValidInput} 
+                aria-label="generate-otp-button"
+              >
+                {otpLoading ? '[ SENDING… ]' : '[ GENERATE OTP ⚡ ]'}
+              </button>
+            </div>
+          </form>
           {validationError && (
             <div className="validation-error">{validationError}</div>
           )}
@@ -819,47 +682,47 @@ function App() {
             <div className="validation-error">{otpError}</div>
           )}
           <div className="inline-disclaimer" role="note">
-            {searchType === 'Email' 
-              ? '🔒 Enter target email address to receive a secure 6-digit verification code before retrieving breach intelligence.' 
-              : '📱 Enter target phone number to receive a secure 6-digit SMS OTP via Android Gateway before retrieving breach intelligence.'}
+            🔒 Disclaimer: Prototype link is for evaluation purpose only. Please do not share, project is under active development.
           </div>
         </div>
       )}
 
       {showSearch && !loading && !result && step === 'otp' && (
         <div className="search-card" role="region" aria-label="otp-verification">
-          <div className="otp-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, color: '#00eaff', fontFamily: 'Orbitron, monospace', fontSize: '0.85rem' }}>
+          <div className="otp-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, color: '#00eaff', fontFamily: 'Orbitron, monospace', fontSize: '0.85rem', width: '100%' }}>
             <span>VERIFICATION CODE SENT TO: <strong style={{ color: '#fff' }}>{query}</strong></span>
             <span style={{ color: timeLeft <= 60 ? '#ff3366' : '#00eaff' }}>⏱ {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
           </div>
 
-          <div className="search-row centered">
-            <input
-              className="search-input"
-              type="text"
-              maxLength={6}
-              placeholder="Enter 6-digit OTP"
-              value={otp}
-              onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              aria-label="otp-input"
-              autoFocus
-              style={{ letterSpacing: '6px', fontSize: '1.25rem', textAlign: 'center' }}
-            />
-            <button 
-              className="search-btn" 
-              onClick={handleVerifyOtp} 
-              disabled={otpLoading || otp.length !== 6 || timeLeft <= 0} 
-              aria-label="verify-otp-button"
-            >
-              {otpLoading ? '[ SCANNING… ]' : '[ VERIFY & SCAN 🔍 ]'}
-            </button>
-          </div>
+          <form onSubmit={handleVerifyOtp} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className="search-row centered">
+              <input
+                className="search-input"
+                type="text"
+                maxLength={6}
+                placeholder="Enter 6-digit OTP"
+                value={otp}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                aria-label="otp-input"
+                autoFocus
+                style={{ letterSpacing: '6px', fontSize: '1.25rem', textAlign: 'center' }}
+              />
+              <button 
+                type="submit"
+                className="search-btn" 
+                disabled={otpLoading || otp.length !== 6 || timeLeft <= 0} 
+                aria-label="verify-otp-button"
+              >
+                {otpLoading ? '[ SCANNING… ]' : '[ VERIFY & SCAN 🔍 ]'}
+              </button>
+            </div>
+          </form>
 
           {otpError && (
             <div className="validation-error">{otpError}</div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: '0.85rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: '0.85rem', width: '100%' }}>
             <button
               type="button"
               onClick={handleGenerateOtp}
@@ -873,7 +736,7 @@ function App() {
               onClick={() => { setStep('input'); setOtp(''); setOtpError(''); }}
               style={{ background: 'transparent', border: 'none', color: '#999', cursor: 'pointer' }}
             >
-              ← Change {searchType === 'Email' ? 'Email' : 'Number'}
+              ← Change Target
             </button>
           </div>
         </div>
@@ -890,137 +753,65 @@ function App() {
 
       {!showSearchingAnimation && (
         <div className="results">
-        {result && result.packets && (() => {
-          // Defensive: backend sometimes returns only packets[0]. Prefer packets[1] if present,
-          // otherwise fall back to packets[0]. Build a single-element array so rendering stays simple.
-          const preferredPacket = (result.packets[1] !== undefined) ? result.packets[1] : result.packets[0];
-          // Detect no-results scenario to hide Download button and threat meter
-          const infoText = preferredPacket && typeof preferredPacket.info === 'string' ? preferredPacket.info : '';
-          const isNoResult = /no\s*results?(\s*found)?|no\s*public\s*breach|scan\s*complete/i.test(infoText || '');
-          // Determine if pagination should be shown: ONLY when real total pages > 1
-          const effectiveTotal = (typeof totalPages === 'number' && totalPages > 1) 
-            ? totalPages 
-            : (result?.pagination?.total && typeof result.pagination.total === 'number' && result.pagination.total > 1)
-              ? result.pagination.total 
-              : 1;
-          
-          const hasPagination = effectiveTotal > 1;
-          return (
-            <div className="packet" key={0}>
-              {/* Exposure Score & Risk Classification Header */}
-              {result && result.analytics && result.analytics.exposure && !isNoResult && (
-                <div className="exposure-meter-card">
-                  <div className="exposure-gauge-container">
-                    <div className="exposure-score-circle" style={{ borderColor: result.analytics.exposure.riskColor || '#00ff66' }}>
-                      <span className="score-num">{result.analytics.exposure.score ?? 0}</span>
-                      <span className="score-label">/ 100</span>
-                    </div>
-                    <div className="exposure-meta">
-                      <div
-                        className="risk-badge"
-                        style={{
-                          backgroundColor: `${result.analytics.exposure.riskColor || '#00ff66'}22`,
-                          color: result.analytics.exposure.riskColor || '#00ff66',
-                          borderColor: result.analytics.exposure.riskColor || '#00ff66'
-                        }}
-                      >
-                        THREAT LEVEL: {result.analytics.exposure.riskLevel || 'LOW'}
-                      </div>
-                      <div className="exposure-summary">
-                        {result.analytics.exposure.entities?.recordCount ?? 1} records identified • {result.analytics.exposure.entities?.phoneCount ?? 0} phone numbers linked • {result.analytics.exposure.entities?.hasDocument ? '⚠️ National Document / Aadhaar Exposed' : 'Digital Exposure Detected'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Factor Breakdown Chips */}
-                  {Array.isArray(result.analytics.exposure.breakdown) && result.analytics.exposure.breakdown.length > 0 && (
-                    <div className="breakdown-chips">
-                      {result.analytics.exposure.breakdown.map((b, idx) => (
-                        <span className="breakdown-chip" key={idx}>
-                          ⚡ {b?.factor || 'Threat factor'}: +{b?.points || 0} pts
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="packet-header">
-                <h2>[ Data Breach Information ]</h2>
-
-                <div className="header-actions-group">
-                  {/* View Mode Switcher Toggle */}
-                  {!isNoResult && (
-                    <div className="view-mode-toggle">
-                      <button
-                        className={`tab-toggle-btn ${viewMode === 'terminal' ? 'active' : ''}`}
-                        onClick={() => setViewMode('terminal')}
-                        aria-label="terminal-view"
-                      >
-                        [ Terminal View ]
-                      </button>
-                      <button
-                        className={`tab-toggle-btn ${viewMode === 'timeline' ? 'active' : ''}`}
-                        onClick={() => setViewMode('timeline')}
-                        aria-label="timeline-view"
-                      >
-                        [ Timeline View ⏱ ]
-                      </button>
-                    </div>
-                  )}
-
+          {result && result.packets && (() => {
+            const preferredPacket = (result.packets[1] !== undefined) ? result.packets[1] : result.packets[0];
+            const infoText = preferredPacket && typeof preferredPacket.info === 'string' ? preferredPacket.info : '';
+            const isNoResult = /no\s*results?(\s*found)?/i.test(infoText || '');
+            const effectiveTotal = (typeof totalPages === 'number' && totalPages > 0)
+              ? totalPages
+              : (result && result.pagination && typeof result.pagination.total === 'number')
+                ? result.pagination.total
+                : (breaches && breaches.length ? breaches.length : 1);
+            
+            const hasPagination = Number(effectiveTotal) > 1 && 
+                                 (result && result.pagination && result.pagination.total > 1);
+            return (
+              <div className="packet" key={0}>
+                <div className="packet-header">
+                  <h2>[ Data Breach Information ]</h2>
                   <div className="header-buttons">
                     {!isNoResult && (
                       <button className="header-btn" onClick={handleDownload} aria-label="download-html" disabled={downloading}>
-                        {downloading ? 'Exporting…' : 'Download Report'}
+                        {downloading ? 'Downloading…' : 'Download'}
                       </button>
                     )}
                     <button className="header-btn" onClick={closeResults} aria-label="new-search">Try another query</button>
                   </div>
                 </div>
-              </div>
-
-              {/* Conditional View Rendering */}
-              {viewMode === 'terminal' ? (
                 <pre className="terminal">{terminalText}<span className="cursor" /></pre>
-              ) : (
-                <BreachTimeline events={result?.analytics?.timeline || []} />
-              )}
 
-              {/* Optional: show raw packet info for debugging when content is missing */}
-              {(!preferredPacket || Object.keys(preferredPacket).length === 0) && (
-                <div className="warning">No detailed packet available.</div>
-              )}
+                {(!preferredPacket || Object.keys(preferredPacket).length === 0) && (
+                  <div className="warning">No detailed packet available.</div>
+                )}
 
-              {/* Pagination controls (only when more than one page) */}
-              {hasPagination && (
-                <div className="pagination-controls">
-                  <button 
-                    className="pagination-btn prev-btn"
-                    onClick={handlePrevPage}
-                    disabled={loadingPrevPage || currentPage <= 0}
-                    aria-label="previous-page"
-                  >
-                    {loadingPrevPage ? 'Loading...' : '◀ Prev'}
-                  </button>
-                  <span className="page-indicator">
-                    Page {currentPage + 1} of {effectiveTotal}
-                  </span>
-                  <button 
-                    className="pagination-btn next-btn"
-                    onClick={handleNextPage}
-                    disabled={loadingNextPage || (currentPage + 1) >= effectiveTotal}
-                    aria-label="next-page"
-                  >
-                    {loadingNextPage ? 'Loading...' : 'Next ▶'}
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-        {result && result.error && <div className="error">{result.error}</div>}
-      </div>
+                {hasPagination && (
+                  <div className="pagination-controls">
+                    <button 
+                      className="pagination-btn prev-btn"
+                      onClick={handlePrevPage}
+                      disabled={loadingPrevPage}
+                      aria-label="previous-page"
+                    >
+                      {loadingPrevPage ? 'Loading...' : '◀ Prev'}
+                    </button>
+                    <span className="page-indicator">
+                      Page {Math.max(1, currentPage + 1)} of {effectiveTotal}
+                    </span>
+                    <button 
+                      className="pagination-btn next-btn"
+                      onClick={handleNextPage}
+                      disabled={loadingNextPage || (typeof effectiveTotal === 'number' && (currentPage + 1) >= effectiveTotal)}
+                      aria-label="next-page"
+                    >
+                      {loadingNextPage ? 'Loading...' : 'Next ▶'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          {result && result.error && <div className="error">{result.error}</div>}
+        </div>
       )}
     </div>
   );

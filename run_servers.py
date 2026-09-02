@@ -62,6 +62,7 @@ def print_banner():
   - Python FastAPI Service : http://localhost:8001
   - Node.js Express Backend : http://localhost:5000
   - React Frontend App     : http://localhost:3000
+  - Premkumar Teli
  ================================================================{RESET}
 """
     print(banner)

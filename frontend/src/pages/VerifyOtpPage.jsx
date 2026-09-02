@@ -111,7 +111,7 @@ export default function VerifyOtpPage() {
   };
 
   return (
-    <div className="auth-screen">
+    <div className="dashboard">
       <video className="bg-video" autoPlay muted loop playsInline aria-hidden>
         <source src={bgVideo1} type="video/mp4" />
       </video>

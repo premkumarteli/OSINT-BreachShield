@@ -47,8 +47,11 @@ class Query(BaseModel):
 session_env = os.environ.get('TG_SESSION', 'osint_bot_session')
 # Resolve relative session path cleanly
 if not os.path.isabs(session_env):
+    root_session = os.path.join(os.path.dirname(__file__), '..', session_env)
     local_session = os.path.join(os.path.dirname(__file__), session_env)
-    if os.path.exists(local_session + '.session') or os.path.exists(local_session):
+    if os.path.exists(root_session + '.session') or os.path.exists(root_session):
+        session_name = root_session
+    elif os.path.exists(local_session + '.session') or os.path.exists(local_session):
         session_name = local_session
     else:
         session_name = session_env

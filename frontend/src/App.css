@@ -21,25 +21,8 @@ body {
   font-family: 'Fira Mono', 'Consolas', 'Courier New', monospace;
   background: #050806; /* near-black */
   color: var(--text-accent);
-  min-height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-/* Custom Cyber Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(0, 10, 20, 0.8);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 234, 255, 0.35);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 234, 255, 0.7);
+  height: 100vh;
+  overflow: hidden; /* keep global scroll out */
 }
 
 /* subtle scan lines */
@@ -143,91 +126,96 @@ body::before {
   z-index: 2; /* sit above videos but below main content */
 }
 
-/* Centered Full-Screen Dashboard */
-.dashboard {
-  min-height: 100vh;
-  width: 100vw;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
-  padding: 24px;
-}
-
-/* Centered Hero Header */
-.hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  margin-bottom: 24px;
-  z-index: 3;
-  width: 100%;
-}
-
-.hero-title {
-  font-family: 'Orbitron', monospace;
-  font-size: clamp(2.4rem, 5vw, 3.8rem);
-  font-weight: 900;
-  color: var(--accent);
-  margin: 0 0 10px 0;
-  text-shadow: 0 0 25px rgba(0, 234, 255, 0.8), 0 0 50px rgba(0, 234, 255, 0.4);
-  letter-spacing: 4px;
-  text-align: center;
-}
-
-.hero-credit {
-  font-family: 'Rajdhani', monospace;
-  font-size: 1.15rem;
-  color: #8eeaff;
-  letter-spacing: 1.5px;
-  text-shadow: 0 0 10px rgba(0, 234, 255, 0.4);
-  text-align: center;
-}
-
-.hero-credit strong {
-  color: #fff;
-  font-weight: 700;
-}
-
 .inline-disclaimer {
-  margin-top: 16px;
+  margin-top: 150px;
   background: rgba(0, 20, 40, 0.6);
   border: 1px solid rgba(0, 234, 255, 0.25);
   color: #c6f7ff;
-  padding: 8px 14px;
+  padding: 8px 12px;
   border-radius: 10px;
   box-shadow: 0 0 12px rgba(0, 234, 255, 0.18);
   backdrop-filter: blur(4px) saturate(120%);
   -webkit-backdrop-filter: blur(4px) saturate(120%);
-  font-size: clamp(0.78rem, 1.6vw, 0.88rem);
+  font-size: clamp(0.8rem, 1.8vw, 0.95rem);
   text-align: center;
-  max-width: 720px;
-  white-space: normal;
-  line-height: 1.4;
+  max-width: 780px;
+  white-space: normal; /* allow wrapping */
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.35;
   width: 100%;
-  box-sizing: border-box;
+}
+/* Hero heading and credit */
+.hero {
+  position: absolute;
+  top: 8vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
+  text-align: center;
+  z-index: 3;
+  pointer-events: none; /* don’t block the search inputs */
+}
+.hero-title {
+  margin: 0 0 6px 0;
+  font-size: clamp(40px, 10vw, 120px);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: #eafaff;
+  text-shadow: 0 0 10px rgba(0, 234, 255, 0.75), 0 0 24px rgba(0, 180, 255, 0.32);
+  font-family: 'Orbitron', 'Rajdhani', system-ui, sans-serif;
+  text-transform: uppercase;
+}
+.hero-credit {
+  margin-top: 2px;
+  color: var(--text-strong);
+  opacity: 0.95;
+  font-size: clamp(12px, 2.4vw, 18px);
+  text-shadow: 0 0 8px rgba(0, 234, 255, 0.35);
+}
+.hero-credit strong { color: var(--accent); text-shadow: 0 0 12px rgba(0, 234, 255, 0.55); }
+
+/* Top disclaimer banner */
+/* Inline disclaimer under the search card */
+/* .inline-disclaimer removed */
+
+.dashboard {
+  position: relative;
+  z-index: 1; /* make sure your content is above overlay */
+  display: flex; /* layout sidebar + results */
+  height: 100vh;
+}
+
+.app-container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column; /* stack title and search bar */
+  justify-content: center; /* vertical center */
+  align-items: center;     /* horizontal center */
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  z-index: 2;
 }
 
 /* centered search card */
 .search-card {
-  position: relative;
-  width: 100%;
-  max-width: 820px;
-  margin: 0 auto;
-  padding: 18px 24px;
+  position: absolute;
+  top: 48vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 640px;
+  max-width: 92%;
+  padding: 12px 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
-  justify-content: center;
   z-index: 3;
-  box-sizing: border-box;
 }
+
 
 .results {
   position: fixed;
@@ -248,7 +236,7 @@ body::before {
   gap: 14px;
   margin: 0 auto;
   width: 100%;
-  max-width: 780px;
+  max-width: 750px; /* increased to accommodate dropdown */
   position: relative;
   z-index: 2;
 }
@@ -566,41 +554,40 @@ body::before {
 /* Packet header with CTA */
 .packet-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 12px;
   margin-bottom: 10px;
-  padding: 8px 12px;
-  min-height: 44px;
-  flex-wrap: wrap;
+  position: relative;
+  padding: 12px 16px;
+  min-height: 50px;
 }
 .packet-header h2 { 
   margin: 0; 
-  flex-shrink: 0;
+  flex: 1;
+  padding-right: 280px;
   line-height: 1.2;
-  font-size: 1.05rem;
-}
-
-.header-actions-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-left: auto;
+  max-width: calc(100% - 280px);
 }
 
 /* Header buttons in right corner */
 .header-buttons {
   display: flex;
   gap: 8px;
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 10;
+  flex-wrap: nowrap;
   align-items: center;
+  flex-direction: row;
 }
 
 .header-btn {
   background: rgba(0, 234, 255, 0.2);
   color: rgba(0, 234, 255, 0.9);
   border: 1px solid rgba(0, 234, 255, 0.4);
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -610,7 +597,6 @@ body::before {
   backdrop-filter: blur(6px);
   white-space: nowrap;
   text-align: center;
-  font-family: 'Courier New', monospace;
 }
 
 .header-btn:hover {
@@ -626,7 +612,6 @@ body::before {
   cursor: not-allowed;
   transform: none;
 }
-
 
 /* User menu (top-right) */
 .user-menu { position: fixed; top: 12px; right: 16px; z-index: 50; }
@@ -897,6 +882,7 @@ body::before {
   }
   .terminal::-webkit-scrollbar { display: none; }
   .search-card {
+    top: 26vh; /* center-ish vertically on phones */
     width: 92%;
     max-width: 92%;
     padding: 10px 14px;
@@ -988,290 +974,4 @@ body::before {
     max-width: none;
     width: 100%;
   }
-}
-
-/* ================================================================
-   NEW: Exposure Score Gauge & Risk Classification Styles
-   ================================================================ */
-.exposure-meter-card {
-  background: rgba(8, 14, 26, 0.92);
-  border: 1px solid rgba(0, 243, 255, 0.28);
-  border-radius: 10px;
-  padding: 14px 18px;
-  margin-bottom: 12px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(0, 243, 255, 0.04);
-}
-
-.exposure-gauge-container {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.exposure-score-circle {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: 3.5px solid #00ff66;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.8);
-  flex-shrink: 0;
-}
-
-.score-num {
-  font-size: 20px;
-  font-weight: 900;
-  color: #ffffff;
-  font-family: 'Courier New', monospace;
-  line-height: 1;
-}
-
-.score-label {
-  font-size: 9px;
-  color: #94a3b8;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.exposure-meta {
-  flex: 1;
-}
-
-.risk-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  border: 1px solid;
-  margin-bottom: 5px;
-  text-transform: uppercase;
-}
-
-.exposure-summary {
-  font-size: 12px;
-  color: #cbd5e1;
-  font-family: 'Courier New', monospace;
-  line-height: 1.4;
-}
-
-.breakdown-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 8px;
-}
-
-.breakdown-chip {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
-  padding: 2px 7px;
-  font-size: 10.5px;
-  color: #fbbf24;
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-}
-
-/* ================================================================
-   NEW: View Mode Toggle (Terminal vs. Timeline)
-   ================================================================ */
-.view-mode-toggle {
-  display: flex;
-  gap: 6px;
-  margin-left: 8px;
-}
-
-.tab-toggle-btn {
-  background: rgba(0, 243, 255, 0.08);
-  border: 1px solid rgba(0, 243, 255, 0.3);
-  color: #00f3ff;
-  font-family: 'Courier New', monospace;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.tab-toggle-btn:hover {
-  background: rgba(0, 243, 255, 0.2);
-  border-color: #00f3ff;
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
-}
-
-.tab-toggle-btn.active {
-  background: rgba(0, 243, 255, 0.28);
-  border-color: #00f3ff;
-  color: #ffffff;
-  box-shadow: 0 0 14px rgba(0, 243, 255, 0.5);
-}
-
-/* ================================================================
-   NEW: Chronological Breach Timeline Styles
-   ================================================================ */
-.breach-timeline-container {
-  padding: 8px 4px 60px 4px;
-  flex: 1;
-  overflow-y: auto;
-  max-height: calc(100vh - 280px);
-}
-
-.timeline-header-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 8px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
-  font-family: 'Courier New', monospace;
-}
-
-.meta-title {
-  color: #00f3ff;
-  font-size: 12px;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-.meta-count {
-  background: rgba(0, 243, 255, 0.15);
-  border: 1px solid rgba(0, 243, 255, 0.4);
-  color: #e2e8f0;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.timeline-wrapper {
-  position: relative;
-  padding-left: 20px;
-}
-
-.timeline-spine {
-  position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 78px;
-  width: 2px;
-  background: linear-gradient(180deg, #00f3ff, #ff6a00, #ff003c);
-  box-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
-}
-
-.timeline-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.timeline-item {
-  display: flex;
-  align-items: flex-start;
-  position: relative;
-}
-
-.timeline-marker {
-  width: 70px;
-  text-align: right;
-  padding-right: 22px;
-  font-family: 'Courier New', monospace;
-  font-weight: 800;
-  color: #00f3ff;
-  font-size: 14px;
-  flex-shrink: 0;
-  padding-top: 4px;
-}
-
-.marker-dot {
-  position: absolute;
-  left: 54px;
-  top: 10px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #00f3ff;
-  box-shadow: 0 0 10px #00f3ff, 0 0 20px rgba(0, 243, 255, 0.6);
-  border: 2px solid #0b0f19;
-}
-
-.timeline-card {
-  flex: 1;
-  background: rgba(11, 18, 33, 0.9);
-  border: 1px solid rgba(0, 243, 255, 0.2);
-  border-left: 3px solid #00f3ff;
-  border-radius: 8px;
-  padding: 12px 14px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.timeline-card:hover {
-  transform: translateX(4px);
-  border-color: rgba(0, 243, 255, 0.5);
-  box-shadow: 0 0 16px rgba(0, 243, 255, 0.2);
-}
-
-.timeline-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.source-name {
-  font-weight: 800;
-  color: #ffffff;
-  font-size: 14px;
-  font-family: 'Courier New', monospace;
-}
-
-.category-tag {
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 3px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.category-tag.critical {
-  background: rgba(255, 0, 60, 0.18);
-  color: #ff3366;
-  border: 1px solid rgba(255, 0, 60, 0.4);
-}
-
-.category-tag.high {
-  background: rgba(255, 106, 0, 0.18);
-  color: #ff8833;
-  border: 1px solid rgba(255, 106, 0, 0.4);
-}
-
-.timeline-card-body {
-  font-size: 12.5px;
-  color: #94a3b8;
-  line-height: 1.4;
-  font-family: 'Courier New', monospace;
-}
-
-.timeline-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: #64748b;
-  font-family: 'Courier New', monospace;
-}
-
-.empty-icon {
-  font-size: 32px;
-  margin-bottom: 10px;
 }
