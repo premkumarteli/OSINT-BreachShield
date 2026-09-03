@@ -5,6 +5,7 @@ import bgVideo1 from './bg1.mp4';
 import bgVideo2 from './bg2.mp4';
 import bgVideo3 from './bg3.mp4';
 import UserMenu from './components/UserMenu';
+import AIIntelligenceCards from './components/AIIntelligenceCards';
 
 // Prefer env var, fallback to local backend for dev
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
@@ -779,6 +780,11 @@ function App() {
                   </div>
                 </div>
                 <pre className="terminal">{terminalText}<span className="cursor" /></pre>
+
+                {result && (result.analytics || result.blockchainAudit) && (
+                  <AIIntelligenceCards analytics={result.analytics} blockchainAudit={result.blockchainAudit} token={token} />
+                )}
+
 
                 {(!preferredPacket || Object.keys(preferredPacket).length === 0) && (
                   <div className="warning">No detailed packet available.</div>

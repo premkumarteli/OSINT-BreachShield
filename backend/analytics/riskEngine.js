@@ -3,7 +3,7 @@
  * Analyzes raw intelligence data and computes a deterministic threat score (0-100)
  */
 
-function analyzeExposure(rawText = '', query = '') {
+function analyzeExposure(rawText = '', query = '', aiAnalysis = null) {
   const text = String(rawText || '');
   if (!text.trim() || /no\s*results?(\s*found)?|no\s*public\s*breach\s*records|scan\s*complete/i.test(text)) {
     return {
@@ -11,6 +11,13 @@ function analyzeExposure(rawText = '', query = '') {
       riskLevel: 'LOW',
       riskColor: '#00ff66',
       breakdown: [],
+      factors: {
+        phishing_probability: 0.0,
+        correlation_score: 0.0,
+        source_reliability: 0.0,
+        severity: 0.0,
+        recency: 0.0
+      },
       entities: {
         passwordCount: 0,
         phoneCount: 0,
@@ -45,73 +52,89 @@ function analyzeExposure(rawText = '', query = '') {
   const recordBlocks = text.split(/(?:\*\*💾|\n\s*\n|[-=_]{5,}|\[\s*RECORD)/i).filter(b => b.trim().length > 25);
   const recordCount = Math.max(1, recordBlocks.length, breachSources.length);
 
-  // 3. Weight Calculation
+  // 3. Weight Calculation & Factor Attribution
   let rawScore = 0;
   const breakdown = [];
 
-  // Government ID / Document Leak (Critical: +35 pts)
+  // PII & Document Leak (+35 max)
+  let severityFactor = 0.20;
   if (docsFound.length > 0 || /document\s*number|aadhaar/i.test(text)) {
     rawScore += 35;
+    severityFactor = 0.95;
     breakdown.push({ factor: 'National ID / Document Leak', count: Math.max(1, docsFound.length), points: 35 });
   }
 
-  // Plaintext/Credential Exposure (+30 pts)
+  // Passwords (+30 max)
   if (passwordsFound.length > 0) {
     const pwPts = Math.min(30, passwordsFound.length * 20);
     rawScore += pwPts;
+    severityFactor = Math.max(severityFactor, 0.85);
     breakdown.push({ factor: 'Compromised Passwords / Hashes', count: passwordsFound.length, points: pwPts });
   }
 
-  // Physical Address / Geolocation (+20 pts)
+  // Physical Address (+20 max)
   if (addressMatches.length > 0 || /adres|address/i.test(text)) {
     rawScore += 20;
     breakdown.push({ factor: 'Physical Address / PII Exposed', count: Math.max(1, addressMatches.length), points: 20 });
   }
 
-  // Phone / Contact Identity Exposed (+15 pts)
+  // Contact Info (+15 max)
   if (phonesFound.length > 0 || /telephone|mobile/i.test(text)) {
     const phonePts = Math.min(15, Math.max(1, phonesFound.length) * 10);
     rawScore += phonePts;
     breakdown.push({ factor: 'Phone Numbers Linked', count: Math.max(1, phonesFound.length), points: phonePts });
   }
 
-  // Family / Father Name Linked (+10 pts)
-  if (fatherMatches.length > 0 || /father/i.test(text)) {
-    rawScore += 10;
-    breakdown.push({ factor: 'Family Identity Linked', count: Math.max(1, fatherMatches.length), points: 10 });
-  }
-
-  // Database Sprawl (+10 pts)
+  // Multiple Leak Sources (+15 max)
   if (recordCount > 1 || breachSources.length > 1) {
     rawScore += 15;
     breakdown.push({ factor: 'Multiple Leak Sources', count: Math.max(recordCount, breachSources.length), points: 15 });
   }
 
-  // Base score for any confirmed breach record
-  rawScore = Math.max(25, rawScore);
+  // AI Factors
+  let phishingProb = 0.0;
+  let correlationScore = 0.0;
+  if (aiAnalysis) {
+    phishingProb = Number(aiAnalysis.max_phishing_probability || 0.0);
+    if (phishingProb > 0.40) {
+      const phishPts = Math.min(30, Math.round(phishingProb * 30));
+      rawScore += phishPts;
+      breakdown.push({ factor: 'AI Phishing Probability', count: 1, points: phishPts });
+    }
+  }
 
-  // Cap at 100
-  const score = Math.min(100, rawScore);
+  // Base score for confirmed breach
+  rawScore = Math.max(20, rawScore);
+  const score = Math.min(100, Math.round(rawScore));
 
   // Categorize Risk Level
   let riskLevel = 'LOW';
   let riskColor = '#00ff66';
-  if (score >= 75) {
+  if (score >= 80) {
     riskLevel = 'CRITICAL';
     riskColor = '#ff003c';
-  } else if (score >= 50) {
+  } else if (score >= 60) {
     riskLevel = 'HIGH';
     riskColor = '#ff6a00';
-  } else if (score >= 25) {
+  } else if (score >= 30) {
     riskLevel = 'MEDIUM';
     riskColor = '#ffcc00';
   }
+
+  const factors = {
+    phishing_probability: roundFour(phishingProb),
+    correlation_score: roundFour(recordCount > 1 ? 0.75 : 0.25),
+    source_reliability: 0.90,
+    severity: roundFour(severityFactor),
+    recency: 0.95
+  };
 
   return {
     score,
     riskLevel,
     riskColor,
     breakdown,
+    factors,
     entities: {
       passwordCount: passwordsFound.length,
       phoneCount: Math.max(1, phonesFound.length),
@@ -123,6 +146,11 @@ function analyzeExposure(rawText = '', query = '') {
     }
   };
 }
+
+function roundFour(val) {
+  return Math.round((Number(val) || 0) * 10000) / 10000;
+}
+
 
 /**
  * Redacts plaintext passwords, national IDs, addresses, parent names, and exposed emails

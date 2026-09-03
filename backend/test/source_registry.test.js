@@ -4,11 +4,11 @@ const { getEnabledSources, TelegramScraperSource } = require('../sources/registr
 
 describe('BreachSource Registry (sources/registry.js) - Exclusive Telegram OSINT Feed', () => {
 
-  it('5.1: getEnabledSources() exclusively returns TelegramScraperSource', () => {
+  it('5.1: getEnabledSources() returns active OSINT source adapters including TelegramScraperSource', () => {
     const sources = getEnabledSources({ pythonServiceUrl: 'http://127.0.0.1:8001/query' });
     
-    assert.equal(sources.length, 1, 'Should have exactly 1 active source (Telegram OSINT Scraper)');
-    assert.ok(sources[0] instanceof TelegramScraperSource, 'TelegramScraperSource is registered as the exclusive primary source');
+    assert.ok(sources.length >= 1, 'Should have active source adapters registered');
+    assert.ok(sources.some(s => s instanceof TelegramScraperSource), 'TelegramScraperSource is registered among active sources');
   });
 
   it('5.2: TelegramScraperSource adheres to BreachSource search() contract shape', async () => {

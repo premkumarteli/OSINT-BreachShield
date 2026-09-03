@@ -49,10 +49,45 @@ async function executeSearch(query, verifiedTarget, options = {}) {
     packets.push({ query, info: 'Scan complete. No threat records detected in Telegram OSINT feeds.' });
   }
 
-  // Run Analytics & Timeline Parsers on Telegram threat intelligence text
+  // Run Analytics & Timeline Parsers on multi-source threat intelligence text
   const fullText = packets.map(p => p.info || '').join('\n\n');
-  const exposure = analyzeExposure(fullText, query);
+
+  // Query AI Threat Analysis Microservice
+  let aiAnalysis = null;
+  let modelComparison = null;
+  try {
+    const fetch = require('node-fetch');
+    const aiResp = await fetch(`${pythonServiceUrl.replace('/query', '')}/api/ai/analyze-threat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: fullText, query })
+    });
+    if (aiResp.ok) {
+      aiAnalysis = await aiResp.json();
+      modelComparison = aiAnalysis.model_comparison || null;
+    }
+  } catch (aiErr) {
+    console.warn('[SearchService AI warning] Could not fetch AI analysis:', aiErr.message);
+  }
+
+  const exposure = analyzeExposure(fullText, query, aiAnalysis);
   const timeline = parseBreachTimeline(fullText);
+
+  // Auto-log Event Hash to Blockchain Audit Ledger
+  let auditRecord = null;
+  try {
+    const { logThreatEvent } = require('../blockchain/auditLogger');
+    auditRecord = await logThreatEvent({
+      eventId: `search_${targetHash.substring(0, 12)}_${Date.now()}`,
+      eventType: 'OSINT_BREACH_SEARCH',
+      query: normalizedQuery,
+      riskScore: exposure.score,
+      riskLevel: exposure.riskLevel,
+      sourceName: 'MultiSource_OSINT'
+    });
+  } catch (blockchainErr) {
+    console.warn('[SearchService Blockchain warning] Audit logging failed:', blockchainErr.message);
+  }
 
   // Sanitize and redact sensitive credentials before delivering to client
   const sanitizedPackets = packets.map(p => ({
@@ -63,13 +98,13 @@ async function executeSearch(query, verifiedTarget, options = {}) {
   // Build structured records for frontend cards
   const records = liveHits.map((hit, idx) => ({
     id: idx + 1,
-    source: 'Telegram OSINT Feed',
-    title: 'Telegram Threat Scraper Spill',
+    source: hit.source || 'OSINT Feed',
+    title: `${hit.source || 'OSINT'} Threat Intelligence Spill`,
     year: hit.year || new Date().getFullYear().toString(),
-    category: 'Live Threat Feed',
-    sourceType: 'TELEGRAM',
+    category: 'Multi-Source Intelligence',
+    sourceType: hit.sourceType || 'LIVE_SCRAPER',
     dataClasses: Array.isArray(hit.dataClasses) && hit.dataClasses.length ? hit.dataClasses : ['IDENTITY'],
-    details: 'Real-time credential or database leak captured across monitored Telegram OSINT channels.'
+    details: 'Real-time threat spill captured across multi-source intelligence adapters.'
   }));
 
   return {
@@ -78,11 +113,15 @@ async function executeSearch(query, verifiedTarget, options = {}) {
     pagination,
     analytics: {
       exposure,
-      timeline
-    }
+      timeline,
+      aiAnalysis,
+      modelComparison
+    },
+    blockchainAudit: auditRecord
   };
 }
 
 module.exports = {
   executeSearch
 };
+

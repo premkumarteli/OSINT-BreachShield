@@ -35,28 +35,79 @@ except ValueError:
     print(f"[CRITICAL] TG_API_ID must be an integer, received: {api_id_raw}", file=sys.stderr)
     sys.exit(1)
 
-app = FastAPI(title="OSINT Breach Intelligence Scraper")
+app = FastAPI(title="OSINT Breach Intelligence Scraper with AI Threat Analysis")
 
-@app.get('/health')
-def health():
-    return {"status": "ok", "service": "osint_scraper"}
+# Initialize AI Threat Intelligence Layer
+try:
+    from ai import OSINTThreatAnalyzer, PhishingURLClassifier, EntityCorrelator, ModelManager
+    ai_analyzer = OSINTThreatAnalyzer()
+    ai_phishing = PhishingURLClassifier()
+    ai_correlator = EntityCorrelator()
+    ai_models = ModelManager()
+    AI_MODULE_ACTIVE = True
+    print("[AI Module] Successfully initialized AI Threat Intelligence Engine.")
+except Exception as ai_init_err:
+    AI_MODULE_ACTIVE = False
+    print(f"[AI Module Warning] Could not initialize AI engine: {ai_init_err}")
 
 class Query(BaseModel):
     query: str
 
+class URLAnalysisRequest(BaseModel):
+    url: str
+
+class ThreatAnalysisRequest(BaseModel):
+    text: str
+    query: str = ""
+
+class CorrelationRequest(BaseModel):
+    record_a: dict
+    record_b: dict
+
+@app.post("/api/ai/analyze-url")
+def analyze_url_endpoint(req: URLAnalysisRequest):
+    if not AI_MODULE_ACTIVE:
+        raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
+    return ai_phishing.analyze_url(req.url)
+
+@app.post("/api/ai/analyze-threat")
+def analyze_threat_endpoint(req: ThreatAnalysisRequest):
+    if not AI_MODULE_ACTIVE:
+        raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
+    return ai_analyzer.analyze_threat_payload(req.text, req.query)
+
+@app.post("/api/ai/correlate")
+def correlate_endpoint(req: CorrelationRequest):
+    if not AI_MODULE_ACTIVE:
+        raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
+    return ai_correlator.correlate_records(req.record_a, req.record_b)
+
+@app.post("/api/ai/compare-models")
+def compare_models_endpoint(req: URLAnalysisRequest):
+    if not AI_MODULE_ACTIVE:
+        raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
+    return ai_models.compare_architectures(req.url)
+
+@app.get("/api/ai/eval-benchmark")
+def eval_benchmark_endpoint():
+    if not AI_MODULE_ACTIVE:
+        raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
+    return ai_models.run_benchmark_evaluation()
+
+
 session_env = os.environ.get('TG_SESSION', 'osint_bot_session')
 # Resolve relative session path cleanly
 if not os.path.isabs(session_env):
-    root_session = os.path.join(os.path.dirname(__file__), '..', session_env)
-    local_session = os.path.join(os.path.dirname(__file__), session_env)
+    root_session = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', session_env))
+    local_session = os.path.abspath(os.path.join(os.path.dirname(__file__), session_env))
     if os.path.exists(root_session + '.session') or os.path.exists(root_session):
         session_name = root_session
     elif os.path.exists(local_session + '.session') or os.path.exists(local_session):
         session_name = local_session
     else:
-        session_name = session_env
+        session_name = root_session
 else:
-    session_name = session_env
+    session_name = os.path.abspath(session_env)
 
 print(f"Using session file: {session_name}")
 client = TelegramClient(session_name, api_id, api_hash)
@@ -160,17 +211,12 @@ async def startup_event():
         if not client.is_connected():
             await client.connect()
         if not await client.is_user_authorized():
-            print("Telegram session not authorized or needs login. Trying start()...")
-            # Only call start if not authorized
-            # Avoid interactive prompt crashing the server
-            try:
-                await client.start(phone=phone)
-            except Exception as e:
-                print(f"[Telethon Warning] Could not authorize Telegram session: {e}")
+            print("[Telethon Notice] Telegram session is not authorized. Server running in non-interactive mode. (Run 'python scraper/login_telegram.py' if interactive login is needed).")
         else:
-            print("Telegram client connected & authorized successfully.")
+            print("[Telethon OK] Telegram client connected & authorized successfully.")
     except Exception as exc:
         print(f"[Telethon Startup Warning] Telegram connection error: {exc}")
+
 
     # background keepalive to keep Telethon session fresh
     async def _keep_alive():
@@ -357,7 +403,20 @@ async def send_query(q: Query):
                     pass
 
                 packets = [{'info': m} for m in messages]
-                return {'packets': packets, 'response': full_text, 'pagination': public_pagination()}
+                ai_data = None
+                if AI_MODULE_ACTIVE:
+                    try:
+                        ai_data = ai_analyzer.analyze_threat_payload(full_text, target_q)
+                    except Exception as ai_err:
+                        print(f"[AI Analysis Error] {ai_err}")
+
+                return {
+                    'packets': packets,
+                    'response': full_text,
+                    'pagination': public_pagination(),
+                    'ai_analysis': ai_data
+                }
+
     except Exception as e:
         print(f"[Query Fallback] Error or timeout: {e}")
         return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}

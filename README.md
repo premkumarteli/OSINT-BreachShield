@@ -6,11 +6,13 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=nodedotjs&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.14-EE4C2C?logo=pytorch&logoColor=white)
+![Transformers](https://img.shields.io/badge/Transformers-HuggingFace-FFD21E)
 ![Android](https://img.shields.io/badge/Android-Kotlin%20%7C%20Compose-3DDC84?logo=android&logoColor=white)
 ![WebSocket](https://img.shields.io/badge/WebSocket-OkHttp%20%7C%20ws-010101?logo=socketdotio&logoColor=white)
 
-**Next-Generation OSINT Intelligence & Breach Detection Platform**  
-*Gated OTP-First Verification • Android Physical SIM Relay • Real-Time Dark Web Scraper*
+**Next-Generation AI-Powered OSINT Intelligence, Phishing Detection & Blockchain Audit Platform**  
+*Gated OTP Verification • AI Phishing Classifier • CNN/RNN/Transformer Comparative Analysis • SentenceTransformer Correlation • Tamper-Evident Blockchain Audit Ledger*
 
 </div>
 
@@ -19,102 +21,101 @@
 ## 🏛️ System Architecture
 
 ```text
-                               ┌────────────────────────────────┐
-                               │   User Browser (React 18)      │
-                               │   http://localhost:3000        │
-                               └───────────────┬────────────────┘
-                                               │
-                                      HTTP / REST (JSON)
-                                               │
-                                               ▼
-                               ┌────────────────────────────────┐
-                               │   Core API Gateway (Node.js)   │
-                               │   http://localhost:5000        │
-                               └──────┬──────────────────┬──────┘
-                                      │                  │
-               WebSocket (/ws/gateway)│                  │HTTP (Port 8001)
-                                      ▼                  ▼
-     ┌──────────────────────────────────┐      ┌──────────────────────────────┐
-     │ 📱 Android SMS Gateway App       │      │ 🐍 Python OSINT Scraper      │
-     │ Native Kotlin / Jetpack Compose  │      │ FastAPI + Telethon Engine    │
-     │ Relays OTP SMS via Physical SIM  │      │ Queries Deep & Dark Web Hubs │
-     └──────────────────────────────────┘      └──────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                         WEB & BREACH SEARCH SUBSYSTEM                            │
+└──────────────────────────────────────────────────────────────────────────────────┘
+   React 18 Frontend (Port 3000)
+       │
+       │ HTTP / REST (JWT Cookies & Bearer Tokens)
+       ▼
+   Node.js / Express Backend (Port 5000)
+       ├── authGuard / verifyOtpToken (Middleware)
+       ├── searchService.js & Multi-Source OSINT Registry
+       ├── riskEngine.js (Explainable Multi-Factor Risk & Data Masking)
+       ├── blockchain/ (Audit Hasher, Blockchain Client & Verification)
+       └── MySQL Database (email_otps, gateway_devices, sms_jobs, ai_schema)
+       │
+       │ HTTP POST /query & /api/ai/*
+       ▼
+   Python FastAPI Microservice (Port 8001) [osint_service.py]
+       ├── scraper/ai/ (URLFeatureExtractor, PhishingURLClassifier)
+       ├── scraper/ai/ (CNNPhishingClassifier, RNNPhishingClassifier, TransformerPhishingClassifier)
+       ├── scraper/ai/ (EntityCorrelator - SentenceTransformers all-MiniLM-L6-v2)
+       └── Telethon MTProto Client (Serialized with asyncio.Lock)
 ```
-
----
-
-## 📂 Repository Structure
 
 ```text
-OSINT-BreachShield/
-│
-├── frontend/                      # React 18 Web UI (Search, OTP Auth, Threat Level Gauge)
-├── backend/                       # Node.js Express Server, WebSocket Gateway & Breach Analytics
-├── scraper/                       # Python FastAPI Scraper & Telethon Threat Feed Engine
-├── android-gateway/               # Native Android Kotlin App (SMS OTP Hardware Relay)
-│
-├── data/                          # Breach catalogs, partition stores & session records
-├── docs/                          # Architecture diagrams, testing guides & presentations
-├── scripts/                       # Deployment, automation & maintenance scripts
-│
-├── run_servers.py                 # 🚀 Unified 1-command development launcher
-├── package.json                   # Root monorepo task runner
-└── README.md                      # Project documentation
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                     ANDROID PHYSICAL-SIM SMS GATEWAY SUBSYSTEM                   │
+└──────────────────────────────────────────────────────────────────────────────────┘
+   Node.js Backend WebSocket Relay (ws://localhost:5000/ws/gateway)
+       ▲
+       │ WebSocket Connections + Heartbeat + JWT Device Token Auth
+       ▼
+   Android Gateway App (Kotlin / Jetpack Compose / OkHttp / Room)
+       │
+       │ Android Telephony API (SmsManagerWrapper)
+       ▼
+   Physical Android SIM Card ──► Cellular Network ──► Recipient Mobile Device (SMS OTP)
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🤖 Implemented AI & Security Modules
 
-### 1. Prerequisites
-- **Node.js**: v18.0.0+
-- **Python**: 3.10+
-- **Android Studio** (Optional, for building the Android Gateway app)
+### 1. AI Phishing URL Detection Pipeline (`scraper/ai/phishing_classifier.py`)
+- **Extraction & Normalization**: Canonical URL parsing, TLD extraction, domain entropy, special character frequencies.
+- **Model**: `nhellyercreek/url-phishing-classifier` with fallback to neural ensemble.
+- **Output**: URL, classification (`SAFE`, `SUSPICIOUS`, `PHISHING`), confidence percentage, model version, and inference latency (ms).
 
-### 2. Install Dependencies
+### 2. CNN vs. RNN vs. Transformer Model Analysis (`scraper/ai/model_manager.py`)
+- **Char-CNN (1D Conv)**: Character sequence feature map convolution.
+- **BiLSTM (RNN)**: Bidirectional recurrent sequence modeling.
+- **Transformer**: Self-attention mechanism for contextual feature learning.
+- **Metrics Evaluated**: Accuracy, Precision, Recall, F1-Score, Confusion Matrix, Parameter Count, and Inference Latency.
+
+### 3. Entity & Breach Semantic Correlation (`scraper/ai/entity_correlator.py`)
+- **Structured Field Matching**: Cross-check email, phone, IP, username, and password hash matches.
+- **Dense Embeddings**: `sentence-transformers/all-MiniLM-L6-v2` dense vectors.
+- **Classification**: `RELATED` ($\ge 0.75$), `POSSIBLY_RELATED` ($0.50 - 0.74$), `UNRELATED` ($< 0.50$).
+
+### 4. Multi-Source OSINT Registry (`backend/sources/`)
+- `TelegramScraperSource.js`: Telethon MTProto scraper.
+- `PhishingFeedSource.js`: Active public phishing database feed ingestion.
+- `PublicBreachSource.js`: Partitioned k-anonymity breach catalog store.
+- `ThreatIntelSource.js`: Public domain & threat indicator reputation feed.
+
+### 5. Transparent Explainable Risk Engine (`backend/analytics/riskEngine.js`)
+- Multi-factor risk formula ($0-100$) outputting `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`.
+- Transparent factor breakdown object (`phishing_probability`, `correlation_score`, `severity`, `recency`, `source_reliability`).
+
+### 6. Tamper-Evident Blockchain Audit Ledger (`backend/blockchain/`)
+- Canonical JSON serialization & SHA-256 event hashing.
+- On-chain transaction logging & block verification (`VALID`, `TAMPERED`, `NOT_FOUND`).
+
+---
+
+## 🚀 Running Tests & Benchmarks
+
 ```bash
-npm run install:all
+# Python AI Unit Tests & Benchmarks (7/7 Passed)
+cd scraper
+python -m pytest test_ai_engine.py
+
+# Node.js AI, Multi-Source & Blockchain Tests (10/10 Passed)
+cd backend
+node test/ai_blockchain.test.js
+
+# Regression Tests
+node test/source_registry.test.js
+node test/scraper_redaction.test.js
 ```
 
-### 3. Launch All Services (1 Command)
-```bash
-python run_servers.py
-```
-
-This single command starts:
-- 🐍 **Python FastAPI OSINT Service** $\rightarrow$ `http://localhost:8001`
-- 🟢 **Node.js Express Backend & WebSocket** $\rightarrow$ `http://localhost:5000`
-- ⚛️ **React Frontend Dashboard** $\rightarrow$ `http://localhost:3000`
-
 ---
 
-## 📱 Android SMS Gateway Setup
+## 📜 Database Schema Migrations
 
-The **BreachShield Gateway** Android app turns any physical Android phone into a secure, hardware-isolated SMS OTP relay:
-
-1. Open `android-gateway` in **Android Studio**.
-2. Connect your Android phone via USB or Wireless ADB.
-3. Build and install (`gradlew assembleDebug`).
-4. On first launch:
-   - Enter your Server URL (e.g. `http://192.168.1.100:5000` or local network IP).
-   - Enter your Gateway Name & Registration Token.
-   - Tap **Register Gateway**.
-5. The device connects via WebSocket (`ws://<IP>:5000/ws/gateway`) and enters **`🟢 ONLINE`** mode with a 24/7 background foreground service.
-
----
-
-## 🔐 Security & OTP-First Architecture
-
-* **Strict Gating**: No direct database access or breach intelligence searches can be triggered without verifying an active 6-digit OTP session.
-* **Dual Dispatch Channels**:
-  * **Email Targets**: Dispatched securely over TLS via Gmail SMTP.
-  * **Phone Targets**: Dispatched in real-time over WebSocket to the registered Android SIM Gateway.
-* **Brute-Force & Rate-Limit Shield**:
-  * 60-second cooldown between OTP requests.
-  * 5-minute cryptographic expiration with `bcrypt` hash verification.
-  * 5-attempt limit per verification window.
-
----
-
-## 📄 License
-Distributed under the **MIT License**.
+Run MySQL migrations located in:
+- `backend/sql/schema.sql` (Email OTPs)
+- `backend/sql/gateway_schema.sql` (Android SMS Gateway Devices & Jobs)
+- `backend/sql/ai_schema.sql` (Phishing Analysis, ML Predictions, Entity Correlations, Threat Indicators, Blockchain Audit Logs)

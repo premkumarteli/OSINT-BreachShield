@@ -66,6 +66,7 @@ const ingestRouter = require('./api/ingest');
 const reportRouter = require('./api/report');
 const gatewayRouter = require('./gateway/routes/gatewayRoutes');
 const adminRouter = require('./api/admin');
+const aiRouter = require('./api/ai');
 const { touchHeartbeat } = require('./services/sessionTracker');
 
 app.use('/api/auth', authRouter);
@@ -75,6 +76,8 @@ app.use('/api/v1', ingestRouter); // Mounts /api/v1/range, /api/v1/breaches, /ap
 app.use('/api', reportRouter); // Mounts /api/download
 app.use('/api/gateway', gatewayRouter); // Mounts /api/gateway/register
 app.use('/api/admin', adminRouter); // Mounts BreachShield Admin Control API
+app.use('/api', aiRouter); // Mounts /api/ai and /api/blockchain routes
+
 
 // Website User Session Heartbeat
 app.post('/api/session/heartbeat', (req, res) => {

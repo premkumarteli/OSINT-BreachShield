@@ -1,23 +1,27 @@
-/**
- * @file registry.js
- * @description Exclusive BreachSource registry configured purely for the Live Telegram OSINT Feed.
- */
-
 const { TelegramScraperSource } = require('./TelegramScraperSource');
+const { PhishingFeedSource } = require('./PhishingFeedSource');
+const { PublicBreachSource } = require('./PublicBreachSource');
+const { ThreatIntelSource } = require('./ThreatIntelSource');
 
 /**
- * Returns an array containing solely the active Telegram OSINT Scraper source.
+ * Returns an array containing all active multi-source OSINT adapters.
  * @param {Object} [options] - Optional runtime overrides
- * @param {string} [options.pythonServiceUrl] - Override URL for python scraper service
  * @returns {import('./BreachSource').BreachSource[]}
  */
 function getEnabledSources(options = {}) {
   return [
-    new TelegramScraperSource(options.pythonServiceUrl)
+    new TelegramScraperSource(options.pythonServiceUrl),
+    new PhishingFeedSource(),
+    new PublicBreachSource(),
+    new ThreatIntelSource()
   ];
 }
 
 module.exports = {
   getEnabledSources,
-  TelegramScraperSource
+  TelegramScraperSource,
+  PhishingFeedSource,
+  PublicBreachSource,
+  ThreatIntelSource
 };
+
