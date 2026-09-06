@@ -114,9 +114,9 @@ async function executeSearch(query, verifiedTarget, options = {}) {
     analytics: {
       exposure,
       timeline,
-      aiAnalysis,
-      modelComparison
+      aiAnalysis
     },
+    auditLedger: auditRecord,
     blockchainAudit: auditRecord
   };
 }

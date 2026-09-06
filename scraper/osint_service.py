@@ -39,16 +39,16 @@ app = FastAPI(title="OSINT Breach Intelligence Scraper with AI Threat Analysis")
 
 # Initialize AI Threat Intelligence Layer
 try:
-    from ai import OSINTThreatAnalyzer, PhishingURLClassifier, EntityCorrelator, ModelManager
+    from ai import OSINTThreatAnalyzer, PhishingURLClassifier, EntityCorrelator
     ai_analyzer = OSINTThreatAnalyzer()
     ai_phishing = PhishingURLClassifier()
     ai_correlator = EntityCorrelator()
-    ai_models = ModelManager()
     AI_MODULE_ACTIVE = True
     print("[AI Module] Successfully initialized AI Threat Intelligence Engine.")
 except Exception as ai_init_err:
     AI_MODULE_ACTIVE = False
     print(f"[AI Module Warning] Could not initialize AI engine: {ai_init_err}")
+
 
 class Query(BaseModel):
     query: str
@@ -82,17 +82,6 @@ def correlate_endpoint(req: CorrelationRequest):
         raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
     return ai_correlator.correlate_records(req.record_a, req.record_b)
 
-@app.post("/api/ai/compare-models")
-def compare_models_endpoint(req: URLAnalysisRequest):
-    if not AI_MODULE_ACTIVE:
-        raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
-    return ai_models.compare_architectures(req.url)
-
-@app.get("/api/ai/eval-benchmark")
-def eval_benchmark_endpoint():
-    if not AI_MODULE_ACTIVE:
-        raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
-    return ai_models.run_benchmark_evaluation()
 
 
 session_env = os.environ.get('TG_SESSION', 'osint_bot_session')

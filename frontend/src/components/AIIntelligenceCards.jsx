@@ -1,25 +1,28 @@
 import React, { useState } from 'react';
 
-export default function AIIntelligenceCards({ analytics, blockchainAudit, token }) {
+export default function AIIntelligenceCards({ analytics, auditLedger, blockchainAudit, token }) {
   const [verificationResult, setVerificationResult] = useState(null);
   const [verifying, setVerifying] = useState(false);
 
   const aiAnalysis = analytics?.aiAnalysis || null;
-  const modelComparison = analytics?.modelComparison || null;
   const exposure = analytics?.exposure || null;
   const urlAnalyses = aiAnalysis?.url_analyses || [];
   const factors = exposure?.factors || null;
+  const auditData = auditLedger || blockchainAudit || null;
 
   const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
 
-  const handleVerifyBlockchain = async () => {
-    if (!blockchainAudit?.eventId) return;
+  const handleVerifyEvent = async () => {
+    if (!auditData?.eventId) return;
     setVerifying(true);
     try {
-      const resp = await fetch(`${API_BASE}/api/blockchain/verify/${blockchainAudit.eventId}`, {
+      const resp = await fetch(`${API_BASE}/api/audit/verify/${auditData.eventId}`, {
+        method: 'GET',
         headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       });
       const data = await resp.json();
       setVerificationResult(data);
@@ -73,7 +76,7 @@ export default function AIIntelligenceCards({ analytics, blockchainAudit, token 
         </div>
       )}
 
-      {/* 2. AI Phishing URL Detection */}
+      {/* 2. AI Phishing URL Detection (HuggingFace urlbert) */}
       {urlAnalyses.length > 0 && (
         <div className="ai-card" style={{ background: '#0b0f19', border: '1px solid rgba(255, 0, 60, 0.3)', borderRadius: '10px', padding: '20px' }}>
           <h3 style={{ color: '#ff003c', marginTop: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -107,72 +110,26 @@ export default function AIIntelligenceCards({ analytics, blockchainAudit, token 
         </div>
       )}
 
-      {/* 3. CNN vs RNN vs Transformer Comparison */}
-      {modelComparison && (
-        <div className="ai-card" style={{ background: '#0b0f19', border: '1px solid rgba(255, 204, 0, 0.3)', borderRadius: '10px', padding: '20px' }}>
-          <h3 style={{ color: '#ffcc00', marginTop: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>📊</span> Deep Learning Comparative Analysis (CNN vs RNN vs Transformer)
-          </h3>
-          <p style={{ color: '#94a3b8', fontSize: '13px', margin: '4px 0 16px 0' }}>
-            Empirical multi-architecture evaluation comparing character sequences, lexical features, and self-attention mechanisms.
-          </p>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', color: '#e2e8f0', fontSize: '13px', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#00f3ff' }}>
-                  <th style={{ padding: '8px' }}>Architecture</th>
-                  <th style={{ padding: '8px' }}>Model Name</th>
-                  <th style={{ padding: '8px' }}>Classification</th>
-                  <th style={{ padding: '8px' }}>Confidence</th>
-                  <th style={{ padding: '8px' }}>Parameters</th>
-                  <th style={{ padding: '8px' }}>Latency</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(modelComparison.predictions || {}).map(([arch, pred]) => (
-                  <tr key={arch} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '8px', fontWeight: 'bold', color: '#00f3ff' }}>{arch}</td>
-                    <td style={{ padding: '8px', color: '#cbd5e1' }}>{pred.model_name}</td>
-                    <td style={{ padding: '8px' }}>
-                      <span style={{ color: pred.classification === 'PHISHING' ? '#ff003c' : (pred.classification === 'SUSPICIOUS' ? '#ffcc00' : '#00ff66') }}>
-                        {pred.classification}
-                      </span>
-                    </td>
-                    <td style={{ padding: '8px' }}>{(pred.confidence * 100).toFixed(1)}%</td>
-                    <td style={{ padding: '8px', fontFamily: 'monospace' }}>{pred.parameter_count?.toLocaleString()}</td>
-                    <td style={{ padding: '8px', fontFamily: 'monospace' }}>{pred.inference_latency_ms}ms</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Blockchain Audit Logging & Tamper Verification */}
-      {blockchainAudit && (
+      {/* 3. SHA-256 Audit Hash Chain / Tamper-Evident Event Ledger */}
+      {auditData && (
         <div className="ai-card" style={{ background: '#0b0f19', border: '1px solid rgba(0, 255, 102, 0.3)', borderRadius: '10px', padding: '20px' }}>
           <h3 style={{ color: '#00ff66', marginTop: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🔗</span> Tamper-Evident Blockchain Audit Ledger
+            <span>🔗</span> Tamper-Evident Event Ledger (SHA-256 Audit Chain)
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '12px', marginTop: '12px' }}>
             <div>
               <span style={{ color: '#94a3b8' }}>Event ID:</span>
-              <div style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>{blockchainAudit.eventId}</div>
+              <div style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>{auditData.eventId}</div>
             </div>
             <div>
-              <span style={{ color: '#94a3b8' }}>Canonical Hash (SHA-256):</span>
-              <div style={{ color: '#00f3ff', fontFamily: 'monospace', wordBreak: 'break-all' }}>{blockchainAudit.canonicalHash}</div>
-            </div>
-            <div>
-              <span style={{ color: '#94a3b8' }}>Transaction Hash (TxHash):</span>
-              <div style={{ color: '#00ff66', fontFamily: 'monospace', wordBreak: 'break-all' }}>{blockchainAudit.txHash}</div>
+              <span style={{ color: '#94a3b8' }}>Event Hash (SHA-256):</span>
+              <div style={{ color: '#00f3ff', fontFamily: 'monospace', wordBreak: 'break-all' }}>{auditData.canonicalHash || auditData.eventHash}</div>
             </div>
           </div>
 
-          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <button
-              onClick={handleVerifyBlockchain}
+              onClick={handleVerifyEvent}
               disabled={verifying}
               style={{
                 background: 'transparent',
@@ -185,12 +142,12 @@ export default function AIIntelligenceCards({ analytics, blockchainAudit, token 
                 fontSize: '13px'
               }}
             >
-              {verifying ? 'Verifying Ledger...' : 'Verify Event Integrity'}
+              {verifying ? 'Recomputing SHA-256 Hash...' : 'Verify Event Integrity'}
             </button>
 
             {verificationResult && (
               <span style={{
-                color: verificationResult.status === 'VALID' ? '#00ff66' : '#ff003c',
+                color: verificationResult.status === 'MATCH' || verificationResult.status === 'VALID' ? '#00ff66' : '#ff003c',
                 fontWeight: 'bold',
                 fontSize: '13px'
               }}>

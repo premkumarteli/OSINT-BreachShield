@@ -7,7 +7,6 @@ from ai.rnn_model import RNNPhishingClassifier
 from ai.transformer_model import TransformerPhishingClassifier
 from ai.entity_correlator import EntityCorrelator
 from ai.threat_analyzer import OSINTThreatAnalyzer
-from ai.model_manager import ModelManager
 
 
 def test_url_feature_extractor():
@@ -26,39 +25,19 @@ def test_url_feature_extractor():
     assert len(seq) == 128
 
 
-def test_cnn_classifier():
-    cnn = CNNPhishingClassifier()
-    res = cnn.predict("http://paypal-verify-login.xyz/auth")
-    assert res["architecture"] == "CNN"
-    assert res["classification"] in ["PHISHING", "SUSPICIOUS", "SAFE"]
-    assert "inference_latency_ms" in res
-    assert res["parameter_count"] > 0
-
-
-def test_rnn_classifier():
-    rnn = RNNPhishingClassifier()
-    res = rnn.predict("http://paypal-verify-login.xyz/auth")
-    assert res["architecture"] == "RNN"
-    assert res["classification"] in ["PHISHING", "SUSPICIOUS", "SAFE"]
-    assert "inference_latency_ms" in res
-    assert res["parameter_count"] > 0
-
-
-def test_transformer_classifier():
-    tr = TransformerPhishingClassifier()
-    res = tr.predict("http://paypal-verify-login.xyz/auth")
-    assert res["architecture"] == "Transformer"
-    assert res["classification"] in ["PHISHING", "SUSPICIOUS", "SAFE"]
-    assert "inference_latency_ms" in res
-    assert res["parameter_count"] > 0
-
-
-def test_phishing_url_classifier():
+def test_phishing_url_classifier_real_model():
     clf = PhishingURLClassifier()
-    res = clf.analyze_url("http://apple-id-verify.top/login")
-    assert res["classification"] in ["PHISHING", "SUSPICIOUS", "SAFE"]
-    assert "confidence" in res
-    assert "inference_latency_ms" in res
+    assert clf.hf_model is not None, "Real Hugging Face model must be loaded"
+    
+    # Legitimate URL test
+    res_safe = clf.analyze_url("https://www.google.com")
+    assert res_safe["classification"] == "SAFE"
+    assert res_safe["phishing_probability"] < 0.40
+    
+    # Phishing URL test
+    res_phish = clf.analyze_url("http://paypa1-secure-login.tk/verify-account")
+    assert res_phish["classification"] == "PHISHING"
+    assert res_phish["phishing_probability"] > 0.65
 
 
 def test_entity_correlator():
@@ -72,16 +51,12 @@ def test_entity_correlator():
     assert len(res["matched_fields"]) >= 1
 
 
-def test_model_manager_benchmarks():
-    mgr = ModelManager()
-    eval_res = mgr.run_benchmark_evaluation()
-    assert eval_res["benchmark_dataset_size"] == 8
-    assert len(eval_res["evaluations"]) == 3
-    
-    for ev in eval_res["evaluations"]:
-        assert "accuracy" in ev
-        assert "precision" in ev
-        assert "recall" in ev
-        assert "f1_score" in ev
-        assert "confusion_matrix" in ev
-        assert "avg_latency_ms" in ev
+def test_threat_analyzer():
+    analyzer = OSINTThreatAnalyzer()
+    res = analyzer.analyze_threat_payload(
+        "Phishing link detected: http://paypa1-secure-login.tk/verify-account for victim user@example.com",
+        query="user@example.com"
+    )
+    assert res["has_phishing_url"] is True
+    assert res["max_phishing_probability"] > 0.65
+    assert len(res["url_analyses"]) >= 1

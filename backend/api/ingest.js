@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { getRange, ingestBatch } = require('../ingest/kAnonymityStore');
-const { requireAdminToken } = require('../middleware/authGuard');
+const { requireAdminToken, verifyOtpToken } = require('../middleware/authGuard');
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ const ingestLimiter = rateLimit({
 });
 
 // GET /range/:prefix
-router.get('/range/:prefix', (req, res) => {
+router.get('/range/:prefix', verifyOtpToken, (req, res) => {
   try {
     const prefix = (req.params.prefix || '').trim().toUpperCase();
     if (!/^[0-9A-F]{5}$/.test(prefix)) {
@@ -45,7 +45,7 @@ router.get('/range/:prefix', (req, res) => {
 });
 
 // GET /breaches
-router.get('/breaches', (req, res) => {
+router.get('/breaches', verifyOtpToken, (req, res) => {
   try {
     if (!fs.existsSync(CATALOG_FILE)) {
       return res.json({ success: true, count: 0, breaches: [] });
@@ -60,7 +60,7 @@ router.get('/breaches', (req, res) => {
 });
 
 // GET /breaches/:name
-router.get('/breaches/:name', (req, res) => {
+router.get('/breaches/:name', verifyOtpToken, (req, res) => {
   try {
     if (!fs.existsSync(CATALOG_INDEX_FILE)) {
       return res.status(404).json({ error: 'Breach index not found' });

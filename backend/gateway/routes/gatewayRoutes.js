@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const gatewayController = require('../controllers/gatewayController');
-const { verifyOtpToken } = require('../../middleware/authGuard');
+const { verifyOtpToken, requireAdminToken } = require('../../middleware/authGuard');
 
 // Rate limiter for registration: 5 requests per minute per IP
 const registerLimiter = rateLimit({
@@ -17,7 +17,7 @@ const registerLimiter = rateLimit({
  * @route   POST /api/gateway/register
  * @desc    Register a new or existing Android SMS Gateway device (Rate limited: 5 req/min)
  */
-router.post('/register', registerLimiter, gatewayController.registerDevice);
+router.post('/register', requireAdminToken, registerLimiter, gatewayController.registerDevice);
 
 /**
  * @route   GET /api/gateway/devices

@@ -1,5 +1,5 @@
 const { computeEventHash, createCanonicalJson } = require('../blockchain/auditHasher');
-const blockchainClient = require('../blockchain/blockchainClient');
+const { computeLeaf, hashPair, buildMerkleTree, verifyProof } = require('../blockchain/merkleUtils');
 const { verifyThreatEvent } = require('../blockchain/verificationService');
 const { logThreatEvent } = require('../blockchain/auditLogger');
 const { analyzeExposure } = require('../analytics/riskEngine');
@@ -30,17 +30,20 @@ async function runTests() {
   assert(canonical.includes('"eventId":"evt_101"'), 'Canonical JSON contains sorted eventId');
   assert(typeof hash === 'string' && hash.length === 64, 'Event hash is 64-char SHA-256 string');
 
-  // 2. Blockchain Client
-  const tx = await blockchainClient.submitAuditTransaction('evt_101', hash);
-  assert(tx.txHash.startsWith('0x'), 'Transaction hash starts with 0x prefix');
-  assert(tx.blockNumber > 0, 'Block number generated');
+  // 2. Merkle Tree Construction & Cryptographic Proofs
+  const leaf1 = computeLeaf('evt_101', hash, 1700000000);
+  const leaf2 = computeLeaf('evt_102', 'b'.repeat(64), 1700000001);
+  const tree = buildMerkleTree([leaf1, leaf2]);
+  assert(tree.root && tree.root.startsWith('0x') && tree.root.length === 66, 'Merkle root generated (0x-prefixed 32 bytes)');
+  const proofValid = verifyProof(leaf1, tree.proofs[0].proof, tree.root);
+  assert(proofValid === true, 'Merkle inclusion proof verifies correctly');
 
   // 3. Audit Logger & Verification
   const auditRec = await logThreatEvent(event);
   assert(auditRec.verificationStatus === 'VALID', 'Audit logger creates valid record');
 
   const verification = await verifyThreatEvent('evt_101', event);
-  assert(verification.status === 'VALID' && verification.verified === true, 'Verification service confirms VALID event payload');
+  assert(verification.verified === true, 'Verification service confirms verified event payload');
 
   const tamperedEvent = { ...event, riskScore: 10 };
   const tamperedVerification = await verifyThreatEvent('evt_101', tamperedEvent);

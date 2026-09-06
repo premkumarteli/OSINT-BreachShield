@@ -8,5 +8,11 @@
     "test": "npm --prefix backend test && npm --prefix frontend test -- --watchAll=false",
     "install:all": "npm --prefix backend install && npm --prefix frontend install",
     "postinstall": "npm --prefix backend install && npm --prefix frontend install"
+  },
+  "dependencies": {
+    "ethers": "^6.17.0"
+  },
+  "devDependencies": {
+    "jest": "^30.5.1"
   }
 }

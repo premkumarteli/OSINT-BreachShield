@@ -39,7 +39,7 @@ async function registerDevice(req, res) {
         platform: 'android'
       },
       JWT_SECRET,
-      { expiresIn: '365d' }
+      { expiresIn: '24h' }
     );
 
     const now = new Date();

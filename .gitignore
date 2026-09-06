@@ -79,6 +79,7 @@ apps/android-gateway/.artifacts/
 *.pepk
 *.p12
 
-# Archives
+# Archives & Binary Docs
 *.zip
+*.pdf
 

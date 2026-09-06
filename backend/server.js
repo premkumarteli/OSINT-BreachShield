@@ -23,6 +23,9 @@ try {
   console.warn('dotenv not found; continuing without .env');
 }
 
+// Initialize blockchain recovery before starting server
+const { recoverPendingBatches } = require('./blockchain');
+
 const app = express();
 
 // CORS with credentials for auth cookie
@@ -69,6 +72,29 @@ const adminRouter = require('./api/admin');
 const aiRouter = require('./api/ai');
 const { touchHeartbeat } = require('./services/sessionTracker');
 
+// Heartbeat rate limiter: max 1 heartbeat per session per 5 seconds
+const heartbeatLimiter = new Map();
+function heartbeatRateLimit(req, res, next) {
+  const { sessionId } = req.body || {};
+  if (!sessionId) return next();
+  const now = Date.now();
+  const last = heartbeatLimiter.get(sessionId);
+  if (last && now - last < 5000) {
+    return res.status(429).json({ error: 'Heartbeat rate limit exceeded' });
+  }
+  heartbeatLimiter.set(sessionId, now);
+  // Evict stale entries every 100 requests
+  if (heartbeatLimiter.size > 100) {
+    for (const [k, v] of heartbeatLimiter) {
+      if (now - v > 30000) heartbeatLimiter.delete(k);
+    }
+  }
+  next();
+}
+
+// Session ID format: sess_<timestamp>_<5-char alphanumeric>
+const SESSION_ID_PATTERN = /^sess_\d{10,13}_[a-z0-9]{5}$/;
+
 app.use('/api/auth', authRouter);
 app.use('/api', authRouter); // Supports legacy /api/send-otp, /api/verify-otp
 app.use('/api', searchRouter); // Mounts /api/search, /api/telegram-page
@@ -80,8 +106,11 @@ app.use('/api', aiRouter); // Mounts /api/ai and /api/blockchain routes
 
 
 // Website User Session Heartbeat
-app.post('/api/session/heartbeat', (req, res) => {
+app.post('/api/session/heartbeat', heartbeatRateLimit, (req, res) => {
   const { sessionId, currentPage } = req.body || {};
+  if (!sessionId || !SESSION_ID_PATTERN.test(sessionId)) {
+    return res.status(400).json({ error: 'Invalid sessionId format' });
+  }
   const updated = touchHeartbeat(sessionId, currentPage);
   res.json({ success: true, active: Boolean(updated) });
 });
@@ -103,12 +132,19 @@ setupGatewayWebSocket(server);
 const PORT = Number(process.env.PORT || 5000);
 
 if (require.main === module) {
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`OSINT backend running on port ${PORT}`);
-    console.log(`Gateway WebSocket relay active at ws://0.0.0.0:${PORT}/ws/gateway`);
-    console.log('Auto-ingest stores breach metadata only; raw threat data is never persisted to disk.');
-    console.log('CORS allowed origins:', ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS.join(', ') : '(localhost:3000 default)');
-  });
+  recoverPendingBatches()
+    .then(() => {
+      server.listen(PORT, '0.0.0.0', () => {
+        console.log(`OSINT backend running on port ${PORT}`);
+        console.log(`Gateway WebSocket relay active at ws://0.0.0.0:${PORT}/ws/gateway`);
+        console.log('Auto-ingest stores breach metadata only; raw threat data is never persisted to disk.');
+        console.log('CORS allowed origins:', ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS.join(', ') : '(localhost:3000 default)');
+      });
+    })
+    .catch(err => {
+      console.error('[STARTUP] Blockchain recovery failed:', err);
+      process.exit(1);
+    });
 }
 
 module.exports = { app, server };

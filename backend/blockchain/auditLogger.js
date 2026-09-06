@@ -1,11 +1,14 @@
 const { computeEventHash, createCanonicalJson } = require('./auditHasher');
-const blockchainClient = require('./blockchainClient');
 const { query } = require('../auth/db');
 const fs = require('fs');
 const path = require('path');
+const { enqueueLeaf } = require('./merkleBatcher');
 
 const INSTANCE_DIR = path.join(__dirname, '../../instance');
 const AUDIT_LOGS_JSON = path.join(INSTANCE_DIR, 'blockchain_audit_logs.json');
+
+// In-memory ledger for fast local lookups and test modifications
+const memoryAuditLedger = new Map();
 
 function readJsonLogs() {
   try {
@@ -27,7 +30,7 @@ function writeJsonLogs(data) {
 }
 
 /**
- * Logs a threat event to the blockchain audit system and MySQL.
+ * Logs a threat event to the tamper-evident SHA-256 audit ledger.
  */
 async function logThreatEvent(event) {
   const eventId = String(event.eventId || event.id || `evt_${Date.now()}_${Math.floor(Math.random()*1000)}`);
@@ -37,37 +40,56 @@ async function logThreatEvent(event) {
   const canonicalJson = createCanonicalJson(eventPayload);
   const canonicalHash = computeEventHash(eventPayload);
 
-  // 1. Submit transaction to blockchain ledger
-  const tx = await blockchainClient.submitAuditTransaction(eventId, canonicalHash);
-
   const auditRecord = {
     eventId,
     eventType,
     canonicalHash,
-    txHash: tx.txHash,
-    blockNumber: tx.blockNumber,
-    networkId: tx.networkId,
+    eventHash: canonicalHash,
     verificationStatus: 'VALID',
     createdAt: new Date().toISOString(),
-    canonicalJson
+    eventData: eventPayload,
+    canonicalJson,
+    merkleProof: null,
+    merkleRoot: null,
+    anchorTxHash: null,
+    anchorBlockNumber: null,
+    anchorNetwork: null,
+    anchoredAt: null
   };
 
-  // 2. Persist in MySQL with JSON fallback
+  memoryAuditLedger.set(eventId, auditRecord);
+
+  // Persist to disk JSON store
+  const logs = readJsonLogs().filter(l => l.eventId !== eventId);
+  logs.push(auditRecord);
+  writeJsonLogs(logs);
+
+  // Try saving to MySQL table if available
   try {
     await query(`
       INSERT INTO blockchain_audit_logs 
       (event_id, event_type, canonical_hash, tx_hash, block_number, network_id, verification_status)
-      VALUES (?, ?, ?, ?, ?, ?, 'VALID')
-    `, [eventId, eventType, canonicalHash, tx.txHash, tx.blockNumber, tx.networkId]);
-  } catch (dbErr) {
-    const logs = readJsonLogs().filter(l => l.eventId !== eventId);
-    logs.push(auditRecord);
-    writeJsonLogs(logs);
+      VALUES (?, ?, ?, ?, 1, 'sha256-audit-chain', 'VALID')
+    `, [eventId, eventType, canonicalHash, canonicalHash]);
+  } catch (_) {}
+
+  // Enqueue for Merkle batching and anchoring
+  try {
+    await enqueueLeaf({
+      eventId,
+      canonicalHash,
+      timestamp: Date.now()
+    });
+  } catch (err) {
+    console.warn('[AUDIT LOGGER] Failed to enqueue for Merkle batching:', err.message);
   }
 
   return auditRecord;
 }
 
 module.exports = {
-  logThreatEvent
+  logThreatEvent,
+  memoryAuditLedger,
+  readJsonLogs,
+  writeJsonLogs
 };

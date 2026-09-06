@@ -23,6 +23,7 @@ const JWT_SECRET = 'deep_adversarial_stress_secret_123890';
 
 let mockPythonServer;
 let backendProcess;
+let stressAdminToken;
 const otpMap = new Map();
 
 async function waitForOtp(emailOrPhone, timeoutMs = 6000) {
@@ -123,6 +124,13 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
         if (!started) reject(new Error(`Backend exited early with code ${code}`));
       });
     });
+
+    // 3. Create admin token for gateway registration tests
+    stressAdminToken = jwt.sign(
+      { sub: 'admin@breachshield.io', email: 'admin@breachshield.io', role: 'admin', verified: true },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
   });
 
   after(async () => {
@@ -453,21 +461,33 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
   // =========================================================================
   describe('Section 3: WebSocket Disconnect, Abrupt Drop, Reconnect & Queueing Stress', () => {
     it('3.1: Android Gateway WS handshake, auth, ping/pong heartbeat roundtrip', async () => {
+      // Register a device to get a valid gateway token
+      const deviceId = `device_stress_auth_${Date.now()}`;
+      const regRes = await fetch(`${BASE_URL}/api/gateway/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${stressAdminToken}`
+        },
+        body: JSON.stringify({ deviceId, deviceName: 'WS Auth Test', manufacturer: 'Test', model: 'T', androidVersion: '14' })
+      });
+      const regJson = await regRes.json();
+      const gwToken = regJson.gatewayToken;
+
       const ws = new WebSocket(WS_URL);
-      const testDeviceId = `device_stress_auth_${Date.now()}`;
 
       await new Promise((resolve, reject) => {
         ws.on('open', resolve);
         ws.on('error', reject);
       });
 
-      // 1. Send Handshake Auth
-      ws.send(JSON.stringify({ deviceId: testDeviceId, token: 'gateway_test_token' }));
+      // 1. Send Handshake Auth with valid gateway token
+      ws.send(JSON.stringify({ deviceId, token: gwToken }));
       const authMsg = await new Promise((resolve) => {
         ws.once('message', (msg) => resolve(JSON.parse(msg.toString())));
       });
       assert.equal(authMsg.type, 'AUTH_SUCCESS');
-      assert.equal(authMsg.deviceId, testDeviceId);
+      assert.equal(authMsg.deviceId, deviceId);
 
       // 2. Ping / Pong text heartbeat (matching Android WebSocketManager.kt)
       ws.send('ping');
@@ -502,10 +522,13 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
     it('3.3: Queue SMS jobs when gateway is offline, fetch via GET /api/gateway/pending/:deviceId', async () => {
       const offlineDeviceId = `device_offline_${Date.now()}`;
 
-      // 1. Register device
+      // 1. Register device (requires admin auth)
       const regRes = await fetch(`${BASE_URL}/api/gateway/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${stressAdminToken}`
+        },
         body: JSON.stringify({
           deviceId: offlineDeviceId,
           deviceName: 'Stress Test Device',
@@ -515,12 +538,17 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
         })
       });
       assert.equal(regRes.status, 200);
+      const regJson = await regRes.json();
+      const deviceToken = regJson.gatewayToken;
+      assert.ok(deviceToken, 'Register must return a gatewayToken');
+
+      const gwAuth = { 'Authorization': `Bearer ${deviceToken}` };
 
       // 2. Queue 3 SMS dispatch jobs for the offline device
       for (let i = 1; i <= 3; i++) {
         const smsRes = await fetch(`${BASE_URL}/api/gateway/send-sms`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...gwAuth },
           body: JSON.stringify({
             deviceId: offlineDeviceId,
             phoneNumber: `+91980000000${i}`,
@@ -535,7 +563,9 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
       }
 
       // 3. Query pending jobs endpoint
-      const pendingRes = await fetch(`${BASE_URL}/api/gateway/pending/${offlineDeviceId}`);
+      const pendingRes = await fetch(`${BASE_URL}/api/gateway/pending/${offlineDeviceId}`, {
+        headers: gwAuth
+      });
       assert.equal(pendingRes.status, 200);
       const pendingJson = await pendingRes.json();
       assert.equal(pendingJson.success, true);
@@ -548,7 +578,7 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
       // 4. Update SMS status to DELIVERED via HTTP API
       const statusRes = await fetch(`${BASE_URL}/api/gateway/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...gwAuth },
         body: JSON.stringify({
           requestId: `stress_req_${offlineDeviceId}_1`,
           deviceId: offlineDeviceId,
@@ -558,7 +588,9 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
       assert.equal(statusRes.status, 200);
 
       // 5. Query pending jobs again -> now 2 remaining
-      const pendingRes2 = await fetch(`${BASE_URL}/api/gateway/pending/${offlineDeviceId}`);
+      const pendingRes2 = await fetch(`${BASE_URL}/api/gateway/pending/${offlineDeviceId}`, {
+        headers: gwAuth
+      });
       const pendingJson2 = await pendingRes2.json();
       assert.equal(pendingJson2.count, 2);
     });
@@ -573,8 +605,15 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
           const devId = `stress_burst_device_${idx}_${Date.now()}`;
           wsClients.push({ ws, devId });
 
+          // Sign a per-device gateway token so each connection can authenticate
+          const gwToken = jwt.sign(
+            { deviceId: devId, role: 'sms_gateway', platform: 'android' },
+            JWT_SECRET,
+            { expiresIn: '5m' }
+          );
+
           ws.on('open', () => {
-            ws.send(JSON.stringify({ deviceId: devId }));
+            ws.send(JSON.stringify({ deviceId: devId, token: gwToken }));
           });
 
           ws.on('message', (raw) => {
@@ -582,11 +621,14 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
               const msg = JSON.parse(raw.toString());
               if (msg.type === 'AUTH_SUCCESS') {
                 resolve();
+              } else if (msg.type === 'AUTH_FAILED') {
+                reject(new Error(`AUTH_FAILED for ${devId}: ${msg.error}`));
               }
             } catch (_) {}
           });
 
           ws.on('error', reject);
+          setTimeout(() => reject(new Error(`Timeout waiting for AUTH_SUCCESS on ${devId}`)), 3000);
         });
       });
 
@@ -611,8 +653,30 @@ describe('Deep Adversarial Stress & Resiliency Challenge Suite', () => {
     });
 
     it('3.5: Stress: Fuzzing with malformed non-JSON messages and oversized frames', async () => {
+      // Register a device to get a valid gateway token
+      const fuzzDeviceId = `device_fuzz_${Date.now()}`;
+      const regRes = await fetch(`${BASE_URL}/api/gateway/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${stressAdminToken}`
+        },
+        body: JSON.stringify({ deviceId: fuzzDeviceId, deviceName: 'Fuzz Test', manufacturer: 'Test', model: 'T', androidVersion: '14' })
+      });
+      const regJson = await regRes.json();
+      const fuzzGwToken = regJson.gatewayToken;
+
       const ws = new WebSocket(WS_URL);
       await new Promise((resolve) => ws.on('open', resolve));
+
+      // Authenticate first
+      ws.send(JSON.stringify({ deviceId: fuzzDeviceId, token: fuzzGwToken }));
+      await new Promise((resolve) => {
+        ws.once('message', (raw) => {
+          const msg = JSON.parse(raw.toString());
+          resolve();
+        });
+      });
 
       const fuzzPayloads = [
         '{ malformed json: true, ',

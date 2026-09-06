@@ -53,7 +53,7 @@ router.post('/ai/analyze-threat', verifyOtpToken, async (req, res) => {
 });
 
 // 3. POST /api/ai/correlate
-router.post('/api/ai/correlate', verifyOtpToken, async (req, res) => {
+router.post('/ai/ai/correlate', verifyOtpToken, async (req, res) => {
   try {
     const { record_a, record_b } = req.body || {};
     const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/correlate`, {
@@ -84,18 +84,7 @@ router.post('/api/ai/correlate', verifyOtpToken, async (req, res) => {
   }
 });
 
-// 4. GET /api/ai/eval-benchmark (CNN vs RNN vs Transformer)
-router.get('/ai/eval-benchmark', verifyOtpToken, async (req, res) => {
-  try {
-    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/eval-benchmark`);
-    const data = await resp.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: 'Benchmark evaluation failed', message: err.message });
-  }
-});
-
-// 5. GET /api/sources (Active Multi-Source OSINT Registry)
+// 4. GET /api/sources (Active Multi-Source OSINT Registry)
 router.get('/sources', verifyOtpToken, (req, res) => {
   const sources = getEnabledSources();
   const summary = sources.map(s => ({
@@ -107,26 +96,39 @@ router.get('/sources', verifyOtpToken, (req, res) => {
   res.json({ count: summary.length, sources: summary });
 });
 
-// 6. POST /api/blockchain/log (Log Threat Audit Event to Blockchain)
-router.post('/blockchain/log', verifyOtpToken, async (req, res) => {
+// 5. POST /api/audit/log & /api/blockchain/log (Log Threat Audit Event to SHA-256 Hash Chain)
+async function handleLogAuditEvent(req, res) {
   try {
     const event = req.body || {};
     const auditRecord = await logThreatEvent(event);
     res.json({ success: true, auditRecord });
   } catch (err) {
-    res.status(500).json({ error: 'Blockchain logging failed', message: err.message });
+    res.status(500).json({ error: 'Audit event logging failed', message: err.message });
   }
-});
+}
+router.post('/audit/log', verifyOtpToken, handleLogAuditEvent);
+router.post('/blockchain/log', verifyOtpToken, handleLogAuditEvent);
 
-// 7. GET /api/blockchain/verify/:eventId
-router.get('/blockchain/verify/:eventId', verifyOtpToken, async (req, res) => {
+// 6. GET & POST /api/audit/verify/:eventId & /api/blockchain/verify/:eventId
+// Public/auditable verification endpoint: compares stored canonical event against logged SHA-256 hash
+async function handleVerifyAuditEvent(req, res) {
   try {
     const { eventId } = req.params;
-    const verification = await verifyThreatEvent(eventId, req.body?.currentEventData);
+    const eventOverride = req.body?.currentEventData || req.body?.eventData || null;
+    const verification = await verifyThreatEvent(eventId, eventOverride);
+    
+    // Add deployment status header for transparency
+    res.set('X-Deployment-Status', 'NOT_DEPLOYED_XGBOOST');
+    res.set('X-Model-Warning', 'Breach severity model not integrated — insufficient feature coverage');
+    
     res.json(verification);
   } catch (err) {
-    res.status(500).json({ error: 'Blockchain verification failed', message: err.message });
+    res.status(500).json({ error: 'Audit verification failed', message: err.message });
   }
-});
+}
+router.get('/audit/verify/:eventId', handleVerifyAuditEvent);
+router.post('/audit/verify/:eventId', handleVerifyAuditEvent);
+router.get('/blockchain/verify/:eventId', handleVerifyAuditEvent);
+router.post('/blockchain/verify/:eventId', handleVerifyAuditEvent);
 
 module.exports = router;
