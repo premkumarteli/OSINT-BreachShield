@@ -38,6 +38,8 @@ env/
 **/__pycache__/
 **/*.pyc
 **/*.pyo
+*.pt
+*.pth
 
 # Telegram Telethon Sessions & Sensitive Credentials
 *.session
