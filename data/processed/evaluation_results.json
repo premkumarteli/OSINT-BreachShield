@@ -1,0 +1,242 @@
+{
+  "test_set_size": 157,
+  "test_distribution": {
+    "0": 11,
+    "1": 74,
+    "2": 63,
+    "3": 9
+  },
+  "naive_baseline_accuracy": 0.471,
+  "models": {
+    "XGBoost": {
+      "accuracy": 0.8917,
+      "macro_f1": 0.832,
+      "weighted_f1": 0.894,
+      "per_class": {
+        "LOW": {
+          "precision": 0.643,
+          "recall": 0.818,
+          "f1": 0.72,
+          "support": 11
+        },
+        "MEDIUM": {
+          "precision": 0.907,
+          "recall": 0.919,
+          "f1": 0.913,
+          "support": 74
+        },
+        "HIGH": {
+          "precision": 0.949,
+          "recall": 0.889,
+          "f1": 0.918,
+          "support": 63
+        },
+        "CRITICAL": {
+          "precision": 0.778,
+          "recall": 0.778,
+          "f1": 0.778,
+          "support": 9
+        }
+      },
+      "confusion_matrix": [
+        [
+          9,
+          2,
+          0,
+          0
+        ],
+        [
+          4,
+          68,
+          2,
+          0
+        ],
+        [
+          1,
+          4,
+          56,
+          2
+        ],
+        [
+          0,
+          1,
+          1,
+          7
+        ]
+      ]
+    },
+    "CNN": {
+      "accuracy": 0.6624,
+      "macro_f1": 0.572,
+      "weighted_f1": 0.657,
+      "per_class": {
+        "LOW": {
+          "precision": 0.455,
+          "recall": 0.455,
+          "f1": 0.455,
+          "support": 11
+        },
+        "MEDIUM": {
+          "precision": 0.642,
+          "recall": 0.824,
+          "f1": 0.722,
+          "support": 74
+        },
+        "HIGH": {
+          "precision": 0.791,
+          "recall": 0.54,
+          "f1": 0.642,
+          "support": 63
+        },
+        "CRITICAL": {
+          "precision": 0.5,
+          "recall": 0.444,
+          "f1": 0.471,
+          "support": 9
+        }
+      },
+      "confusion_matrix": [
+        [
+          5,
+          5,
+          1,
+          0
+        ],
+        [
+          5,
+          61,
+          7,
+          1
+        ],
+        [
+          1,
+          25,
+          34,
+          3
+        ],
+        [
+          0,
+          4,
+          1,
+          4
+        ]
+      ]
+    },
+    "RNN": {
+      "accuracy": 0.414,
+      "macro_f1": 0.321,
+      "weighted_f1": 0.44,
+      "per_class": {
+        "LOW": {
+          "precision": 0.146,
+          "recall": 0.545,
+          "f1": 0.231,
+          "support": 11
+        },
+        "MEDIUM": {
+          "precision": 0.634,
+          "recall": 0.351,
+          "f1": 0.452,
+          "support": 74
+        },
+        "HIGH": {
+          "precision": 0.516,
+          "recall": 0.508,
+          "f1": 0.512,
+          "support": 63
+        },
+        "CRITICAL": {
+          "precision": 0.077,
+          "recall": 0.111,
+          "f1": 0.091,
+          "support": 9
+        }
+      },
+      "confusion_matrix": [
+        [
+          6,
+          2,
+          3,
+          0
+        ],
+        [
+          22,
+          26,
+          22,
+          4
+        ],
+        [
+          12,
+          11,
+          32,
+          8
+        ],
+        [
+          1,
+          2,
+          5,
+          1
+        ]
+      ]
+    },
+    "Transformer": {
+      "accuracy": 0.4841,
+      "macro_f1": 0.429,
+      "weighted_f1": 0.508,
+      "per_class": {
+        "LOW": {
+          "precision": 0.189,
+          "recall": 0.636,
+          "f1": 0.292,
+          "support": 11
+        },
+        "MEDIUM": {
+          "precision": 0.676,
+          "recall": 0.338,
+          "f1": 0.45,
+          "support": 74
+        },
+        "HIGH": {
+          "precision": 0.679,
+          "recall": 0.603,
+          "f1": 0.639,
+          "support": 63
+        },
+        "CRITICAL": {
+          "precision": 0.222,
+          "recall": 0.667,
+          "f1": 0.333,
+          "support": 9
+        }
+      },
+      "confusion_matrix": [
+        [
+          7,
+          3,
+          0,
+          1
+        ],
+        [
+          27,
+          25,
+          17,
+          5
+        ],
+        [
+          2,
+          8,
+          38,
+          15
+        ],
+        [
+          1,
+          1,
+          1,
+          6
+        ]
+      ]
+    }
+  },
+  "recommendation": "XGBoost",
+  "naive_baseline": 0.471
+}
