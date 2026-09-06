@@ -41,14 +41,18 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TextDataset(Dataset):
-    def __init__(self, indices, labels):
+    def __init__(self, indices, labels, return_lengths=False):
         self.indices = torch.tensor(indices, dtype=torch.long)
         self.labels = torch.tensor(labels, dtype=torch.long)
+        self.return_lengths = return_lengths
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
+        if self.return_lengths:
+            length = (self.indices[idx] != 0).sum().item()
+            return self.indices[idx], self.labels[idx], length
         return self.indices[idx], self.labels[idx]
 
 
@@ -88,11 +92,20 @@ class TextRNN(nn.Module):
         self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True, bidirectional=True)
         self.fc = nn.Linear(hidden_dim * 2, num_classes)
         self.dropout = nn.Dropout(0.3)
+        self.needs_lengths = True
 
-    def forward(self, x):
+    def forward(self, x, lengths=None):
         # x: (batch, seq_len)
         emb = self.embedding(x)  # (batch, seq_len, embed_dim)
-        lstm_out, (h_n, _) = self.lstm(emb)  # lstm_out: (batch, seq_len, hidden*2)
+
+        if lengths is not None:
+            lengths_cpu = lengths.cpu().clamp(min=1)
+            packed = nn.utils.rnn.pack_padded_sequence(
+                emb, lengths_cpu, batch_first=True, enforce_sorted=False
+            )
+            _, (h_n, _) = self.lstm(packed)
+        else:
+            _, (h_n, _) = self.lstm(emb)
 
         # Use final hidden state (forward + backward)
         h_forward = h_n[-2]  # (batch, hidden)
@@ -153,19 +166,46 @@ class TextTransformer(nn.Module):
 
 # === Training ===
 
+def collate_with_lengths(batch):
+    """Collate for RNN: returns (indices, labels, lengths) sorted by length desc."""
+    indices, labels, lengths = zip(*batch)
+    indices = torch.stack(indices)
+    labels = torch.stack(labels)
+    lengths = torch.tensor(lengths, dtype=torch.long)
+    # Sort by length descending (required for pack_padded_sequence)
+    sorted_idx = lengths.argsort(descending=True)
+    return indices[sorted_idx], labels[sorted_idx], lengths[sorted_idx]
+
+
+def collate_no_lengths(batch):
+    """Collate for CNN/Transformer: returns (indices, labels)."""
+    indices, labels = zip(*batch)
+    return torch.stack(indices), torch.stack(labels)
+
+
 def train_epoch(model, loader, optimizer, criterion, device):
     model.train()
     total_loss = 0
     correct = 0
     total = 0
+    use_lengths = getattr(model, 'needs_lengths', False)
 
-    for inputs, labels in loader:
-        inputs, labels = inputs.to(device), labels.to(device)
+    for batch in loader:
+        if use_lengths:
+            inputs, labels, lengths = batch
+            inputs, labels, lengths = inputs.to(device), labels.to(device), lengths.to(device)
+        else:
+            inputs, labels = batch
+            inputs, labels = inputs.to(device), labels.to(device)
 
         optimizer.zero_grad()
-        outputs = model(inputs)
+        if use_lengths:
+            outputs = model(inputs, lengths)
+        else:
+            outputs = model(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
 
         total_loss += loss.item() * inputs.size(0)
@@ -181,11 +221,21 @@ def evaluate(model, loader, criterion, device):
     total_loss = 0
     correct = 0
     total = 0
+    use_lengths = getattr(model, 'needs_lengths', False)
 
     with torch.no_grad():
-        for inputs, labels in loader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs)
+        for batch in loader:
+            if use_lengths:
+                inputs, labels, lengths = batch
+                inputs, labels, lengths = inputs.to(device), labels.to(device), lengths.to(device)
+            else:
+                inputs, labels = batch
+                inputs, labels = inputs.to(device), labels.to(device)
+
+            if use_lengths:
+                outputs = model(inputs, lengths)
+            else:
+                outputs = model(inputs)
             loss = criterion(outputs, labels)
 
             total_loss += loss.item() * inputs.size(0)
@@ -262,17 +312,22 @@ def main():
     max_seq_len = text_data["max_seq_len"]
 
     # Prepare data loaders
-    def make_loader(split_name, shuffle=False):
+    def make_loader(split_name, shuffle=False, return_lengths=False):
         indices = text_data["splits"][split_name]["indices"]
         labels = text_data["splits"][split_name]["labels"]
         # Map string labels to integers
         label_map = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
         labels_int = [label_map[l] for l in labels]
-        dataset = TextDataset(indices, labels_int)
-        return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=shuffle)
+        dataset = TextDataset(indices, labels_int, return_lengths=return_lengths)
+        collate_fn = collate_with_lengths if return_lengths else collate_no_lengths
+        return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=shuffle, collate_fn=collate_fn)
 
+    # CNN/Transformer loaders (no lengths)
     train_loader = make_loader("train", shuffle=True)
     val_loader = make_loader("val", shuffle=False)
+    # RNN loaders (with lengths, sorted descending)
+    rnn_train_loader = make_loader("train", shuffle=True, return_lengths=True)
+    rnn_val_loader = make_loader("val", shuffle=False, return_lengths=True)
 
     # Class weights (inversely proportional to frequency)
     all_labels = text_data["splits"]["train"]["labels"]
@@ -302,7 +357,7 @@ def main():
     # Train RNN (LSTM)
     rnn = TextRNN(vocab_size, EMBED_DIM, HIDDEN_DIM, NUM_CLASSES).to(DEVICE)
     rnn_optimizer = optim.Adam(rnn.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-    rnn_results = train_model(rnn, train_loader, val_loader, criterion, rnn_optimizer, "rnn", project_root)
+    rnn_results = train_model(rnn, rnn_train_loader, rnn_val_loader, criterion, rnn_optimizer, "rnn", project_root)
     results["rnn"] = rnn_results
 
     # Train Transformer

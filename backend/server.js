@@ -25,6 +25,7 @@ try {
 
 // Initialize blockchain recovery before starting server
 const { recoverPendingBatches } = require('./blockchain');
+const { ensureContractDeployed } = require('./blockchain/ensureContract');
 
 const app = express();
 
@@ -132,7 +133,8 @@ setupGatewayWebSocket(server);
 const PORT = Number(process.env.PORT || 5000);
 
 if (require.main === module) {
-  recoverPendingBatches()
+  ensureContractDeployed()
+    .then(() => recoverPendingBatches())
     .then(() => {
       server.listen(PORT, '0.0.0.0', () => {
         console.log(`OSINT backend running on port ${PORT}`);
@@ -142,7 +144,7 @@ if (require.main === module) {
       });
     })
     .catch(err => {
-      console.error('[STARTUP] Blockchain recovery failed:', err);
+      console.error('[STARTUP] Blockchain setup failed:', err);
       process.exit(1);
     });
 }

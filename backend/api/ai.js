@@ -1,11 +1,46 @@
 const express = require('express');
 const router = express.Router();
 const { verifyOtpToken } = require('../auth/routes/auth');
+const { requireAdminToken } = require('../middleware/authGuard');
 const { query } = require('../auth/db');
 const { logThreatEvent } = require('../blockchain/auditLogger');
 const { verifyThreatEvent } = require('../blockchain/verificationService');
 const { getEnabledSources } = require('../sources/registry');
 const fetch = require('node-fetch');
+
+// Allowed fields for audit event logging — matches what auditHasher.createCanonicalJson uses
+const ALLOWED_AUDIT_FIELDS = new Set([
+  'eventId', 'eventType', 'query', 'riskScore', 'riskLevel', 'sourceName'
+]);
+
+function validateAuditEvent(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { valid: false, error: 'Request body must be a JSON object' };
+  }
+  const rejected = Object.keys(body).filter(k => !ALLOWED_AUDIT_FIELDS.has(k));
+  if (rejected.length > 0) {
+    return { valid: false, error: `Unexpected fields: ${rejected.join(', ')}` };
+  }
+  if (body.eventId !== undefined && typeof body.eventId !== 'string') {
+    return { valid: false, error: 'eventId must be a string' };
+  }
+  if (body.eventType !== undefined && typeof body.eventType !== 'string') {
+    return { valid: false, error: 'eventType must be a string' };
+  }
+  if (body.query !== undefined && typeof body.query !== 'string') {
+    return { valid: false, error: 'query must be a string' };
+  }
+  if (body.riskScore !== undefined && typeof body.riskScore !== 'number') {
+    return { valid: false, error: 'riskScore must be a number' };
+  }
+  if (body.riskLevel !== undefined && typeof body.riskLevel !== 'string') {
+    return { valid: false, error: 'riskLevel must be a string' };
+  }
+  if (body.sourceName !== undefined && typeof body.sourceName !== 'string') {
+    return { valid: false, error: 'sourceName must be a string' };
+  }
+  return { valid: true, sanitized: body };
+}
 
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8001';
 
@@ -97,17 +132,26 @@ router.get('/sources', verifyOtpToken, (req, res) => {
 });
 
 // 5. POST /api/audit/log & /api/blockchain/log (Log Threat Audit Event to SHA-256 Hash Chain)
+// Admin-only: no frontend or user-facing code calls these routes.
+// Actual audit logging happens internally via searchService.js calling logThreatEvent() directly.
 async function handleLogAuditEvent(req, res) {
   try {
-    const event = req.body || {};
-    const auditRecord = await logThreatEvent(event);
-    res.json({ success: true, auditRecord });
+    const validation = validateAuditEvent(req.body);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error });
+    }
+    const auditRecord = await logThreatEvent(validation.sanitized);
+    res.json({
+      success: true,
+      auditRecord,
+      anchorStatus: auditRecord.anchorStatus || 'pending'
+    });
   } catch (err) {
     res.status(500).json({ error: 'Audit event logging failed', message: err.message });
   }
 }
-router.post('/audit/log', verifyOtpToken, handleLogAuditEvent);
-router.post('/blockchain/log', verifyOtpToken, handleLogAuditEvent);
+router.post('/audit/log', requireAdminToken, handleLogAuditEvent);
+router.post('/blockchain/log', requireAdminToken, handleLogAuditEvent);
 
 // 6. GET & POST /api/audit/verify/:eventId & /api/blockchain/verify/:eventId
 // Public/auditable verification endpoint: compares stored canonical event against logged SHA-256 hash

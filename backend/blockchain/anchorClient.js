@@ -1,5 +1,9 @@
 const { ethers } = require('ethers');
 const crypto = require('crypto');
+const path = require('path');
+try {
+  require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+} catch (_) {}
 
 class AnchorClient {
   constructor() {
@@ -123,7 +127,7 @@ class AnchorClient {
         return {
           txHash: receipt.hash,
           blockNumber: receipt.blockNumber,
-          network: 'polygon-amoy',
+          network: 'local-hardhat',
           timestamp: new Date().toISOString()
         };
         
@@ -145,7 +149,7 @@ class AnchorClient {
             return {
               txHash: '0x' + '0'.repeat(64), // No new tx
               blockNumber: Number(blockNumber),
-              network: 'polygon-amoy',
+              network: 'local-hardhat',
               timestamp: new Date().toISOString(),
               duplicate: true
             };

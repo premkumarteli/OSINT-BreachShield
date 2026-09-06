@@ -147,7 +147,7 @@ export default function AIIntelligenceCards({ analytics, auditLedger, blockchain
 
             {verificationResult && (
               <span style={{
-                color: verificationResult.status === 'MATCH' || verificationResult.status === 'VALID' ? '#00ff66' : '#ff003c',
+                color: verificationResult.verified ? '#00ff66' : '#ff003c',
                 fontWeight: 'bold',
                 fontSize: '13px'
               }}>

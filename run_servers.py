@@ -22,6 +22,7 @@ import threading
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PYTHON_DIR = os.path.join(BASE_DIR, 'scraper')
 BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
+BLOCKCHAIN_DIR = os.path.join(BACKEND_DIR, 'blockchain')
 FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
 
 # Load unified root .env into os.environ
@@ -59,9 +60,10 @@ def print_banner():
  ================================================================
        OSINT BREACHSHIELD - UNIFIED SERVER LAUNCHER
  ================================================================
-  - Python FastAPI Service : http://localhost:8001
+  - Local Hardhat Blockchain: http://127.0.0.1:8545
+  - Python FastAPI Service  : http://localhost:8001
   - Node.js Express Backend : http://localhost:5000
-  - React Frontend App     : http://localhost:3000
+  - React Frontend App      : http://localhost:3000
   - Premkumar Teli
  ================================================================{RESET}
 """
@@ -149,7 +151,33 @@ def main():
     print(f"{CYAN}[LAUNCHER] Node Binary  :{RESET} {node_bin}")
     print(f"{CYAN}[LAUNCHER] NPM Binary   :{RESET} {npm_bin}\n")
 
+    start_blockchain = "--no-blockchain" not in sys.argv and os.environ.get("ENABLE_LOCAL_BLOCKCHAIN", "true") != "false"
     start_telegram = "--no-telegram" not in sys.argv and os.environ.get("ENABLE_TELEGRAM_SCRAPER") != "false"
+
+    # 0. Start Local Hardhat Blockchain (Port 8545)
+    if start_blockchain:
+        if is_port_open('127.0.0.1', 8545):
+            print(f"{GREEN}[INFO] Local Hardhat Blockchain is already active on http://127.0.0.1:8545{RESET}")
+        else:
+            bc_cmd = [node_bin, "scripts/start-node.js"]
+            print(f"{YELLOW}[0/3] Starting Local Hardhat Blockchain on port 8545...{RESET}")
+            p_bc = subprocess.Popen(
+                bc_cmd,
+                cwd=BLOCKCHAIN_DIR,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+            processes.append((p_bc, "Hardhat (8545)"))
+            threading.Thread(target=stream_log, args=(p_bc, "Hardhat", YELLOW), daemon=True).start()
+            for _ in range(15):
+                if is_port_open('127.0.0.1', 8545):
+                    print(f"{GREEN}[LAUNCHER] [OK] Local Hardhat Blockchain is READY on http://127.0.0.1:8545!{RESET}")
+                    break
+                time.sleep(1.0)
+    else:
+        print(f"{CYAN}[INFO] Local Blockchain is OFF (using in-memory SHA-256 audit ledger).{RESET}")
 
     # 1. Start Python FastAPI Live Threat Feed Service (Port 8001)
     if start_telegram:

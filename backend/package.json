@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "dev:chain": "npx hardhat node --config blockchain/hardhat.config.js",
+    "dev:all": "npx concurrently --names chain,backend --kill-others \"npx hardhat node --config blockchain/hardhat.config.js\" \"nodemon index.js\"",
     "test": "node --test --test-concurrency=1 test/admin_api.test.js test/auth_search.test.js test/challenger_backend.test.js test/local_store_primary.test.js test/admin_ingest_auth.test.js test/source_registry.test.js test/scraper_redaction.test.js"
   },
   "keywords": [],
@@ -28,6 +30,9 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "concurrently": "^10.0.5",
+    "hardhat": "^3.15.0",
     "nodemon": "^3.1.7"
   }
 }

@@ -84,10 +84,11 @@ async function verifyThreatEvent(eventId, eventDataOverride = null) {
         
         // Verify the Merkle proof if available
         if (record.merkleProof && record.merkleRoot) {
+          const leafTimestamp = record.timestamp || (record.createdAt ? Date.parse(record.createdAt) : Date.now());
           const leafHash = computeLeaf(
             record.eventId,
             record.canonicalHash,
-            Date.parse(record.createdAt)
+            leafTimestamp
           );
           
           const proofValid = verifyProof(

@@ -41,7 +41,8 @@ Naive baseline (always predict MEDIUM): **47.1%** on test set.
 |-------|--------------|----------------|
 | XGBoost | Gradient boosted trees (max_depth=6, lr=0.1) | Sample weights, early stopping |
 | CNN | Emb(128) → Conv1D(k=3,4,5, 64 filters) → MaxPool → FC | Dropout 0.3, weight_decay=1e-4 |
-| RNN | Emb(128) → BiLSTM(128) → FC | Dropout 0.3, weight_decay=1e-4 (original arch) |
+| RNN (unpacked, original) | Emb(128) → BiLSTM(128) → FC | Dropout 0.3, weight_decay=1e-4 |
+| RNN (packed, fixed) | Emb(128) → BiLSTM(128) → FC | Dropout 0.3, weight_decay=1e-4, packed sequences, grad clip=1.0 |
 | Transformer | Emb(128) → PosEnc → TransformerEncoder(2 layers, 4 heads) → AvgPool → FC | Dropout 0.1/0.3, weight_decay=1e-4 |
 
 ---
@@ -54,7 +55,8 @@ Naive baseline (always predict MEDIUM): **47.1%** on test set.
 |-------|---------:|---------:|------------:|-----------------:|
 | **XGBoost** | **89.2%** | **83.2%** | **89.4%** | **+42.0%** |
 | CNN (retried) | 66.2% | 57.2% | 65.7% | +19.1% |
-| RNN (original) | 41.4% | 32.1% | 44.0% | **-5.7%** |
+| RNN (unpacked, original) | 41.4% | 32.1% | 44.0% | **-5.7%** |
+| RNN (packed sequences, fixed) | 44.6% | 34.0% | 46.8% | **-2.5%** |
 | Transformer (original) | 48.4% | 42.9% | 50.8% | +1.3% |
 
 ### Per-Class Metrics (Test Set)
@@ -75,13 +77,21 @@ Naive baseline (always predict MEDIUM): **47.1%** on test set.
 | HIGH | 79.1% | 54.0% | 64.2% | 63 |
 | CRITICAL | 50.0% | 44.4% | 47.1% | 9 ⚠ |
 
-#### RNN (original)
+#### RNN (unpacked, original)
 | Class | Precision | Recall | F1 | Support |
 |-------|----------:|-------:|---:|--------:|
 | LOW | 14.6% | 54.5% | 23.1% | 11 |
 | MEDIUM | 63.4% | 35.1% | 45.2% | 74 |
 | HIGH | 51.6% | 50.8% | 51.2% | 63 |
 | CRITICAL | 7.7% | 11.1% | 9.1% | 9 ⚠ |
+
+#### RNN (packed sequences, fixed)
+| Class | Precision | Recall | F1 | Support |
+|-------|----------:|-------:|---:|--------:|
+| LOW | 13.5% | 45.5% | 20.8% | 11 |
+| MEDIUM | 53.6% | 40.5% | 46.2% | 74 |
+| HIGH | 60.7% | 54.0% | 57.1% | 63 |
+| CRITICAL | 12.5% | 11.1% | 11.8% | 9 ⚠ |
 
 #### Transformer (original)
 | Class | Precision | Recall | F1 | Support |
@@ -111,12 +121,20 @@ HIGH:     [1, 25, 34, 3]
 CRITICAL: [0, 4, 1, 4]
 ```
 
-**RNN:**
+**RNN (unpacked, original):**
 ```
 LOW:      [6, 2, 3, 0]
 MEDIUM:   [22, 26, 22, 4]
 HIGH:     [12, 11, 32, 8]
 CRITICAL: [1, 2, 5, 1]
+```
+
+**RNN (packed sequences, fixed):**
+```
+LOW:      [5, 5, 1, 0]
+MEDIUM:   [22, 30, 19, 3]
+HIGH:     [10, 15, 34, 4]
+CRITICAL: [0, 6, 2, 1]
 ```
 
 **Transformer:**
@@ -139,7 +157,8 @@ on point estimates for this class.
 |-------|----------:|-------:|---:|
 | XGBoost | 77.8% | 77.8% | 77.8% |
 | CNN | 50.0% | 44.4% | 47.1% |
-| RNN | 7.7% | 11.1% | 9.1% |
+| RNN (unpacked, original) | 7.7% | 11.1% | 9.1% |
+| RNN (packed sequences, fixed) | 12.5% | 11.1% | 11.8% |
 | Transformer | 22.2% | 66.7% | 33.3% |
 
 ---
@@ -151,10 +170,16 @@ on point estimates for this class.
 | XGBoost | 89.2% | **+42.0%** |
 | CNN | 66.2% | +19.1% |
 | Transformer | 48.4% | +1.3% |
-| RNN | 41.4% | **-5.7%** |
+| RNN (unpacked, original) | 41.4% | **-5.7%** |
+| RNN (packed sequences, fixed) | 44.6% | **-2.5%** |
 
-RNN **underperforms the naive baseline** by 5.7%. It learned nothing
-useful beyond class frequency.
+RNN (unpacked, original) **underperforms the naive baseline** by 5.7%.
+RNN (packed sequences, fixed) **still underperforms the naive baseline** by 2.5%.
+
+The packed-sequence fix improved accuracy by +3.2% (41.4% → 44.6%), but the
+RNN remains below the naive baseline. The original conclusion holds: the RNN
+has not learned useful representations on this dataset, and the padding
+artifact was not the sole cause of underperformance.
 
 ---
 
@@ -164,7 +189,8 @@ useful beyond class frequency.
 |-------|----------------:|--------------:|--------------:|-------------|
 | XGBoost | 195 | 0.38 | 86.4% | No |
 | CNN (retried) | 7 | 0.95 | 72.1% | Yes |
-| RNN (original) | 6 | 1.26 | 50.0% | Yes (severe) |
+| RNN (unpacked, original) | 6 | 1.26 | 50.0% | Yes (severe) |
+| RNN (packed sequences, fixed) | 6 | 1.13 | 42.2% | Yes (severe) |
 | Transformer (original) | 6 | 1.05 | 61.7% | Yes (severe) |
 
 All three neural models overfit severely despite:
@@ -206,10 +232,11 @@ metrics in any paper/report.
 3. **Fast inference** — tree ensemble, no GPU needed
 4. **Interpretable features** — feature importances show what drives severity
 5. **Beats naive baseline by 42%** — all neural models are within 20% of naive
-6. **RNN underperforms naive baseline** — learned nothing useful
+6. **RNN underperforms naive baseline even after fixing padding bug** — learned nothing useful
 
 **Do not deploy CNN/RNN/Transformer.** They overfit, underperform the
-baseline (RNN), and add no value over XGBoost on this dataset size.
+baseline (RNN even after packed-sequence fix), and add no value over
+XGBoost on this dataset size.
 
 ---
 
@@ -218,13 +245,15 @@ baseline (RNN), and add no value over XGBoost on this dataset size.
 All code, data splits, and trained models saved in:
 - `data/processed/xgboost_model.json`
 - `data/processed/cnn_best.pt` (retried)
-- `data/processed/rnn_original_best.pt` (original)
+- `data/processed/rnn_original_best.pt` (original, unpacked)
+- `data/processed/rnn_fixed_best.pt` (fixed, packed sequences + grad clip)
 - `data/processed/transformer_best.pt` (original)
 - `data/processed/evaluation_results.json`
+- `data/processed/rnn_fixed_evaluation.json` (fixed RNN test results)
 - `data/processed/xgboost_features.json`
 - `data/processed/text_features.json`
 
-Training scripts: `scraper/ai/data/train_xgboost.py`, `scraper/ai/data/train_text_models.py`
+Training scripts: `scraper/ai/data/train_xgboost.py`, `scraper/ai/data/train_text_models.py`, `scraper/ai/data/train_rnn_fixed.py`
 
 ---
 

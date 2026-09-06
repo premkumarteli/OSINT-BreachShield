@@ -59,10 +59,14 @@ data/alerts.json
 data/audit_logs.json
 data/*.db
 
-# Web App Build Outputs
+# Web App & Contract Build Outputs
 frontend/build/
 build/
 dist/
+artifacts/
+**/artifacts/
+cache/
+**/cache/
 
 # Android Native Gateway Build & IDE Artifacts
 apps/android-gateway/.gradle/

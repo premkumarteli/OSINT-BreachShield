@@ -33,7 +33,8 @@ function writeJsonLogs(data) {
  * Logs a threat event to the tamper-evident SHA-256 audit ledger.
  */
 async function logThreatEvent(event) {
-  const eventId = String(event.eventId || event.id || `evt_${Date.now()}_${Math.floor(Math.random()*1000)}`);
+  const now = Date.now();
+  const eventId = String(event.eventId || event.id || `evt_${now}_${Math.floor(Math.random()*1000)}`);
   const eventType = String(event.eventType || event.type || 'THREAT_DETECTED');
   
   const eventPayload = { ...event, eventId, eventType };
@@ -43,10 +44,11 @@ async function logThreatEvent(event) {
   const auditRecord = {
     eventId,
     eventType,
+    timestamp: now,
     canonicalHash,
     eventHash: canonicalHash,
     verificationStatus: 'VALID',
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(now).toISOString(),
     eventData: eventPayload,
     canonicalJson,
     merkleProof: null,
@@ -54,8 +56,22 @@ async function logThreatEvent(event) {
     anchorTxHash: null,
     anchorBlockNumber: null,
     anchorNetwork: null,
-    anchoredAt: null
+    anchoredAt: null,
+    anchorStatus: 'pending'
   };
+
+  // Enqueue for Merkle batching and anchoring (before persistence so anchorStatus is recorded)
+  try {
+    await enqueueLeaf({
+      eventId,
+      canonicalHash,
+      timestamp: now
+    });
+    auditRecord.anchorStatus = 'enqueued';
+  } catch (err) {
+    auditRecord.anchorStatus = 'enqueue_failed';
+    console.warn('[AUDIT LOGGER] Failed to enqueue for Merkle batching:', err.message);
+  }
 
   memoryAuditLedger.set(eventId, auditRecord);
 
@@ -72,17 +88,6 @@ async function logThreatEvent(event) {
       VALUES (?, ?, ?, ?, 1, 'sha256-audit-chain', 'VALID')
     `, [eventId, eventType, canonicalHash, canonicalHash]);
   } catch (_) {}
-
-  // Enqueue for Merkle batching and anchoring
-  try {
-    await enqueueLeaf({
-      eventId,
-      canonicalHash,
-      timestamp: Date.now()
-    });
-  } catch (err) {
-    console.warn('[AUDIT LOGGER] Failed to enqueue for Merkle batching:', err.message);
-  }
 
   return auditRecord;
 }
