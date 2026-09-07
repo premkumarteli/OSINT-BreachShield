@@ -19,7 +19,7 @@ describe('AppRouter Integration', () => {
   test('renders SearchPage on initial load at root route', () => {
     render(<AppRouter />);
     expect(screen.getByText('OSINT SEARCH')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/enter email to check breaches/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/enter email/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /generate-otp-button/i })).toBeInTheDocument();
   });
 });
@@ -32,7 +32,7 @@ describe('SearchPage (/ route)', () => {
       </MemoryRouter>
     );
 
-    const input = screen.getByPlaceholderText(/enter email to check breaches/i);
+    const input = screen.getByPlaceholderText(/enter email/i);
     const btn = screen.getByRole('button', { name: /generate-otp-button/i });
 
     // Initially disabled
@@ -58,7 +58,7 @@ describe('SearchPage (/ route)', () => {
       </MemoryRouter>
     );
 
-    const input = screen.getByPlaceholderText(/enter email to check breaches/i);
+    const input = screen.getByPlaceholderText(/enter email/i);
     const btn = screen.getByRole('button', { name: /generate-otp-button/i });
 
     fireEvent.change(input, { target: { value: 'test@victim.com' } });
@@ -81,7 +81,7 @@ describe('SearchPage (/ route)', () => {
       </MemoryRouter>
     );
 
-    const input = screen.getByPlaceholderText(/enter email to check breaches/i);
+    const input = screen.getByPlaceholderText(/enter email/i);
     const btn = screen.getByRole('button', { name: /generate-otp-button/i });
 
     fireEvent.change(input, { target: { value: 'test@victim.com' } });

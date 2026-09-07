@@ -23,6 +23,7 @@ function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(true);
+  // eslint-disable-next-line no-unused-vars
   const [terminalText, setTerminalText] = useState('');
   
   // Search & OTP state
@@ -272,7 +273,15 @@ function App() {
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      const res = await fetch(`${API_BASE}/api/download`, { method: 'POST' });
+      const authToken = sessionStorage.getItem('osint_token') || '';
+      const res = await fetch(`${API_BASE}/api/download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+        },
+        credentials: 'include'
+      });
       if (!res.ok) {
         const t = await res.text();
         setResult(prev => ({ ...prev, error: `Download failed: ${t || res.status}` }));
@@ -753,7 +762,7 @@ function App() {
       )}
 
       {!showSearchingAnimation && (
-        <div className="results">
+        <div className="results results-redesigned">
           {result && result.packets && (() => {
             const preferredPacket = (result.packets[1] !== undefined) ? result.packets[1] : result.packets[0];
             const infoText = preferredPacket && typeof preferredPacket.info === 'string' ? preferredPacket.info : '';
@@ -766,30 +775,150 @@ function App() {
             
             const hasPagination = Number(effectiveTotal) > 1 && 
                                  (result && result.pagination && result.pagination.total > 1);
+            const analytics = result.analytics || {};
+            const exposure = analytics.exposure || { score: 0, riskLevel: 'LOW', riskColor: '#00ff66', breakdown: [], entities: {} };
+            const records = result.records || [];
+            const auditData = result.blockchainAudit || null;
+
+            const getRiskGradient = (level) => {
+              switch (level) {
+                case 'CRITICAL': return 'linear-gradient(135deg, #ff003c 0%, #ff6b6b 100%)';
+                case 'HIGH': return 'linear-gradient(135deg, #ff3b3b 0%, #ff8c42 100%)';
+                case 'MEDIUM': return 'linear-gradient(135deg, #ffd166 0%, #ffb347 100%)';
+                default: return 'linear-gradient(135deg, #00ff66 0%, #00eaff 100%)';
+              }
+            };
+            const getRiskIcon = (level) => {
+              switch (level) {
+                case 'CRITICAL': return '\u{1F6A8}';
+                case 'HIGH': return '\u26A0\uFE0F';
+                case 'MEDIUM': return '\u26A1';
+                default: return '\u{1F6E1}\uFE0F';
+              }
+            };
+
             return (
-              <div className="packet" key={0}>
-                <div className="packet-header">
-                  <h2>[ Data Breach Information ]</h2>
+              <div className="packet-redesigned" key={0}>
+                {/* Header Bar */}
+                <div className="results-header-bar">
+                  <h2 className="results-title">INTELLIGENCE REPORT</h2>
                   <div className="header-buttons">
                     {!isNoResult && (
                       <button className="header-btn" onClick={handleDownload} aria-label="download-html" disabled={downloading}>
-                        {downloading ? 'Downloading…' : 'Download'}
+                        {downloading ? 'Downloading...' : 'Download'}
                       </button>
                     )}
                     <button className="header-btn" onClick={closeResults} aria-label="new-search">Try another query</button>
                   </div>
                 </div>
-                <pre className="terminal">{terminalText}<span className="cursor" /></pre>
 
-                {result && (result.analytics || result.blockchainAudit) && (
-                  <AIIntelligenceCards analytics={result.analytics} blockchainAudit={result.blockchainAudit} token={token} />
+                {/* Risk Score Hero */}
+                <div className="risk-hero" style={{ '--risk-color': exposure.riskColor || '#00ff66' }}>
+                  <div className="risk-glow" style={{ background: getRiskGradient(exposure.riskLevel) }}></div>
+                  <div className="risk-score-ring" style={{ borderColor: exposure.riskColor || '#00ff66' }}>
+                    <span className="risk-icon">{getRiskIcon(exposure.riskLevel)}</span>
+                    <span className="risk-score-num">{exposure.score}</span>
+                    <span className="risk-score-max">/100</span>
+                  </div>
+                  <div className="risk-info">
+                    <div className="risk-level-badge" style={{ background: getRiskGradient(exposure.riskLevel) }}>
+                      {exposure.riskLevel} RISK
+                    </div>
+                    <div className="risk-subtitle">Threat Assessment for <strong>{query || 'target'}</strong></div>
+                    <div className="entity-chips">
+                      {exposure.entities?.hasDocument && (
+                        <span className="entity-chip alert-chip">National ID Exposed</span>
+                      )}
+                      {exposure.entities?.passwordCount > 0 && (
+                        <span className="entity-chip warn-chip">{exposure.entities.passwordCount} Password(s) Leaked</span>
+                      )}
+                      {exposure.entities?.phoneCount > 0 && (
+                        <span className="entity-chip info-chip">{exposure.entities.phoneCount} Phone(s) Linked</span>
+                      )}
+                      {exposure.entities?.recordCount > 0 && (
+                        <span className="entity-chip info-chip">{exposure.entities.recordCount} Record(s) Found</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Threat Factors */}
+                {exposure.breakdown && exposure.breakdown.length > 0 && (
+                  <div className="threat-factors">
+                    <h3 className="section-title">
+                      <span className="section-icon">{'\u{1F50D}'}</span>
+                      Identified Threat Vectors
+                    </h3>
+                    <div className="factors-grid">
+                      {exposure.breakdown.map((item, idx) => (
+                        <div key={idx} className="factor-card">
+                          <div className="factor-bar" style={{ width: `${Math.min(100, item.points * 2)}%` }}></div>
+                          <div className="factor-content">
+                            <span className="factor-text">{item.factor}</span>
+                            <span className="factor-pts">+{item.points}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
-
-                {(!preferredPacket || Object.keys(preferredPacket).length === 0) && (
-                  <div className="warning">No detailed packet available.</div>
+                {/* AI Intelligence Cards */}
+                {(result.analytics || auditData) && (
+                  <AIIntelligenceCards analytics={result.analytics} blockchainAudit={auditData} token={token} />
                 )}
 
+                {/* Breach Records */}
+                {records.length > 0 && (
+                  <div className="breach-records-section">
+                    <h3 className="section-title">
+                      <span className="section-icon">{'\u{1F4BE}'}</span>
+                      Breach Records ({records.length})
+                    </h3>
+                    <div className="breach-cards-grid">
+                      {records.map((rec) => (
+                        <div key={rec.id || Math.random()} className="breach-card">
+                          <div className="card-header">
+                            <div>
+                              <div className="card-title">{rec.title}</div>
+                              <div className="card-category-tag">{rec.category}</div>
+                            </div>
+                            <span className="card-year-badge">{rec.year}</span>
+                          </div>
+                          <div className="card-pills-row">
+                            {(rec.dataClasses || []).map((dc, dcIdx) => (
+                              <span key={dcIdx} className="data-pill">{dc.replace(/_/g, ' ')}</span>
+                            ))}
+                          </div>
+                          <p className="card-details-text">{rec.details}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Raw Terminal */}
+                <div className="terminal-section">
+                  <div className="terminal-header">
+                    <div className="terminal-dots">
+                      <span className="dot red"></span>
+                      <span className="dot yellow"></span>
+                      <span className="dot green"></span>
+                    </div>
+                    <span className="terminal-title">breach_intel@osint ~ $</span>
+                    <button className="copy-btn" onClick={() => {
+                      const text = result.packets.map(p => p.info || '').join('\n\n');
+                      navigator.clipboard?.writeText(text);
+                    }}>
+                      {'\u{1F4CB}'} Copy
+                    </button>
+                  </div>
+                  <div className="terminal-body">
+                    <pre className="terminal-output">{infoText || 'No breach details available.'}</pre>
+                  </div>
+                </div>
+
+                {/* Pagination */}
                 {hasPagination && (
                   <div className="pagination-controls">
                     <button 
@@ -798,7 +927,7 @@ function App() {
                       disabled={loadingPrevPage}
                       aria-label="previous-page"
                     >
-                      {loadingPrevPage ? 'Loading...' : '◀ Prev'}
+                      {loadingPrevPage ? 'Loading...' : '\u25C0 Prev'}
                     </button>
                     <span className="page-indicator">
                       Page {Math.max(1, currentPage + 1)} of {effectiveTotal}
@@ -809,7 +938,7 @@ function App() {
                       disabled={loadingNextPage || (typeof effectiveTotal === 'number' && (currentPage + 1) >= effectiveTotal)}
                       aria-label="next-page"
                     >
-                      {loadingNextPage ? 'Loading...' : 'Next ▶'}
+                      {loadingNextPage ? 'Loading...' : 'Next \u25B6'}
                     </button>
                   </div>
                 )}

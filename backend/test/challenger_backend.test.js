@@ -500,14 +500,10 @@ describe('Adversarial Backend Security Challenge Suite', () => {
     const legacyRoutes = [
       { method: 'POST', path: '/api/auth/register' },
       { method: 'POST', path: '/api/auth/login' },
-      { method: 'GET',  path: '/api/auth/me' },
-      { method: 'POST', path: '/api/auth/set-password' },
       { method: 'POST', path: '/api/register' },
       { method: 'POST', path: '/api/login' },
-      { method: 'GET',  path: '/api/me' },
       { method: 'POST', path: '/register' },
       { method: 'POST', path: '/login' },
-      { method: 'GET',  path: '/me' },
       { method: 'GET',  path: '/dashboard' },
       { method: 'GET',  path: '/api/dashboard' }
     ];
@@ -522,6 +518,20 @@ describe('Adversarial Backend Security Challenge Suite', () => {
         assert.equal(res.status, 404, `Legacy route ${r.method} ${r.path} must return 404`);
       });
     }
+
+    it('4.y: Unauthenticated /api/auth/me returns 401 Unauthorized', async () => {
+      const res = await fetch(`${BASE_URL}/api/auth/me`);
+      assert.equal(res.status, 401);
+    });
+
+    it('4.z: Unauthenticated /api/auth/set-password returns 401 Unauthorized', async () => {
+      const res = await fetch(`${BASE_URL}/api/auth/set-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'newpassword123' })
+      });
+      assert.equal(res.status, 401);
+    });
   });
 
   // =========================================================================

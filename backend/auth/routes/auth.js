@@ -354,7 +354,60 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-// ---------------- ROUTE 3: POST /api/auth/logout ----------------
+// ---------------- ROUTE 3: GET /api/auth/me ----------------
+router.get('/me', (req, res) => {
+  try {
+    let token = null;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    } else if (req.cookies?.otp_token) {
+      token = req.cookies.otp_token;
+    } else if (req.cookies?.token) {
+      token = req.cookies.token;
+    }
+    if (!token) return res.status(401).json({ error: 'Not authenticated' });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (!decoded || decoded.verified !== true) return res.status(401).json({ error: 'Not authenticated' });
+    res.json({ user: { email: decoded.email, username: decoded.username || decoded.email?.split('@')[0] || 'User', role: decoded.role || 'user' } });
+  } catch { res.status(401).json({ error: 'Not authenticated' }); }
+});
+
+// ---------------- ROUTE 4: POST /api/auth/set-password ----------------
+router.post('/set-password', async (req, res) => {
+  try {
+    let token = null;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    } else if (req.cookies?.otp_token) {
+      token = req.cookies.otp_token;
+    } else if (req.cookies?.token) {
+      token = req.cookies.token;
+    }
+    if (!token) return res.status(401).json({ error: 'Authentication required' });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (!decoded || decoded.verified !== true) return res.status(401).json({ error: 'Authentication required' });
+    const { password } = req.body || {};
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+    const hashed = await hashSecret(password);
+    try {
+      await ensureTables();
+      await query('CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(255) UNIQUE, password_hash VARCHAR(255), username VARCHAR(255), role VARCHAR(50) DEFAULT "user", created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+      const existing = await query('SELECT id FROM users WHERE email = ?', [decoded.email]);
+      if (existing && existing.length > 0) {
+        await query('UPDATE users SET password_hash = ? WHERE email = ?', [hashed, decoded.email]);
+      } else {
+        await query('INSERT INTO users (email, password_hash, username, role) VALUES (?, ?, ?, ?)', [decoded.email, hashed, decoded.username || decoded.email?.split('@')[0] || 'user', decoded.role || 'user']);
+      }
+    } catch (_) {}
+    res.json({ success: true, message: 'Password set successfully' });
+  } catch (err) { res.status(500).json({ error: 'Failed to set password' }); }
+});
+
+// ---------------- ROUTE 5: POST /api/auth/logout ----------------
 router.post('/logout', (req, res) => {
   const prod = process.env.NODE_ENV === 'production';
   res.clearCookie('otp_token', { httpOnly: true, secure: prod, sameSite: prod ? 'none' : 'lax' });

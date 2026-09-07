@@ -258,7 +258,6 @@ describe('OSINT BreachShield Test Suite', () => {
       const legacyEndpoints = [
         { method: 'POST', url: '/api/auth/register' },
         { method: 'POST', url: '/api/auth/login' },
-        { method: 'GET', url: '/api/auth/me' },
         { method: 'POST', url: '/register' },
         { method: 'POST', url: '/login' }
       ];
@@ -271,6 +270,31 @@ describe('OSINT BreachShield Test Suite', () => {
         });
         assert.equal(res.status, 404, `Legacy endpoint ${ep.method} ${ep.url} should return 404`);
       }
+    });
+
+    it('T1.6: GET /api/auth/me returns 401 without auth and 200 with valid session', async () => {
+      const unauth = await fetch(`${BASE_URL}/api/auth/me`);
+      assert.equal(unauth.status, 401);
+
+      const email = makeEmail('user_me');
+      await fetch(`${BASE_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const code = await waitForOtp(email);
+      const vRes = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp: code })
+      });
+      const { token } = await vRes.json();
+      const meRes = await fetch(`${BASE_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      assert.equal(meRes.status, 200);
+      const meData = await meRes.json();
+      assert.equal(meData.user.email, email);
     });
   });
 

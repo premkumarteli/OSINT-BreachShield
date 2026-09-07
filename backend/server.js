@@ -104,7 +104,8 @@ app.use('/api', reportRouter); // Mounts /api/download
 app.use('/api/gateway', gatewayRouter); // Mounts /api/gateway/register
 app.use('/api/admin', adminRouter); // Mounts BreachShield Admin Control API
 app.use('/api', aiRouter); // Mounts /api/ai and /api/blockchain routes
-
+const darkwebRouter = require('./api/darkweb');
+app.use('/api/darkweb', darkwebRouter); // Mounts /api/darkweb/watchlist, /api/darkweb/stream
 
 // Website User Session Heartbeat
 app.post('/api/session/heartbeat', heartbeatRateLimit, (req, res) => {
