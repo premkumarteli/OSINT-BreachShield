@@ -114,6 +114,7 @@ async function flushBatch() {
       timestamp: new Date().toISOString(),
       leafCount: batch.length,
       merkleRoot: root,
+      proofs: proofs,
       leaves: batch.map((event, i) => ({
         eventId: event.eventId,
         leafHash: leaves[i],

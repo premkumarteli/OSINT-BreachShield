@@ -11,10 +11,10 @@ function createCanonicalJson(event) {
     eventId: String(event.eventId || event.id || '').trim(),
     eventType: String(event.eventType || event.type || 'THREAT_DETECTED').trim(),
     query: String(event.query || '').trim(),
-    riskScore: Number(event.riskScore || 0),
+    riskScore: Number(event.riskScore ?? 0),
     riskLevel: String(event.riskLevel || 'LOW').trim(),
     sourceName: String(event.sourceName || 'OSINT_FEED').trim(),
-    timestamp: String(event.timestamp || '2026-01-01T00:00:00.000Z').trim()
+    timestamp: String(event.timestamp ?? '2026-01-01T00:00:00.000Z').trim()
   };
 
   // Sort keys deterministically

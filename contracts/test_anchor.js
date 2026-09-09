@@ -1,6 +1,6 @@
-require("dotenv").config({ path: require("path").join(__dirname, "..", "..", "..", ".env") });
-const anchorClient = require("../anchorClient");
-const { computeLeaf } = require("../merkleUtils");
+require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
+const anchorClient = require("../backend/blockchain/anchorClient");
+const { computeLeaf } = require("../backend/blockchain/merkleUtils");
 
 async function main() {
   console.log("=== End-to-End Anchor Test ===");

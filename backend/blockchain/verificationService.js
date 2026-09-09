@@ -25,6 +25,14 @@ async function verifyThreatEvent(eventId, eventDataOverride = null) {
           eventType: rows[0].event_type,
           canonicalHash: rows[0].canonical_hash,
           eventHash: rows[0].canonical_hash,
+          timestamp: rows[0].timestamp || rows[0].created_at,
+          merkleRoot: rows[0].merkle_root,
+          merkleProof: rows[0].merkle_proof,
+          anchorTxHash: rows[0].anchor_tx_hash,
+          anchorBlockNumber: rows[0].anchor_block_number,
+          anchorNetwork: rows[0].anchor_network,
+          eventData: rows[0].event_data ? JSON.parse(rows[0].event_data) : null,
+          canonicalJson: rows[0].canonical_json,
           verificationStatus: rows[0].verification_status
         };
       }

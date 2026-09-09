@@ -97,7 +97,6 @@ function heartbeatRateLimit(req, res, next) {
 const SESSION_ID_PATTERN = /^sess_\d{10,13}_[a-z0-9]{5}$/;
 
 app.use('/api/auth', authRouter);
-app.use('/api', authRouter); // Supports legacy /api/send-otp, /api/verify-otp
 app.use('/api', searchRouter); // Mounts /api/search, /api/telegram-page
 app.use('/api/v1', ingestRouter); // Mounts /api/v1/range, /api/v1/breaches, /api/v1/ingest
 app.use('/api', reportRouter); // Mounts /api/download

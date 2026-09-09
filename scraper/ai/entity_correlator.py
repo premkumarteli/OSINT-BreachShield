@@ -1,33 +1,48 @@
 import re
 import time
+import math
 import numpy as np
 
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+_SENTENCE_TRANSFORMERS_AVAILABLE = None
+
+
+def _check_sentence_transformers():
+    global _SENTENCE_TRANSFORMERS_AVAILABLE
+    if _SENTENCE_TRANSFORMERS_AVAILABLE is None:
+        try:
+            from sentence_transformers import SentenceTransformer  # noqa: F401
+            _SENTENCE_TRANSFORMERS_AVAILABLE = True
+        except ImportError:
+            _SENTENCE_TRANSFORMERS_AVAILABLE = False
+    return _SENTENCE_TRANSFORMERS_AVAILABLE
 
 
 class EntityCorrelator:
     """
     Identity Resolution & Cross-Breach Semantic Correlation Engine.
     Combines structured field matching with SentenceTransformer dense embeddings.
+    Model is loaded lazily on first similarity call.
     """
 
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
         self.model_name = model_name
         self.encoder = None
         
-        # Configurable similarity thresholds
         self.THRESHOLD_RELATED = 0.75
         self.THRESHOLD_POSSIBLY_RELATED = 0.50
+        self._loaded_encoder = False
 
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            try:
-                self.encoder = SentenceTransformer(model_name)
-            except Exception:
-                self.encoder = None
+    def _ensure_encoder(self):
+        if self._loaded_encoder:
+            return
+        self._loaded_encoder = True
+        if not _check_sentence_transformers():
+            return
+        try:
+            from sentence_transformers import SentenceTransformer
+            self.encoder = SentenceTransformer(self.model_name)
+        except Exception:
+            self.encoder = None
 
     @staticmethod
     def extract_entities(text: str) -> dict:
@@ -60,6 +75,7 @@ class EntityCorrelator:
         if not text1 or not text2:
             return 0.0
 
+        self._ensure_encoder()
         if self.encoder:
             try:
                 embeddings = self.encoder.encode([text1, text2])

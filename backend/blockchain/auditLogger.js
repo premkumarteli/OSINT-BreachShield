@@ -15,6 +15,14 @@ function readJsonLogs() {
     if (!fs.existsSync(AUDIT_LOGS_JSON)) return [];
     return JSON.parse(fs.readFileSync(AUDIT_LOGS_JSON, 'utf8') || '[]');
   } catch {
+    // Quarantine corrupt file instead of silently losing data
+    try {
+      if (fs.existsSync(AUDIT_LOGS_JSON)) {
+        const backup = AUDIT_LOGS_JSON + '.corrupt.' + Date.now();
+        fs.copyFileSync(AUDIT_LOGS_JSON, backup);
+        console.error(`[AUDIT LOGGER] Corrupt JSON quarantined to: ${backup}`);
+      }
+    } catch (_) {}
     return [];
   }
 }
@@ -34,7 +42,7 @@ function writeJsonLogs(data) {
  */
 async function logThreatEvent(event) {
   const now = Date.now();
-  const eventId = String(event.eventId || event.id || `evt_${now}_${Math.floor(Math.random()*1000)}`);
+  const eventId = String(event.eventId || event.id || `evt_${now}_${crypto.randomBytes(4).toString('hex')}`);
   const eventType = String(event.eventType || event.type || 'THREAT_DETECTED');
   
   const eventPayload = { ...event, eventId, eventType };
@@ -85,8 +93,8 @@ async function logThreatEvent(event) {
     await query(`
       INSERT INTO blockchain_audit_logs 
       (event_id, event_type, canonical_hash, tx_hash, block_number, network_id, verification_status)
-      VALUES (?, ?, ?, ?, 1, 'sha256-audit-chain', 'VALID')
-    `, [eventId, eventType, canonicalHash, canonicalHash]);
+      VALUES (?, ?, ?, ?, 0, 'sha256-audit-chain', 'ENQUEUED')
+    `, [eventId, eventType, canonicalHash, '']);
   } catch (_) {}
 
   return auditRecord;

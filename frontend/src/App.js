@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import './App.css';
-import bgVideo1 from './bg1.mp4';
-import bgVideo2 from './bg2.mp4';
-import bgVideo3 from './bg3.mp4';
 import UserMenu from './components/UserMenu';
 import AIIntelligenceCards from './components/AIIntelligenceCards';
+import { checkKAnonymity } from './lib/kAnonymity';
+import './App.css';
+
+const bgVideo1 = '/bg1.mp4';
+const bgVideo2 = '/bg2.mp4';
+const bgVideo3 = '/bg3.mp4';
 
 // Prefer env var, fallback to local backend for dev
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
@@ -45,8 +47,11 @@ function App() {
   const [breaches, setBreaches] = useState([]); // Array to store all fetched pages
   const [currentPage, setCurrentPage] = useState(0);
   const [loadingNextPage, setLoadingNextPage] = useState(false);
-  const [loadingPrevPage, setLoadingPrevPage] = useState(false);
   const [totalPages, setTotalPages] = useState(null);
+
+  // k-Anonymity state
+  const [kAnonResult, setKAnonResult] = useState(null);
+  const [loadingPrevPage, setLoadingPrevPage] = useState(false);
 
   const typingRef = useRef(null);
   const bg2Ref = useRef(null);
@@ -280,7 +285,11 @@ function App() {
           'Content-Type': 'application/json',
           ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
         },
-        credentials: 'include'
+        credentials: 'include',
+        body: JSON.stringify({
+          query: email || 'Target Query',
+          content: (terminalLines && terminalLines.length > 0 ? terminalLines.join('\n') : (summary || 'OSINT Breach Intelligence Scan complete.'))
+        })
       });
       if (!res.ok) {
         const t = await res.text();
@@ -370,8 +379,12 @@ function App() {
     const currentToken = overrideToken || token || sessionStorage.getItem('osint_token') || '';
     setLoading(true);
     setResult(null);
+    setKAnonResult(null);
     setShowSearchingAnimation(true);
     setUseBg3(true);
+
+    // Run k-anonymity check in parallel with main search
+    const kAnonPromise = checkKAnonymity(query).catch(() => null);
 
     try {
       const headers = {
@@ -416,6 +429,7 @@ function App() {
       setBreaches([resultData]);
       setCurrentPage(0);
       setResult(resultData);
+      setKAnonResult(await kAnonPromise);
       setShowSearchingAnimation(false);
       setUseBg3(false);
       setUseBg2(true);
@@ -462,7 +476,8 @@ function App() {
             'Content-Type': 'application/json',
             ...(tokenToUse ? { 'Authorization': `Bearer ${tokenToUse}` } : {})
           },
-          credentials: 'include'
+          credentials: 'include',
+          body: JSON.stringify({ query, searchType, osintType })
         });
 
         const data = await res.json();
@@ -508,7 +523,8 @@ function App() {
           'Content-Type': 'application/json',
           ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
         },
-        credentials: 'include'
+        credentials: 'include',
+        body: JSON.stringify({ query, searchType, osintType })
       });
 
       const data = await res.json();
@@ -812,6 +828,27 @@ function App() {
                   </div>
                 </div>
 
+                {/* k-Anonymity Privacy Badge */}
+                {kAnonResult && (
+                  <div className={`k-anon-badge ${kAnonResult.isPwned ? 'pwned' : 'safe'}`}>
+                    <div className="k-anon-icon">{kAnonResult.isPwned ? '\u{1F534}' : '\u{1F7E2}'}</div>
+                    <div className="k-anon-info">
+                      <div className="k-anon-title">
+                        k-Anonymity Check: {kAnonResult.isPwned ? 'BREACH DETECTED' : 'CLEAN'}
+                      </div>
+                      <div className="k-anon-details">
+                        Hash: <code>{kAnonResult.prefix}...{kAnonResult.suffix.slice(0, 8)}</code>
+                        {kAnonResult.isPwned && (
+                          <span> | Exposures: {kAnonResult.exposureCount} | Sources: {kAnonResult.sources.join(', ')}</span>
+                        )}
+                      </div>
+                      <div className="k-anon-privacy">
+                        Your raw email never left this browser — only the SHA-256 prefix was queried.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Risk Score Hero */}
                 <div className="risk-hero" style={{ '--risk-color': exposure.riskColor || '#00ff66' }}>
                   <div className="risk-glow" style={{ background: getRiskGradient(exposure.riskLevel) }}></div>
@@ -877,7 +914,7 @@ function App() {
                     </h3>
                     <div className="breach-cards-grid">
                       {records.map((rec) => (
-                        <div key={rec.id || Math.random()} className="breach-card">
+                        <div key={rec.id || rec.title || `breach-${records.indexOf(rec)}`} className="breach-card">
                           <div className="card-header">
                             <div>
                               <div className="card-title">{rec.title}</div>

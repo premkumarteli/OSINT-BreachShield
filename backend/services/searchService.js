@@ -56,8 +56,8 @@ async function executeSearch(query, verifiedTarget, options = {}) {
   let aiAnalysis = null;
   let modelComparison = null;
   try {
-    const fetch = require('node-fetch');
-    const aiResp = await fetch(`${pythonServiceUrl.replace('/query', '')}/api/ai/analyze-threat`, {
+    const fetchFn = globalThis.fetch || require('node-fetch');
+    const aiResp = await fetchFn(`${pythonServiceUrl.replace('/query', '')}/api/ai/analyze-threat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: fullText, query })

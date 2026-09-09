@@ -45,7 +45,7 @@ export default function SearchPage() {
 
     try {
       const res = await api.post('/api/auth/send-otp', { email: cleanEmail });
-      if (res.data && res.data.success !== false) {
+      if (res.data && res.data.success === true) {
         sessionStorage.setItem('osint_target_email', cleanEmail);
         navigate('/verify-otp', { state: { email: cleanEmail } });
       } else {

@@ -1,12 +1,19 @@
 import time
 from .feature_extractor import URLFeatureExtractor
 
-try:
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
-    import torch
-    HF_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    HF_TRANSFORMERS_AVAILABLE = False
+HF_TRANSFORMERS_AVAILABLE = None  # lazy check
+
+
+def _check_transformers():
+    global HF_TRANSFORMERS_AVAILABLE
+    if HF_TRANSFORMERS_AVAILABLE is None:
+        try:
+            from transformers import AutoTokenizer, AutoModelForSequenceClassification
+            import torch
+            HF_TRANSFORMERS_AVAILABLE = True
+        except ImportError:
+            HF_TRANSFORMERS_AVAILABLE = False
+    return HF_TRANSFORMERS_AVAILABLE
 
 
 class PhishingURLClassifier:
@@ -14,6 +21,7 @@ class PhishingURLClassifier:
     URL Phishing Detection Engine using CrabInHoney/urlbert-tiny-v4-phishing-classifier.
     LABEL_0: good / safe
     LABEL_1: fish / phishing
+    Model is loaded lazily on first analyze_url() call.
     """
 
     def __init__(self, model_repo: str = "CrabInHoney/urlbert-tiny-v4-phishing-classifier"):
@@ -21,16 +29,26 @@ class PhishingURLClassifier:
         self.version = "1.3.0"
         self.hf_tokenizer = None
         self.hf_model = None
+        self._loaded = False
 
-        if HF_TRANSFORMERS_AVAILABLE:
-            try:
-                self.hf_tokenizer = AutoTokenizer.from_pretrained(model_repo)
-                self.hf_model = AutoModelForSequenceClassification.from_pretrained(model_repo)
-                self.hf_model.eval()
-            except Exception as e:
-                self.hf_tokenizer = None
-                self.hf_model = None
-                print(f"[PhishingURLClassifier Warning] Failed to load model {model_repo}: {e}")
+    def _ensure_loaded(self):
+        """Load the HuggingFace model on first use (not at import time)."""
+        if self._loaded:
+            return
+        self._loaded = True
+        if not _check_transformers():
+            print("[PhishingURLClassifier] transformers not installed — classifier disabled")
+            return
+        try:
+            from transformers import AutoTokenizer, AutoModelForSequenceClassification
+            import torch
+            self.hf_tokenizer = AutoTokenizer.from_pretrained(self.model_repo)
+            self.hf_model = AutoModelForSequenceClassification.from_pretrained(self.model_repo)
+            self.hf_model.eval()
+        except Exception as e:
+            self.hf_tokenizer = None
+            self.hf_model = None
+            print(f"[PhishingURLClassifier Warning] Failed to load model {self.model_repo}: {e}")
 
     def analyze_url(self, url: str) -> dict:
         """Classify a single URL using CrabInHoney/urlbert-tiny-v4-phishing-classifier."""
@@ -41,16 +59,17 @@ class PhishingURLClassifier:
             return {
                 "url": url,
                 "normalized_url": "",
-                "classification": "SAFE",
-                "confidence": 1.0,
+                "classification": None,
+                "confidence": 0.0,
                 "phishing_probability": 0.0,
                 "model": self.model_repo,
                 "model_version": self.version,
                 "inference_latency_ms": 0,
-                "error": None
+                "error": "Empty or invalid URL provided"
             }
 
-        # Model must be loaded; if not, return explicit error/null
+        self._ensure_loaded()
+
         if not (self.hf_model and self.hf_tokenizer):
             return {
                 "url": url,
@@ -70,7 +89,6 @@ class PhishingURLClassifier:
                 logits = self.hf_model(**inputs).logits
                 probs = torch.softmax(logits, dim=-1).squeeze().tolist()
                 
-                # Label mapping: LABEL_0 = safe, LABEL_1 = phishing
                 safe_prob = float(probs[0])
                 phish_prob = float(probs[1])
 

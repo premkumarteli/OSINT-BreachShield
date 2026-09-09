@@ -167,7 +167,8 @@ router.post('/send-otp', async (req, res) => {
     }
 
     // 2. Generate 6-digit OTP & Expiry (5 minutes)
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const crypto = require('crypto');
+    const code = String(crypto.randomInt(100000, 1000000));
     const hashedOtp = await hashSecret(code);
     const expiresAt = new Date(now + OTP_EXPIRY_MINUTES * 60 * 1000);
 
@@ -188,7 +189,7 @@ router.post('/send-otp', async (req, res) => {
       await query('DELETE FROM email_otps WHERE email = ?', [targetKey]);
       await query(
         'INSERT INTO email_otps (email, otp, expires_at, verified, attempts) VALUES (?, ?, ?, FALSE, 0)',
-        [targetKey, hashedOtp, expiresAt]
+        [targetKey, hashedOtp, expiresAt.toISOString().slice(0, 19).replace('T', ' ')]
       );
     } catch (dbErr) {
       const otps = readJsonFile(OTPS_JSON).filter(o => String(o.email).toLowerCase() !== targetKey);
@@ -216,10 +217,10 @@ router.post('/send-otp', async (req, res) => {
         
         const smsRes = await queueSmsJob(formattedPhone, smsMessage);
         if (smsRes.success) {
-          console.log(`[SMS OTP DISPATCHED] To: ${formattedPhone} | Code: ${code} (Device: ${smsRes.deviceId})`);
+          console.log(`[SMS OTP DISPATCHED] To: ${formattedPhone} | Code: [REDACTED] (Device: ${smsRes.deviceId})`);
         } else {
           console.log(`\n======================================================`);
-          console.log(`[SMS OTP (DEV FALLBACK)] To: ${formattedPhone} | Code: ${code}`);
+          console.log(`[SMS OTP (DEV FALLBACK)] To: ${formattedPhone} | Code: [REDACTED]`);
           console.log(`[SMS NOTE] ${smsRes.error}`);
           console.log(`======================================================\n`);
         }
@@ -389,8 +390,8 @@ router.post('/set-password', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     if (!decoded || decoded.verified !== true) return res.status(401).json({ error: 'Authentication required' });
     const { password } = req.body || {};
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
     const hashed = await hashSecret(password);
     try {
@@ -416,36 +417,9 @@ router.post('/logout', (req, res) => {
 });
 
 // ---------------- Reusable OTP Verification Middleware ----------------
+// Note: canonical implementation is in middleware/authGuard.js
 function verifyOtpToken(req, res, next) {
-  try {
-    let token = null;
-    const authHeader = req.headers.authorization || req.headers.Authorization;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7).trim();
-    } else if (req.cookies?.otp_token) {
-      token = req.cookies.otp_token;
-    } else if (req.cookies?.token) {
-      token = req.cookies.token;
-    } else if (req.body?.token) {
-      token = req.body.token;
-    } else if (req.query?.token) {
-      token = req.query.token;
-    }
-
-    if (!token) {
-      return res.status(403).json({ error: 'Verification required' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (!decoded || decoded.verified !== true) {
-      return res.status(403).json({ error: 'Verification required' });
-    }
-
-    req.verifiedUser = decoded;
-    return next();
-  } catch (err) {
-    return res.status(403).json({ error: 'Verification required' });
-  }
+  return require('../middleware/authGuard').verifyOtpToken(req, res, next);
 }
 
 // ---------------- Admin JWT Verification Middleware ----------------

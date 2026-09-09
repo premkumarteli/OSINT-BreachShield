@@ -22,7 +22,7 @@ import threading
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PYTHON_DIR = os.path.join(BASE_DIR, 'scraper')
 BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
-BLOCKCHAIN_DIR = os.path.join(BACKEND_DIR, 'blockchain')
+BLOCKCHAIN_DIR = os.path.join(BASE_DIR, 'contracts')
 FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
 
 # Load unified root .env into os.environ
@@ -159,7 +159,7 @@ def main():
         if is_port_open('127.0.0.1', 8545):
             print(f"{GREEN}[INFO] Local Hardhat Blockchain is already active on http://127.0.0.1:8545{RESET}")
         else:
-            bc_cmd = [node_bin, "scripts/start-node.js"]
+            bc_cmd = [node_bin, "start-node.js"]
             print(f"{YELLOW}[0/3] Starting Local Hardhat Blockchain on port 8545...{RESET}")
             p_bc = subprocess.Popen(
                 bc_cmd,

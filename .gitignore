@@ -1,5 +1,5 @@
 # ================================================================
-# OSINT BreachShield - Multi-Platform Monorepo .gitignore
+# OSINT BreachShield - .gitignore
 # ================================================================
 
 # OS & Editor Files
@@ -18,12 +18,6 @@ Thumbs.db
 backend/.env
 backend/.env.*
 !backend/.env.example
-frontend/.env
-frontend/.env.*
-!frontend/.env.example
-scraper/.env
-scraper/.env.*
-!scraper/.env.example
 
 # Node.js & Dependencies
 node_modules/
@@ -38,6 +32,8 @@ env/
 **/__pycache__/
 **/*.pyc
 **/*.pyo
+
+# ML Model Files
 *.pt
 *.pth
 
@@ -67,14 +63,18 @@ artifacts/
 **/artifacts/
 cache/
 **/cache/
+contracts/artifacts/
+contracts/cache/
+contracts/node_modules/
 
 # Android Native Gateway Build & IDE Artifacts
-apps/android-gateway/.gradle/
-apps/android-gateway/build/
-apps/android-gateway/*/build/
-apps/android-gateway/local.properties
-apps/android-gateway/.kotlin/
-apps/android-gateway/.artifacts/
+android-gateway/.gradle/
+android-gateway/build/
+android-gateway/*/build/
+android-gateway/local.properties
+android-gateway/.kotlin/
+android-gateway/.idea/
+android-gateway/app/build/
 *.apk
 *.aab
 
@@ -85,7 +85,15 @@ apps/android-gateway/.artifacts/
 *.pepk
 *.p12
 
-# Archives & Binary Docs
+# Archives & Binary Docs (keep academic deliverables)
 *.zip
-*.pdf
+!docs/academic/*.pdf
+!docs/academic/*.pptx
+!docs/reports/*.docx
 
+# Temporary & Debug Files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~

@@ -1614,3 +1614,56 @@ html { scroll-behavior: smooth; }
 .results-redesigned {
   animation: pageTransition 0.3s ease-out;
 }
+
+/* k-Anonymity Privacy Badge */
+.k-anon-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  animation: slideUp 0.4s ease-out 0.05s forwards;
+  opacity: 0;
+}
+.k-anon-badge.safe {
+  background: rgba(0, 255, 102, 0.06);
+  border: 1px solid rgba(0, 255, 102, 0.25);
+}
+.k-anon-badge.pwned {
+  background: rgba(255, 0, 60, 0.06);
+  border: 1px solid rgba(255, 0, 60, 0.25);
+}
+.k-anon-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.k-anon-info {
+  flex: 1;
+}
+.k-anon-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.k-anon-badge.safe .k-anon-title { color: #00ff66; }
+.k-anon-badge.pwned .k-anon-title { color: #ff6b81; }
+.k-anon-details {
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+.k-anon-details code {
+  color: #00eaff;
+  background: rgba(0, 234, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.k-anon-privacy {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-style: italic;
+}

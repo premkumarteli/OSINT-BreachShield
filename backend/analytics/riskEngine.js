@@ -137,7 +137,7 @@ function analyzeExposure(rawText = '', query = '', aiAnalysis = null) {
     factors,
     entities: {
       passwordCount: passwordsFound.length,
-      phoneCount: Math.max(1, phonesFound.length),
+      phoneCount: phonesFound.length,
       emailCount: emailsFound.length,
       hasDocument: docsFound.length > 0 || /document\s*number/i.test(text),
       hasAddress: addressMatches.length > 0 || /adres/i.test(text),
@@ -160,7 +160,8 @@ function redactSensitiveData(rawText = '', verifiedTarget = '') {
   if (!rawText || typeof rawText !== 'string') return '';
   // Data masking is ON by default for privacy and security.
   // It can only be explicitly bypassed in development environments via DISABLE_DATA_MASKING=true.
-  if (process.env.DISABLE_DATA_MASKING === 'true') {
+  if (process.env.DISABLE_DATA_MASKING === 'true' && process.env.NODE_ENV === 'development') {
+    console.warn('[SECURITY] Data masking is DISABLED — only allowed in development');
     return rawText;
   }
 

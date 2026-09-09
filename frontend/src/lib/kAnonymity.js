@@ -17,15 +17,26 @@ export async function computeSha256(text) {
     }
   } catch (_) {}
 
-  // Fallback for tests/Node environment
   try {
-    const nodeCrypto = require('crypto');
-    if (nodeCrypto && typeof nodeCrypto.createHash === 'function') {
-      return nodeCrypto.createHash('sha256').update(normalized).digest('hex').toUpperCase();
+    if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle) {
+      const msgUint8 = new TextEncoder().encode(normalized);
+      const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', msgUint8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
     }
   } catch (_) {}
 
   return '';
+}
+
+/**
+ * Returns auth headers from sessionStorage.
+ */
+function getAuthHeaders() {
+  const token = sessionStorage.getItem('osint_token');
+  const headers = { Accept: 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
 }
 
 /**
@@ -35,7 +46,7 @@ export async function queryRange(prefix) {
   if (!prefix || prefix.length !== 5) return { matches: [], count: 0 };
   try {
     const res = await axios.get(`${API_BASE}/api/v1/range/${prefix.toUpperCase()}`, {
-      headers: { Accept: 'application/json' },
+      headers: getAuthHeaders(),
       timeout: 8000
     });
     if (res.data && res.data.success) {
@@ -49,6 +60,7 @@ export async function queryRange(prefix) {
 
 /**
  * Checks a target using zero-knowledge client-side hashing.
+ * The raw email/phone never leaves the browser — only the SHA-256 prefix is sent.
  */
 export async function checkKAnonymity(target) {
   try {
@@ -70,7 +82,8 @@ export async function checkKAnonymity(target) {
       exposureCount: match ? match.count : 0,
       sources: match ? match.sources : [],
       dataClasses: match ? match.dataClasses : [],
-      year: match ? match.year : null
+      year: match ? match.year : null,
+      method: 'k-anonymity'
     };
   } catch (err) {
     return null;
@@ -78,11 +91,14 @@ export async function checkKAnonymity(target) {
 }
 
 /**
- * Fetches breach details from catalog.
+ * Fetches breach details from catalog by name.
  */
 export async function getBreachMetadata(name) {
   try {
-    const res = await axios.get(`${API_BASE}/api/v1/breaches/${encodeURIComponent(name)}`, { timeout: 6000 });
+    const res = await axios.get(`${API_BASE}/api/v1/breaches/${encodeURIComponent(name)}`, {
+      headers: getAuthHeaders(),
+      timeout: 6000
+    });
     if (res.data && res.data.success) {
       return res.data.breach;
     }

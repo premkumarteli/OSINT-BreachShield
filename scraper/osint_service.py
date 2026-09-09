@@ -9,6 +9,11 @@ import re
 import httpx
 from dotenv import load_dotenv
 
+# Ensure scraper/ is on sys.path so `from ai import ...` works
+_scraper_dir = os.path.dirname(os.path.abspath(__file__))
+if _scraper_dir not in sys.path:
+    sys.path.insert(0, _scraper_dir)
+
 # Load .env file from local directory or parents
 dotenv_paths = [
     os.path.join(os.path.dirname(__file__), '.env'),
@@ -44,10 +49,24 @@ try:
     ai_phishing = PhishingURLClassifier()
     ai_correlator = EntityCorrelator()
     AI_MODULE_ACTIVE = True
-    print("[AI Module] Successfully initialized AI Threat Intelligence Engine.")
+    print("[AI Module] Successfully initialized AI Threat Intelligence Engine.", flush=True)
 except Exception as ai_init_err:
     AI_MODULE_ACTIVE = False
-    print(f"[AI Module Warning] Could not initialize AI engine: {ai_init_err}")
+    print(f"[AI Module Warning] Could not initialize AI engine: {ai_init_err}", flush=True)
+
+# Initialize Ollama LLM (fully offline)
+try:
+    from ai import LLMThreatAnalyzer
+    llm_analyzer = LLMThreatAnalyzer()
+    LLM_ACTIVE = llm_analyzer.is_available()
+    if LLM_ACTIVE:
+        print(f"[LLM Module] Ollama connected — model: {llm_analyzer.client.model}", flush=True)
+    else:
+        print("[LLM Module] Ollama not available — LLM endpoints will return setup instructions", flush=True)
+except Exception as llm_err:
+    llm_analyzer = None
+    LLM_ACTIVE = False
+    print(f"[LLM Module] Init failed: {llm_err}", flush=True)
 
 
 class Query(BaseModel):
@@ -82,6 +101,73 @@ def correlate_endpoint(req: CorrelationRequest):
         raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
     return ai_correlator.correlate_records(req.record_a, req.record_b)
 
+@app.post("/api/ai/compare")
+def compare_models_endpoint(req: URLAnalysisRequest):
+    if not AI_MODULE_ACTIVE:
+        raise HTTPException(status_code=503, detail="AI Module is initializing or unavailable")
+    return ai_analyzer.compare_models(req.url)
+
+@app.post("/api/ai/analyze-text")
+def llm_analyze_text_endpoint(req: ThreatAnalysisRequest):
+    if not llm_analyzer:
+        raise HTTPException(status_code=503, detail="Ollama not installed — run `ollama pull phi3` to enable offline LLM analysis")
+    return llm_analyzer.analyze_threat_text(req.text, req.query)
+
+@app.post("/api/ai/explain-phishing")
+def llm_explain_phishing_endpoint(req: URLAnalysisRequest):
+    if not llm_analyzer:
+        raise HTTPException(status_code=503, detail="Ollama not installed")
+    classification = getattr(req, 'classification', 'UNKNOWN')
+    probability = getattr(req, 'probability', 0.5)
+    return llm_analyzer.explain_phishing(req.url, classification, probability)
+
+@app.post("/api/ai/extract-entities-llm")
+def llm_extract_entities_endpoint(req: ThreatAnalysisRequest):
+    if not llm_analyzer:
+        raise HTTPException(status_code=503, detail="Ollama not installed")
+    return llm_analyzer.extract_entities(req.text)
+
+@app.get("/api/ai/llm-status")
+def llm_status_endpoint():
+    available = llm_analyzer.is_available() if llm_analyzer else False
+    return {
+        "available": available,
+        "model": llm_analyzer.client.model if llm_analyzer else None,
+        "base_url": llm_analyzer.client.base_url if llm_analyzer else None,
+        "setup_command": "ollama pull phi3" if not available else None,
+    }
+
+@app.get("/api/ai/ollama-models")
+def ollama_models_endpoint():
+    """List locally installed Ollama models."""
+    if not llm_analyzer:
+        return {"models": [], "active_model": None, "error": "Ollama not initialized"}
+    models = llm_analyzer.client.list_models()
+    return {
+        "models": models,
+        "active_model": llm_analyzer.client.model,
+        "base_url": llm_analyzer.client.base_url,
+    }
+
+class SwitchModelRequest(BaseModel):
+    model: str
+
+@app.post("/api/ai/ollama-models/switch")
+def switch_model_endpoint(req: SwitchModelRequest):
+    """Switch the active Ollama model at runtime."""
+    if not llm_analyzer:
+        raise HTTPException(status_code=503, detail="Ollama not initialized")
+    old_model = llm_analyzer.client.model
+    llm_analyzer.client.set_model(req.model)
+    llm_analyzer._available = None  # reset cache
+    new_available = llm_analyzer.is_available()
+    return {
+        "success": True,
+        "previous_model": old_model,
+        "active_model": llm_analyzer.client.model,
+        "available": new_available,
+    }
+
 
 
 session_env = os.environ.get('TG_SESSION', 'osint_bot_session')
@@ -99,7 +185,11 @@ else:
     session_name = os.path.abspath(session_env)
 
 print(f"Using session file: {session_name}")
-client = TelegramClient(session_name, api_id, api_hash)
+try:
+    client = TelegramClient(session_name, api_id=api_id, api_hash=api_hash)
+except TypeError:
+    # Fallback for older Telethon versions
+    client = TelegramClient(session_name, api_id, api_hash)
 
 # A single Telegram chat is shared by this service account. To avoid cross-talk
 # when multiple HTTP users hit the API at the same time, we serialize all
@@ -253,28 +343,22 @@ async def send_query(q: Query):
     """Send query to bot and collect response messages quickly."""
     target_q = q.query
     demo_info = (
+        f"[ DEMO MODE - NO LIVE DATA AVAILABLE ]\n"
         f"[ OSINT TARGET: {target_q} ]\n"
-        f"[ RECORD 1 / 2 - HIGH RISK EXPOSURE ]\n"
         f"--------------------------------------------------\n"
-        f"TARGET: {target_q}\n"
-        f"PASSWORD: P@ssw0rd2024!\n"
-        f"HASH: 5baa61e4c9b93f3f0682250b6cf8331b7ee68d80 (SHA-1)\n"
-        f"LINKED PHONE: +919876543210\n"
-        f"BREACH SOURCE: Canva (2019), Collection #1 (2019)\n"
-        f"LOCATION: Bengaluru, Karnataka, India\n"
-        f"--------------------------------------------------\n"
-        f"[ RECORD 2 / 2 - DOMINOS LEAK ]\n"
-        f"NAME: Target Identity Record\n"
-        f"EMAIL: {target_q}\n"
-        f"BREACH SOURCE: Dominos India (2021)\n"
-        f"ADDRESS: Indiranagar, Bangalore, Karnataka - 560038\n"
+        f"NOTE: This is simulated data for demonstration purposes.\n"
+        f"Connect to a live Telegram bot for real breach intelligence.\n"
         f"--------------------------------------------------"
     )
 
     try:
         # Prevent lock acquisition hang (max 8s wait)
-        async with asyncio.timeout(8.0):
-            async with tg_lock:
+        try:
+            await asyncio.wait_for(tg_lock.acquire(), timeout=8.0)
+        except asyncio.TimeoutError:
+            return {'packets': [{'info': 'Service busy, try again later.'}], 'response': 'Service busy', 'pagination': {'current': 1, 'total': 1}}
+
+        try:
                 try:
                     if not client.is_connected():
                         await client.connect()
@@ -405,6 +489,8 @@ async def send_query(q: Query):
                     'pagination': public_pagination(),
                     'ai_analysis': ai_data
                 }
+        finally:
+            tg_lock.release()
 
     except Exception as e:
         print(f"[Query Fallback] Error or timeout: {e}")
@@ -490,6 +576,7 @@ async def get_next_page():
             await target_message.click(page_row_idx, next_col_idx)
 
             # First, wait briefly for a new message event (some bots send a new message instead of editing)
+            updated_text = None
             try:
                 new_msg = await asyncio.wait_for(queue.get(), timeout=4.0)
                 updated_text = new_msg

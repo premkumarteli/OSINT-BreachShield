@@ -89,7 +89,7 @@ function setupGatewayWebSocket(server) {
 
           // Instantly flush and dispatch any pending SMS jobs for this device
           try {
-            const [pendingRows] = await db.query(
+            const pendingRows = await db.query(
               `SELECT request_id, phone_number, message FROM sms_jobs WHERE (device_id = ? OR device_id IS NULL) AND status = 'PENDING' LIMIT 10;`,
               [currentDeviceId]
             );

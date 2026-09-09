@@ -1,0 +1,9 @@
+{
+  "name": "osint-blockchain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hardhat configuration for AnchorRegistry.sol",
+  "dependencies": {
+    "hardhat": "~2.22.0"
+  }
+}

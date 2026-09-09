@@ -88,7 +88,7 @@ router.post('/ai/analyze-threat', verifyOtpToken, async (req, res) => {
 });
 
 // 3. POST /api/ai/correlate
-router.post('/ai/ai/correlate', verifyOtpToken, async (req, res) => {
+router.post('/ai/correlate', verifyOtpToken, async (req, res) => {
   try {
     const { record_a, record_b } = req.body || {};
     const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/correlate`, {
@@ -119,7 +119,119 @@ router.post('/ai/ai/correlate', verifyOtpToken, async (req, res) => {
   }
 });
 
-// 4. GET /api/sources (Active Multi-Source OSINT Registry)
+// 4. POST /api/ai/compare (Multi-Model Comparison)
+router.post('/ai/compare', verifyOtpToken, async (req, res) => {
+  try {
+    const { url } = req.body || {};
+    if (!url) return res.status(400).json({ error: 'URL parameter required' });
+
+    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/compare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Model comparison failed', message: err.message });
+  }
+});
+
+// 5. POST /api/ai/analyze-text (LLM Threat Analysis — offline Ollama)
+router.post('/ai/analyze-text', verifyOtpToken, async (req, res) => {
+  try {
+    const { text, query } = req.body || {};
+    if (!text) return res.status(400).json({ error: 'Text parameter required' });
+
+    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/analyze-text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, query: query || '' })
+    });
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'LLM analysis failed', message: err.message });
+  }
+});
+
+// 6. POST /api/ai/explain-phishing (LLM Phishing Explanation)
+router.post('/ai/explain-phishing', verifyOtpToken, async (req, res) => {
+  try {
+    const { url, classification, probability } = req.body || {};
+    if (!url) return res.status(400).json({ error: 'URL parameter required' });
+
+    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/explain-phishing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, classification: classification || 'UNKNOWN', probability: probability || 0.5 })
+    });
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'LLM explanation failed', message: err.message });
+  }
+});
+
+// 7. POST /api/ai/extract-entities-llm (LLM Entity Extraction)
+router.post('/ai/extract-entities-llm', verifyOtpToken, async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    if (!text) return res.status(400).json({ error: 'Text parameter required' });
+
+    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/extract-entities-llm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'LLM entity extraction failed', message: err.message });
+  }
+});
+
+// 8. GET /api/ai/llm-status (Check Ollama availability)
+router.get('/ai/llm-status', verifyOtpToken, async (req, res) => {
+  try {
+    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/llm-status`);
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.json({ available: false, error: err.message });
+  }
+});
+
+// 9. GET /api/ai/ollama-models (List installed Ollama models)
+router.get('/ai/ollama-models', verifyOtpToken, async (req, res) => {
+  try {
+    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/ollama-models`);
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.json({ models: [], active_model: null, error: err.message });
+  }
+});
+
+// 10. POST /api/ai/ollama-models/switch (Switch active Ollama model)
+router.post('/ai/ollama-models/switch', verifyOtpToken, async (req, res) => {
+  try {
+    const { model } = req.body || {};
+    if (!model) return res.status(400).json({ error: 'model parameter required' });
+
+    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/ollama-models/switch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model })
+    });
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Model switch failed', message: err.message });
+  }
+});
+
+// 11. GET /api/sources (Active Multi-Source OSINT Registry)
 router.get('/sources', verifyOtpToken, (req, res) => {
   const sources = getEnabledSources();
   const summary = sources.map(s => ({
@@ -131,7 +243,7 @@ router.get('/sources', verifyOtpToken, (req, res) => {
   res.json({ count: summary.length, sources: summary });
 });
 
-// 5. POST /api/audit/log & /api/blockchain/log (Log Threat Audit Event to SHA-256 Hash Chain)
+// 12. POST /api/audit/log & /api/blockchain/log (Log Threat Audit Event to SHA-256 Hash Chain)
 // Admin-only: no frontend or user-facing code calls these routes.
 // Actual audit logging happens internally via searchService.js calling logThreatEvent() directly.
 async function handleLogAuditEvent(req, res) {
@@ -153,7 +265,7 @@ async function handleLogAuditEvent(req, res) {
 router.post('/audit/log', requireAdminToken, handleLogAuditEvent);
 router.post('/blockchain/log', requireAdminToken, handleLogAuditEvent);
 
-// 6. GET & POST /api/audit/verify/:eventId & /api/blockchain/verify/:eventId
+// 13. GET & POST /api/audit/verify/:eventId & /api/blockchain/verify/:eventId
 // Public/auditable verification endpoint: compares stored canonical event against logged SHA-256 hash
 async function handleVerifyAuditEvent(req, res) {
   try {
@@ -170,9 +282,9 @@ async function handleVerifyAuditEvent(req, res) {
     res.status(500).json({ error: 'Audit verification failed', message: err.message });
   }
 }
-router.get('/audit/verify/:eventId', handleVerifyAuditEvent);
-router.post('/audit/verify/:eventId', handleVerifyAuditEvent);
-router.get('/blockchain/verify/:eventId', handleVerifyAuditEvent);
-router.post('/blockchain/verify/:eventId', handleVerifyAuditEvent);
+router.get('/audit/verify/:eventId', verifyOtpToken, handleVerifyAuditEvent);
+router.post('/audit/verify/:eventId', verifyOtpToken, handleVerifyAuditEvent);
+router.get('/blockchain/verify/:eventId', verifyOtpToken, handleVerifyAuditEvent);
+router.post('/blockchain/verify/:eventId', verifyOtpToken, handleVerifyAuditEvent);
 
 module.exports = router;

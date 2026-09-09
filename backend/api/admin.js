@@ -72,21 +72,24 @@ router.post('/auth/send-otp', async (req, res) => {
     const smtpEmail = (process.env.EMAIL_USER || '').trim().toLowerCase();
     const targetEmail = (email || '').trim().toLowerCase();
 
-    const allowedAdminEmails = [configuredAdminEmail, 'admin@example.com', 'admin@breachshield.io', smtpEmail].filter(Boolean);
+    const allowedAdminEmails = [configuredAdminEmail, smtpEmail].filter(Boolean);
 
     if (!targetEmail || !allowedAdminEmails.includes(targetEmail)) {
       return res.status(403).json({ error: 'Unauthorized administrator email identifier.' });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const crypto = require('crypto');
+    const bcrypt = require('bcryptjs');
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
     adminOtpStore.set(targetEmail, {
-      otp,
+      otp: hashedOtp,
       expiresAt: Date.now() + 5 * 60 * 1000,
       attempts: 0
     });
 
     console.log(`\n======================================================`);
-    console.log(`[BREACHSHIELD ADMIN AUTH OTP] -> ${targetEmail}: ${otp}`);
+    console.log(`[BREACHSHIELD ADMIN AUTH OTP] -> ${targetEmail}: [REDACTED]`);
     console.log(`======================================================\n`);
 
     logActivity(targetEmail, 'ADMIN_OTP_REQUESTED', 'ADMIN_AUTH', 'SUCCESS');
@@ -128,7 +131,9 @@ router.post('/auth/verify-otp', async (req, res) => {
       return res.status(429).json({ error: 'Too many invalid attempts. Account locked.' });
     }
 
-    if (String(record.otp).trim() !== String(otp).trim()) {
+    const bcrypt = require('bcryptjs');
+    const otpValid = await bcrypt.compare(String(otp).trim(), String(record.otp).trim());
+    if (!otpValid) {
       record.attempts += 1;
       return res.status(400).json({ error: `Invalid code. ${5 - record.attempts} attempts remaining.` });
     }
@@ -572,6 +577,16 @@ router.put('/settings', requireAdminToken, (req, res) => {
 
     logActivity(req.adminUser?.email || 'ADMIN', 'UPDATE_SETTINGS', 'SYSTEM_CONFIG', 'SUCCESS', updates);
     addAlert('INFO', 'Settings Updated', `System settings updated by ${req.adminUser?.email || 'Admin'}`, 'ADMIN');
+
+    // Persist settings to disk
+    try {
+      const settingsPath = path.join(__dirname, '..', 'instance', 'runtime_settings.json');
+      const instanceDir = path.dirname(settingsPath);
+      if (!fs.existsSync(instanceDir)) fs.mkdirSync(instanceDir, { recursive: true });
+      fs.writeFileSync(settingsPath, JSON.stringify(runtimeSettings, null, 2));
+    } catch (persistErr) {
+      console.warn('[Admin] Failed to persist settings:', persistErr.message);
+    }
 
     res.json({
       success: true,

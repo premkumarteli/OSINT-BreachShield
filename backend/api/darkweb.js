@@ -34,11 +34,6 @@ router.post('/watchlist', verifyOtpToken, (req, res) => {
     return res.status(409).json({ error: 'Keyword already in watchlist' });
   }
   userWatch.add(trimmed);
-  // Broadcast hello event to all connected SSE clients
-  const data = JSON.stringify({ watchlist: Array.from(userWatch) });
-  for (const client of alertClients) {
-    try { client.write(`event: hello\ndata: ${data}\n\n`); } catch (_) {}
-  }
   res.json({ success: true, watchlist: Array.from(userWatch) });
 });
 
@@ -52,7 +47,7 @@ router.delete('/watchlist/:keyword', verifyOtpToken, (req, res) => {
 });
 
 // ---------------- GET /api/darkweb/stream (SSE) ----------------
-router.get('/stream', (req, res) => {
+router.get('/stream', verifyOtpToken, (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -62,7 +57,7 @@ router.get('/stream', (req, res) => {
   res.flushHeaders();
 
   // Send hello with current watchlist
-  const user = req.query?.email || 'default';
+  const user = req.verifiedUser?.email || 'default';
   const items = Array.from(watchlist.get(user) || []);
   res.write(`event: hello\ndata: ${JSON.stringify({ watchlist: items })}\n\n`);
 

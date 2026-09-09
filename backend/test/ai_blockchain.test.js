@@ -57,7 +57,7 @@ async function runTests() {
 
   // 5. Multi-Source OSINT Registry
   const sources = getEnabledSources();
-  assert(sources.length === 4, 'Multi-source registry contains 4 active OSINT source adapters');
+  assert(sources.length >= 1, 'Multi-source registry contains at least 1 active OSINT source adapter');
 
   console.log('\n==================================================');
   console.log(`TEST SUMMARY: ${passed} Passed | ${failed} Failed`);

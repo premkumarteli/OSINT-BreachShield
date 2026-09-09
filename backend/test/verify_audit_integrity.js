@@ -1,13 +1,24 @@
-const { logThreatEvent, memoryAuditLedger, readJsonLogs, writeJsonLogs } = require('../blockchain/auditLogger');
+const { logThreatEvent, memoryAuditLedger } = require('../blockchain/auditLogger');
 const { verifyThreatEvent } = require('../blockchain/verificationService');
-const { computeEventHash } = require('../blockchain/auditHasher');
 
 async function testAuditIntegrity() {
-  console.log('=== REAL EVENT LOGGING & INTEGRITY VERIFICATION TEST ===\n');
+  console.log('=== AUDIT INTEGRITY VERIFICATION TEST ===\n');
+  let passed = 0;
+  let failed = 0;
+
+  function assert(condition, testName) {
+    if (condition) {
+      console.log(`[PASS] ${testName}`);
+      passed++;
+    } else {
+      console.error(`[FAIL] ${testName}`);
+      failed++;
+    }
+  }
 
   // 1. Log a real threat event
   const realEvent = {
-    id: 'evt_real_sec_001',
+    id: 'evt_integrity_test_001',
     type: 'PHISHING_ALERT',
     query: 'user@target-company.com',
     riskScore: 88,
@@ -16,31 +27,25 @@ async function testAuditIntegrity() {
     timestamp: '2026-09-03T06:00:00.000Z'
   };
 
-  console.log('Logging event:', JSON.stringify(realEvent, null, 2));
   const loggedRecord = await logThreatEvent(realEvent);
-  console.log('\nLogged Audit Record:');
-  console.log(JSON.stringify(loggedRecord, null, 2));
+  assert(loggedRecord && loggedRecord.eventId === 'evt_integrity_test_001', 'Event logged successfully');
 
-  // 2. Verify event integrity on unaltered stored record
-  console.log('\n--- 1. VERIFY UNALTERED STORED EVENT ---');
-  const verifyResultMatch = await verifyThreatEvent('evt_real_sec_001');
-  console.log('Verify Result:');
-  console.log(JSON.stringify(verifyResultMatch, null, 2));
+  // 2. Verify unaltered record
+  const verifyResultMatch = await verifyThreatEvent('evt_integrity_test_001');
+  assert(verifyResultMatch.verified === true || verifyResultMatch.status === 'MATCH', 'Unaltered record verifies as valid');
 
-  // 3. Manually alter one field in the stored record (e.g., tamper riskScore from 88 -> 15)
-  console.log('\n--- 2. MANUALLY ALTERING STORED RECORD FIELD ---');
-  const storedRecord = memoryAuditLedger.get('evt_real_sec_001');
+  // 3. Tamper with the record
+  const storedRecord = memoryAuditLedger.get('evt_integrity_test_001');
   if (storedRecord && storedRecord.eventData) {
-    console.log(`Original stored riskScore: ${storedRecord.eventData.riskScore}`);
-    storedRecord.eventData.riskScore = 15; // Tamper field!
-    console.log(`Tampered stored riskScore to: ${storedRecord.eventData.riskScore}`);
+    storedRecord.eventData.riskScore = 15;
   }
 
-  // 4. Verify again after tampering
-  console.log('\n--- 3. VERIFY AFTER FIELD ALTERATION ---');
-  const verifyResultTampered = await verifyThreatEvent('evt_real_sec_001');
-  console.log('Verify Result:');
-  console.log(JSON.stringify(verifyResultTampered, null, 2));
+  // 4. Verify tampered record
+  const verifyResultTampered = await verifyThreatEvent('evt_integrity_test_001');
+  assert(verifyResultTampered.verified === false || verifyResultTampered.status === 'TAMPERED', 'Tampered record detected as invalid');
+
+  console.log(`\nSUMMARY: ${passed} Passed | ${failed} Failed`);
+  if (failed > 0) process.exit(1);
 }
 
 testAuditIntegrity().catch(err => {

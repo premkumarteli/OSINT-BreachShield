@@ -29,14 +29,14 @@ async function contractExists(provider, address) {
  * Returns the deployed contract address.
  */
 function deployViaHardhat() {
-  const blockchainDir = path.join(__dirname);
-  const deployScript = path.join(blockchainDir, 'scripts', 'deploy.js');
+  const contractsDir = path.join(__dirname, '..', '..', 'contracts');
+  const deployScript = path.join(contractsDir, 'scripts', 'deploy.js');
 
   console.log('[AUTO-DEPLOY] Deploying AnchorRegistry via Hardhat...');
   const output = execSync(
     `npx hardhat run scripts/deploy.js --network local`,
     {
-      cwd: blockchainDir,
+      cwd: contractsDir,
       encoding: 'utf8',
       timeout: 60000,
       stdio: ['pipe', 'pipe', 'pipe'],

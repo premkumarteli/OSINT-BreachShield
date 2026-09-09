@@ -3,7 +3,7 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 
 // Load environment variables from root .env or services/api-gateway/.env
-const rootEnv = path.resolve(__dirname, '..', '..', '..', '.env');
+const rootEnv = path.resolve(__dirname, '..', '..', '.env');
 const localEnv = path.resolve(__dirname, '..', '.env');
 
 if (fs.existsSync(rootEnv)) {

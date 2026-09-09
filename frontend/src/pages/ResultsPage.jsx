@@ -245,13 +245,13 @@ export default function ResultsPage() {
                     </h3>
                     <div className="preview-list">
                       {records.slice(0, 3).map((rec) => (
-                        <div key={rec.id} className="preview-item">
+                        <div key={rec.id || `rec-${records.indexOf(rec)}`} className="preview-item">
                           <div className="preview-header">
                             <span className="preview-title">{rec.title}</span>
                             <span className="preview-year">{rec.year}</span>
                           </div>
                           <div className="preview-tags">
-                            {rec.dataClasses.slice(0, 4).map((dc, i) => (
+                            {(rec.dataClasses || []).slice(0, 4).map((dc, i) => (
                               <span key={i} className="preview-tag">{dc.replace(/_/g, ' ')}</span>
                             ))}
                           </div>
@@ -283,7 +283,7 @@ export default function ResultsPage() {
                           <span className="card-year-badge">{rec.year}</span>
                         </div>
                         <div className="card-pills-row">
-                          {rec.dataClasses.map((dc, dcIdx) => (
+                          {(rec.dataClasses || []).map((dc, dcIdx) => (
                             <span key={dcIdx} className="data-pill">{dc.replace(/_/g, ' ')}</span>
                           ))}
                         </div>

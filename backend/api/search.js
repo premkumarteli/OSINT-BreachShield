@@ -12,6 +12,14 @@ const { parseBreachTimeline } = require('../analytics/timelineParser');
 const router = express.Router();
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'https://osint-breach-python.onrender.com/query';
 
+// Derive base URL from PYTHON_SERVICE_URL
+function getPythonBaseUrl() {
+  const url = PYTHON_SERVICE_URL;
+  // Strip trailing /query if present
+  if (url.endsWith('/query')) return url.slice(0, -6);
+  return url;
+}
+
 // POST /api/search (Strictly guarded by OTP verification)
 router.post('/search', verifyOtpToken, async (req, res) => {
   const { query } = req.body || {};
@@ -33,15 +41,9 @@ router.post('/search', verifyOtpToken, async (req, res) => {
       return res.status(403).json({ error: err.message });
     }
     console.error('Search error:', err.message);
-    const exposure = analyzeExposure('', query);
-    const timeline = parseBreachTimeline('');
-    return res.json({
-      success: true,
-      data: {
-        packets: [{ query, info: 'Scan complete. No public breach records detected in primary archives.' }],
-        pagination: { current: 1, total: 1 },
-        analytics: { exposure, timeline }
-      }
+    return res.status(500).json({
+      success: false,
+      error: 'Search failed. Please try again later.'
     });
   }
 });
@@ -51,7 +53,7 @@ router.post('/telegram-page', verifyOtpToken, async (req, res) => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
-    const resp = await fetch(PYTHON_SERVICE_URL.replace('/query', '/next-page'), {
+    const resp = await fetch(`${getPythonBaseUrl()}/next-page`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -83,7 +85,7 @@ router.post('/telegram-prev-page', verifyOtpToken, async (req, res) => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
-    const resp = await fetch(PYTHON_SERVICE_URL.replace('/query', '/prev-page'), {
+    const resp = await fetch(`${getPythonBaseUrl()}/prev-page`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),

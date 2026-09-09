@@ -127,7 +127,7 @@ class AnchorClient {
         return {
           txHash: receipt.hash,
           blockNumber: receipt.blockNumber,
-          network: 'local-hardhat',
+          network: this.rpcEndpoints[this.currentRpcIndex]?.includes('localhost') || this.rpcEndpoints[this.currentRpcIndex]?.includes('127.0.0.1') ? 'local-hardhat' : 'polygon-amoy',
           timestamp: new Date().toISOString()
         };
         
@@ -149,7 +149,7 @@ class AnchorClient {
             return {
               txHash: '0x' + '0'.repeat(64), // No new tx
               blockNumber: Number(blockNumber),
-              network: 'local-hardhat',
+              network: this.rpcEndpoints[this.currentRpcIndex]?.includes('localhost') || this.rpcEndpoints[this.currentRpcIndex]?.includes('127.0.0.1') ? 'local-hardhat' : 'polygon-amoy',
               timestamp: new Date().toISOString(),
               duplicate: true
             };

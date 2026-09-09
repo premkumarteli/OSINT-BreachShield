@@ -2,18 +2,33 @@ import os
 import sys
 from telethon import TelegramClient
 
-api_id = int(os.environ.get('TG_API_ID', '28444606'))
-api_hash = os.environ.get('TG_API_HASH', '409411e66ccb00968523f446d30cded9')
-phone = os.environ.get('TG_PHONE', '+918928868564')
+api_id_raw = os.environ.get('TG_API_ID')
+api_hash = os.environ.get('TG_API_HASH')
+phone = os.environ.get('TG_PHONE')
 session_name = os.environ.get('TG_SESSION', 'osint_bot_session')
+
+if not api_id_raw or not api_hash or not phone:
+    print("[ERROR] Missing required Telegram credentials.", file=sys.stderr)
+    print("Set TG_API_ID, TG_API_HASH, and TG_PHONE in your .env file.", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    api_id = int(api_id_raw)
+except ValueError:
+    print(f"[ERROR] TG_API_ID must be an integer, received: {api_id_raw}", file=sys.stderr)
+    sys.exit(1)
 
 print("==================================================")
 print("     TELEGRAM LOGIN / RE-AUTHENTICATION SCRIPT    ")
 print("==================================================")
-print(f"Phone number: {phone}")
+print(f"Phone number: [REDACTED]")
 print(f"Session name: {session_name}.session\n")
 
-client = TelegramClient(session_name, api_id, api_hash)
+try:
+    client = TelegramClient(session_name, api_id=api_id, api_hash=api_hash)
+except TypeError:
+    # Fallback for older Telethon versions
+    client = TelegramClient(session_name, api_id, api_hash)
 
 async def main():
     print(f"Connecting to Telegram for phone {phone}...")
