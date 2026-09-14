@@ -54,19 +54,10 @@ except Exception as ai_init_err:
     AI_MODULE_ACTIVE = False
     print(f"[AI Module Warning] Could not initialize AI engine: {ai_init_err}", flush=True)
 
-# Initialize Ollama LLM (fully offline)
-try:
-    from ai import LLMThreatAnalyzer
-    llm_analyzer = LLMThreatAnalyzer()
-    LLM_ACTIVE = llm_analyzer.is_available()
-    if LLM_ACTIVE:
-        print(f"[LLM Module] Ollama connected — model: {llm_analyzer.client.model}", flush=True)
-    else:
-        print("[LLM Module] Ollama not available — LLM endpoints will return setup instructions", flush=True)
-except Exception as llm_err:
-    llm_analyzer = None
-    LLM_ACTIVE = False
-    print(f"[LLM Module] Init failed: {llm_err}", flush=True)
+# Ollama LLM — DISABLED (code preserved, not loaded)
+llm_analyzer = None
+LLM_ACTIVE = False
+print("[LLM Module] Ollama disabled — LLM endpoints will return 503", flush=True)
 
 
 class Query(BaseModel):
@@ -109,64 +100,30 @@ def compare_models_endpoint(req: URLAnalysisRequest):
 
 @app.post("/api/ai/analyze-text")
 def llm_analyze_text_endpoint(req: ThreatAnalysisRequest):
-    if not llm_analyzer:
-        raise HTTPException(status_code=503, detail="Ollama not installed — run `ollama pull phi3` to enable offline LLM analysis")
-    return llm_analyzer.analyze_threat_text(req.text, req.query)
+    return {"success": False, "error": "LLM module is disabled", "disabled": True}
 
 @app.post("/api/ai/explain-phishing")
 def llm_explain_phishing_endpoint(req: URLAnalysisRequest):
-    if not llm_analyzer:
-        raise HTTPException(status_code=503, detail="Ollama not installed")
-    classification = getattr(req, 'classification', 'UNKNOWN')
-    probability = getattr(req, 'probability', 0.5)
-    return llm_analyzer.explain_phishing(req.url, classification, probability)
+    return {"success": False, "error": "LLM module is disabled", "disabled": True}
 
 @app.post("/api/ai/extract-entities-llm")
 def llm_extract_entities_endpoint(req: ThreatAnalysisRequest):
-    if not llm_analyzer:
-        raise HTTPException(status_code=503, detail="Ollama not installed")
-    return llm_analyzer.extract_entities(req.text)
+    return {"success": False, "error": "LLM module is disabled", "disabled": True}
 
 @app.get("/api/ai/llm-status")
 def llm_status_endpoint():
-    available = llm_analyzer.is_available() if llm_analyzer else False
-    return {
-        "available": available,
-        "model": llm_analyzer.client.model if llm_analyzer else None,
-        "base_url": llm_analyzer.client.base_url if llm_analyzer else None,
-        "setup_command": "ollama pull phi3" if not available else None,
-    }
+    return {"available": False, "model": None, "base_url": None, "disabled": True}
 
 @app.get("/api/ai/ollama-models")
 def ollama_models_endpoint():
-    """List locally installed Ollama models."""
-    if not llm_analyzer:
-        return {"models": [], "active_model": None, "error": "Ollama not initialized"}
-    models = llm_analyzer.client.list_models()
-    return {
-        "models": models,
-        "active_model": llm_analyzer.client.model,
-        "base_url": llm_analyzer.client.base_url,
-    }
+    return {"models": [], "active_model": None, "disabled": True}
 
 class SwitchModelRequest(BaseModel):
     model: str
 
 @app.post("/api/ai/ollama-models/switch")
 def switch_model_endpoint(req: SwitchModelRequest):
-    """Switch the active Ollama model at runtime."""
-    if not llm_analyzer:
-        raise HTTPException(status_code=503, detail="Ollama not initialized")
-    old_model = llm_analyzer.client.model
-    llm_analyzer.client.set_model(req.model)
-    llm_analyzer._available = None  # reset cache
-    new_available = llm_analyzer.is_available()
-    return {
-        "success": True,
-        "previous_model": old_model,
-        "active_model": llm_analyzer.client.model,
-        "available": new_available,
-    }
+    return {"success": False, "error": "LLM module is disabled", "disabled": True}
 
 
 

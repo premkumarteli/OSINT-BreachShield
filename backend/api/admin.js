@@ -73,8 +73,9 @@ router.post('/auth/send-otp', async (req, res) => {
     const targetEmail = (email || '').trim().toLowerCase();
 
     const allowedAdminEmails = [configuredAdminEmail, smtpEmail].filter(Boolean);
+    const skipOtp = (process.env.SKIP_OTP || '').toLowerCase() === 'true';
 
-    if (!targetEmail || !allowedAdminEmails.includes(targetEmail)) {
+    if (!targetEmail || (!allowedAdminEmails.includes(targetEmail) && !skipOtp)) {
       return res.status(403).json({ error: 'Unauthorized administrator email identifier.' });
     }
 
@@ -115,27 +116,33 @@ router.post('/auth/verify-otp', async (req, res) => {
       return res.status(400).json({ error: 'Email and OTP code are required.' });
     }
 
+    const skipOtp = (process.env.SKIP_OTP || '').toLowerCase() === 'true';
     const record = adminOtpStore.get(targetEmail);
-    if (!record) {
+
+    if (!record && !skipOtp) {
       return res.status(400).json({ error: 'No active OTP found. Please request a new one.' });
     }
 
-    if (Date.now() > record.expiresAt) {
-      adminOtpStore.delete(targetEmail);
-      return res.status(400).json({ error: 'OTP expired. Please request a new code.' });
-    }
+    if (record && !skipOtp) {
+      if (Date.now() > record.expiresAt) {
+        adminOtpStore.delete(targetEmail);
+        return res.status(400).json({ error: 'OTP expired. Please request a new code.' });
+      }
 
-    if (record.attempts >= 5) {
-      adminOtpStore.delete(targetEmail);
-      logActivity(targetEmail, 'ADMIN_LOGIN_LOCKOUT', 'ADMIN_AUTH', 'FAILED');
-      return res.status(429).json({ error: 'Too many invalid attempts. Account locked.' });
-    }
+      if (record.attempts >= 5) {
+        adminOtpStore.delete(targetEmail);
+        logActivity(targetEmail, 'ADMIN_LOGIN_LOCKOUT', 'ADMIN_AUTH', 'FAILED');
+        return res.status(429).json({ error: 'Too many invalid attempts. Account locked.' });
+      }
 
-    const bcrypt = require('bcryptjs');
-    const otpValid = await bcrypt.compare(String(otp).trim(), String(record.otp).trim());
-    if (!otpValid) {
-      record.attempts += 1;
-      return res.status(400).json({ error: `Invalid code. ${5 - record.attempts} attempts remaining.` });
+      const bcrypt = require('bcryptjs');
+      const otpValid = await bcrypt.compare(String(otp).trim(), String(record.otp).trim());
+      if (!otpValid) {
+        record.attempts += 1;
+        return res.status(400).json({ error: `Invalid code. ${5 - record.attempts} attempts remaining.` });
+      }
+    } else if (skipOtp) {
+      console.log(`[DEV] SKIP_OTP=true — bypassing admin OTP for ${targetEmail}`);
     }
 
     adminOtpStore.delete(targetEmail);

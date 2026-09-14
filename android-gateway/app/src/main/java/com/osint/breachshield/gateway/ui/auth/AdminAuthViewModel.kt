@@ -110,24 +110,22 @@ class AdminAuthViewModel @Inject constructor(
                 if (res.success && !res.token.isNullOrBlank()) {
                     preferenceManager.saveAdminAuth(_email.value.trim(), res.token)
 
-                    // Auto-register this phone as SMS Gateway if not registered yet
-                    if (!preferenceManager.isRegistered()) {
-                        try {
-                            val regReq = RegistrationRequest(
-                                deviceId = preferenceManager.getDeviceId(),
-                                deviceName = "${DeviceUtils.getManufacturer()} ${DeviceUtils.getModel()}",
-                                manufacturer = DeviceUtils.getManufacturer(),
-                                model = DeviceUtils.getModel(),
-                                androidVersion = DeviceUtils.getAndroidVersion(),
-                                androidId = DeviceUtils.getAndroidId(context),
-                                simReady = DeviceUtils.isSimReady(context)
-                            )
-                            val regRes = api.registerDevice(regReq)
-                            if (regRes.success && !regRes.gatewayToken.isNullOrBlank()) {
-                                preferenceManager.saveRegistrationData(preferenceManager.getServerUrl(), regRes.gatewayToken)
-                            }
-                        } catch (e: Exception) {}
-                    }
+                    // Auto-register this phone as SMS Gateway (always re-register to get fresh token)
+                    try {
+                        val regReq = RegistrationRequest(
+                            deviceId = preferenceManager.getDeviceId(),
+                            deviceName = "${DeviceUtils.getManufacturer()} ${DeviceUtils.getModel()}",
+                            manufacturer = DeviceUtils.getManufacturer(),
+                            model = DeviceUtils.getModel(),
+                            androidVersion = DeviceUtils.getAndroidVersion(),
+                            androidId = DeviceUtils.getAndroidId(context),
+                            simReady = DeviceUtils.isSimReady(context)
+                        )
+                        val regRes = api.registerDevice(regReq)
+                        if (regRes.success && !regRes.gatewayToken.isNullOrBlank()) {
+                            preferenceManager.saveRegistrationData(preferenceManager.getServerUrl(), regRes.gatewayToken)
+                        }
+                    } catch (e: Exception) {}
 
                     // Start Gateway background service
                     try {

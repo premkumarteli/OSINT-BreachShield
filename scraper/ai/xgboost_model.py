@@ -17,7 +17,7 @@ class XGBoostPhishingClassifier:
     """
 
     def __init__(self):
-        self.model_name = "XGBoost-v1"
+        self.model_name = "XGBoost-URL-Heuristic (experimental, untested)"
         self.model = None
         if XGBOOST_AVAILABLE:
             try:
@@ -113,7 +113,8 @@ class XGBoostPhishingClassifier:
             "confidence": round(phish_prob if classification != "SAFE" else 1.0 - phish_prob, 4),
             "phishing_probability": round(phish_prob, 4),
             "parameter_count": self.get_parameter_count(),
-            "inference_latency_ms": max(1, latency_ms)
+            "inference_latency_ms": max(1, latency_ms),
+            "disclosure": "Trained on 20 hardcoded URLs (10 phishing, 10 safe). No held-out test set. Accuracy unknown. Do not conflate with the separate breach-severity XGBoost model (89.2% on real HIBP data) in data/processed/.",
         }
 
     def evaluate_dataset(self, test_urls: list[str], test_labels: list[int]) -> dict:

@@ -137,98 +137,24 @@ router.post('/ai/compare', verifyOtpToken, async (req, res) => {
   }
 });
 
-// 5. POST /api/ai/analyze-text (LLM Threat Analysis — offline Ollama)
-router.post('/ai/analyze-text', verifyOtpToken, async (req, res) => {
-  try {
-    const { text, query } = req.body || {};
-    if (!text) return res.status(400).json({ error: 'Text parameter required' });
-
-    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/analyze-text`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, query: query || '' })
-    });
-    const data = await resp.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: 'LLM analysis failed', message: err.message });
-  }
+// 5-10. LLM/Ollama routes — DISABLED (code preserved, returns disabled response)
+router.post('/ai/analyze-text', verifyOtpToken, (req, res) => {
+  res.json({ success: false, error: 'LLM module is disabled', disabled: true });
 });
-
-// 6. POST /api/ai/explain-phishing (LLM Phishing Explanation)
-router.post('/ai/explain-phishing', verifyOtpToken, async (req, res) => {
-  try {
-    const { url, classification, probability } = req.body || {};
-    if (!url) return res.status(400).json({ error: 'URL parameter required' });
-
-    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/explain-phishing`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, classification: classification || 'UNKNOWN', probability: probability || 0.5 })
-    });
-    const data = await resp.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: 'LLM explanation failed', message: err.message });
-  }
+router.post('/ai/explain-phishing', verifyOtpToken, (req, res) => {
+  res.json({ success: false, error: 'LLM module is disabled', disabled: true });
 });
-
-// 7. POST /api/ai/extract-entities-llm (LLM Entity Extraction)
-router.post('/ai/extract-entities-llm', verifyOtpToken, async (req, res) => {
-  try {
-    const { text } = req.body || {};
-    if (!text) return res.status(400).json({ error: 'Text parameter required' });
-
-    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/extract-entities-llm`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    const data = await resp.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: 'LLM entity extraction failed', message: err.message });
-  }
+router.post('/ai/extract-entities-llm', verifyOtpToken, (req, res) => {
+  res.json({ success: false, error: 'LLM module is disabled', disabled: true });
 });
-
-// 8. GET /api/ai/llm-status (Check Ollama availability)
-router.get('/ai/llm-status', verifyOtpToken, async (req, res) => {
-  try {
-    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/llm-status`);
-    const data = await resp.json();
-    res.json(data);
-  } catch (err) {
-    res.json({ available: false, error: err.message });
-  }
+router.get('/ai/llm-status', verifyOtpToken, (req, res) => {
+  res.json({ available: false, disabled: true });
 });
-
-// 9. GET /api/ai/ollama-models (List installed Ollama models)
-router.get('/ai/ollama-models', verifyOtpToken, async (req, res) => {
-  try {
-    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/ollama-models`);
-    const data = await resp.json();
-    res.json(data);
-  } catch (err) {
-    res.json({ models: [], active_model: null, error: err.message });
-  }
+router.get('/ai/ollama-models', verifyOtpToken, (req, res) => {
+  res.json({ models: [], active_model: null, disabled: true });
 });
-
-// 10. POST /api/ai/ollama-models/switch (Switch active Ollama model)
-router.post('/ai/ollama-models/switch', verifyOtpToken, async (req, res) => {
-  try {
-    const { model } = req.body || {};
-    if (!model) return res.status(400).json({ error: 'model parameter required' });
-
-    const resp = await fetch(`${PYTHON_SERVICE_URL}/api/ai/ollama-models/switch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model })
-    });
-    const data = await resp.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: 'Model switch failed', message: err.message });
-  }
+router.post('/ai/ollama-models/switch', verifyOtpToken, (req, res) => {
+  res.json({ success: false, error: 'LLM module is disabled', disabled: true });
 });
 
 // 11. GET /api/sources (Active Multi-Source OSINT Registry)

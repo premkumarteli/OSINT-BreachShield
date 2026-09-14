@@ -270,7 +270,15 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     if (!record) {
-      return res.status(400).json({ success: false, error: 'No OTP record found. Please request a new OTP.' });
+      // DEV BYPASS: allow login without prior OTP request when SKIP_OTP=true
+      const skipOtp = (process.env.SKIP_OTP || '').toLowerCase() === 'true';
+      if (skipOtp) {
+        console.log(`[DEV] SKIP_OTP=true — no OTP record for ${targetKey}, allowing login anyway`);
+        // Fall through to JWT issuance below
+        record = { email: targetKey, verified: true, id: 0 };
+      } else {
+        return res.status(400).json({ success: false, error: 'No OTP record found. Please request a new OTP.' });
+      }
     }
 
     // 1. Check Expiry
@@ -279,34 +287,40 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ success: false, error: 'OTP has expired. Please request a new one.' });
     }
 
-    // 2. Check Verification Attempts (Max 5)
-    const attempts = Number(record.attempts || 0);
-    if (attempts >= MAX_VERIFY_ATTEMPTS) {
-      return res.status(429).json({
-        success: false,
-        error: 'Maximum verification attempts exceeded. Please request a new OTP.'
-      });
-    }
-
-    // 3. Compare Hash with bcrypt
-    const match = await compareSecret(otp, record.otp);
-    if (!match) {
-      const remaining = MAX_VERIFY_ATTEMPTS - (attempts + 1);
-      if (isDb) {
-        await query('UPDATE email_otps SET attempts = attempts + 1 WHERE id = ?', [record.id]);
-      } else {
-        if (memoryOtps.has(targetKey)) {
-          memoryOtps.get(targetKey).attempts = (memoryOtps.get(targetKey).attempts || 0) + 1;
-        }
-        const otps = readJsonFile(OTPS_JSON);
-        const item = otps.find(o => o.id === record.id || String(o.email).toLowerCase() === targetKey);
-        if (item) { item.attempts = (item.attempts || 0) + 1; writeJsonFile(OTPS_JSON, otps); }
+    // DEV BYPASS: skip OTP check when SKIP_OTP=true
+    const skipOtp = (process.env.SKIP_OTP || '').toLowerCase() === 'true';
+    if (!skipOtp) {
+      // 2. Check Verification Attempts (Max 5)
+      const attempts = Number(record.attempts || 0);
+      if (attempts >= MAX_VERIFY_ATTEMPTS) {
+        return res.status(429).json({
+          success: false,
+          error: 'Maximum verification attempts exceeded. Please request a new OTP.'
+        });
       }
-      return res.status(400).json({
-        success: false,
-        error: remaining > 0 ? `Invalid OTP code. ${remaining} attempts remaining.` : 'Maximum verification attempts exceeded. Please request a new OTP.',
-        attemptsRemaining: Math.max(0, remaining)
-      });
+
+      // 3. Compare Hash with bcrypt
+      const match = await compareSecret(otp, record.otp);
+      if (!match) {
+        const remaining = MAX_VERIFY_ATTEMPTS - (attempts + 1);
+        if (isDb) {
+          await query('UPDATE email_otps SET attempts = attempts + 1 WHERE id = ?', [record.id]);
+        } else {
+          if (memoryOtps.has(targetKey)) {
+            memoryOtps.get(targetKey).attempts = (memoryOtps.get(targetKey).attempts || 0) + 1;
+          }
+          const otps = readJsonFile(OTPS_JSON);
+          const item = otps.find(o => o.id === record.id || String(o.email).toLowerCase() === targetKey);
+          if (item) { item.attempts = (item.attempts || 0) + 1; writeJsonFile(OTPS_JSON, otps); }
+        }
+        return res.status(400).json({
+          success: false,
+          error: remaining > 0 ? `Invalid OTP code. ${remaining} attempts remaining.` : 'Maximum verification attempts exceeded. Please request a new OTP.',
+          attemptsRemaining: Math.max(0, remaining)
+        });
+      }
+    } else {
+      console.log(`[DEV] SKIP_OTP=true — bypassing OTP verification for ${targetKey}`);
     }
 
     // 4. Mark Verified

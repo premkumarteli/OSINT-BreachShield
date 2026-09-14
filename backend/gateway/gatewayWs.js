@@ -66,7 +66,18 @@ function setupGatewayWebSocket(server) {
         }
 
         try {
-          const decoded = jwt.verify(targetToken, JWT_SECRET);
+          let decoded;
+          try {
+            decoded = jwt.verify(targetToken, JWT_SECRET);
+          } catch (jwtErr) {
+            // DEV BYPASS: skip JWT verification when SKIP_OTP=true
+            if ((process.env.SKIP_OTP || '').toLowerCase() === 'true') {
+              console.log(`[DEV] SKIP_OTP=true — bypassing gateway JWT for device ${deviceId}`);
+              decoded = { deviceId, role: 'sms_gateway' };
+            } else {
+              throw jwtErr;
+            }
+          }
           if (!decoded || decoded.deviceId !== deviceId || decoded.role !== 'sms_gateway') {
             console.warn(`[Gateway WS] Invalid token payload for device ${deviceId}`);
             ws.send(JSON.stringify({ type: 'AUTH_FAILED', error: 'Invalid gateway credentials' }));

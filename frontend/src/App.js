@@ -33,6 +33,7 @@ function App() {
   const [validationError, setValidationError] = useState('');
   const [isValidInput, setIsValidInput] = useState(false);
   const [showSearchingAnimation, setShowSearchingAnimation] = useState(false);
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   
   // In-place OTP Verification state
   const [step, setStep] = useState('input'); // 'input' | 'otp' | 'results'
@@ -287,8 +288,8 @@ function App() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          query: email || 'Target Query',
-          content: (terminalLines && terminalLines.length > 0 ? terminalLines.join('\n') : (summary || 'OSINT Breach Intelligence Scan complete.'))
+          query: query || 'Target Query',
+          content: (result?.packets || []).map(p => p.info || '').join('\n\n') || 'OSINT Breach Intelligence Scan complete.'
         })
       });
       if (!res.ok) {
@@ -828,27 +829,6 @@ function App() {
                   </div>
                 </div>
 
-                {/* k-Anonymity Privacy Badge */}
-                {kAnonResult && (
-                  <div className={`k-anon-badge ${kAnonResult.isPwned ? 'pwned' : 'safe'}`}>
-                    <div className="k-anon-icon">{kAnonResult.isPwned ? '\u{1F534}' : '\u{1F7E2}'}</div>
-                    <div className="k-anon-info">
-                      <div className="k-anon-title">
-                        k-Anonymity Check: {kAnonResult.isPwned ? 'BREACH DETECTED' : 'CLEAN'}
-                      </div>
-                      <div className="k-anon-details">
-                        Hash: <code>{kAnonResult.prefix}...{kAnonResult.suffix.slice(0, 8)}</code>
-                        {kAnonResult.isPwned && (
-                          <span> | Exposures: {kAnonResult.exposureCount} | Sources: {kAnonResult.sources.join(', ')}</span>
-                        )}
-                      </div>
-                      <div className="k-anon-privacy">
-                        Your raw email never left this browser — only the SHA-256 prefix was queried.
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Risk Score Hero */}
                 <div className="risk-hero" style={{ '--risk-color': exposure.riskColor || '#00ff66' }}>
                   <div className="risk-glow" style={{ background: getRiskGradient(exposure.riskLevel) }}></div>
@@ -879,30 +859,39 @@ function App() {
                   </div>
                 </div>
 
-                {/* Threat Factors */}
-                {exposure.breakdown && exposure.breakdown.length > 0 && (
-                  <div className="threat-factors">
-                    <h3 className="section-title">
-                      <span className="section-icon">{'\u{1F50D}'}</span>
-                      Identified Threat Vectors
-                    </h3>
-                    <div className="factors-grid">
-                      {exposure.breakdown.map((item, idx) => (
-                        <div key={idx} className="factor-card">
-                          <div className="factor-bar" style={{ width: `${Math.min(100, item.points * 2)}%` }}></div>
-                          <div className="factor-content">
-                            <span className="factor-text">{item.factor}</span>
-                            <span className="factor-pts">+{item.points}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* AI Intelligence Cards */}
+                {/* Collapsible AI Analysis */}
                 {(result.analytics || auditData) && (
-                  <AIIntelligenceCards analytics={result.analytics} blockchainAudit={auditData} token={token} />
+                  <div className="ai-analysis-collapsible">
+                    <button className="ai-analysis-toggle" onClick={() => setShowAIAnalysis(!showAIAnalysis)}>
+                      <span className="ai-analysis-toggle-icon">{showAIAnalysis ? '▼' : '▶'}</span>
+                      <span>AI Analysis</span>
+                      <span className="ai-analysis-toggle-count">{showAIAnalysis ? 'collapse' : 'expand'}</span>
+                    </button>
+                    {showAIAnalysis && (
+                      <div className="ai-analysis-body">
+                        {kAnonResult && (
+                          <div className={`k-anon-badge ${kAnonResult.isPwned ? 'pwned' : 'safe'}`}>
+                            <div className="k-anon-icon">{kAnonResult.isPwned ? '\u{1F534}' : '\u{1F7E2}'}</div>
+                            <div className="k-anon-info">
+                              <div className="k-anon-title">
+                                k-Anonymity Check: {kAnonResult.isPwned ? 'BREACH DETECTED' : 'CLEAN'}
+                              </div>
+                              <div className="k-anon-details">
+                                Hash: <code>{kAnonResult.prefix}...{kAnonResult.suffix.slice(0, 8)}</code>
+                                {kAnonResult.isPwned && (
+                                  <span> | Exposures: {kAnonResult.exposureCount} | Sources: {kAnonResult.sources.join(', ')}</span>
+                                )}
+                              </div>
+                              <div className="k-anon-privacy">
+                                Your raw email never left this browser — only the SHA-256 prefix was queried.
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <AIIntelligenceCards analytics={result.analytics} blockchainAudit={auditData} token={token} />
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* Breach Records */}
@@ -933,27 +922,6 @@ function App() {
                     </div>
                   </div>
                 )}
-
-                {/* Raw Terminal */}
-                <div className="terminal-section">
-                  <div className="terminal-header">
-                    <div className="terminal-dots">
-                      <span className="dot red"></span>
-                      <span className="dot yellow"></span>
-                      <span className="dot green"></span>
-                    </div>
-                    <span className="terminal-title">breach_intel@osint ~ $</span>
-                    <button className="copy-btn" onClick={() => {
-                      const text = result.packets.map(p => p.info || '').join('\n\n');
-                      navigator.clipboard?.writeText(text);
-                    }}>
-                      {'\u{1F4CB}'} Copy
-                    </button>
-                  </div>
-                  <div className="terminal-body">
-                    <pre className="terminal-output">{infoText || 'No breach details available.'}</pre>
-                  </div>
-                </div>
 
                 {/* Pagination */}
                 {hasPagination && (

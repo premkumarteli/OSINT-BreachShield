@@ -1667,3 +1667,52 @@ html { scroll-behavior: smooth; }
   color: #64748b;
   font-style: italic;
 }
+
+/* AI Analysis Collapsible */
+.ai-analysis-collapsible {
+  margin-top: 24px;
+}
+.ai-analysis-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(0, 234, 255, 0.2);
+  border-radius: 10px;
+  color: #00eaff;
+  font-size: 15px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 1px;
+}
+.ai-analysis-toggle:hover {
+  background: rgba(0, 234, 255, 0.08);
+  border-color: rgba(0, 234, 255, 0.4);
+}
+.ai-analysis-toggle-icon {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+}
+.ai-analysis-toggle-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: #64748b;
+  font-family: 'Fira Mono', monospace;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.ai-analysis-body {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideDown 0.25s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -97,3 +97,4 @@ android-gateway/app/build/
 *.swp
 *.swo
 *~
+~$*

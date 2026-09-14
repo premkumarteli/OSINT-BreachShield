@@ -95,12 +95,22 @@ class OSINTThreatAnalyzer:
         }
 
     def compare_models(self, url: str) -> dict:
-        """Run all 5 ML models on a single URL and return ensemble verdict."""
+        """Run all 5 ML models on a single URL and return ensemble verdict.
+
+        The ensemble verdict averages probabilities from the 4 validated models
+        (HF UrlBERT, CNN, RNN, Transformer). The synthetic XGBoost model is
+        included in the results for comparison but its probability is NOT folded
+        into the ensemble average, because it was trained on 20 hardcoded URLs
+        with no held-out test set and its accuracy is unknown.
+        """
         start_t = time.perf_counter()
         results = {}
         phishing_count = 0
         total_prob = 0.0
         total_models = 0
+
+        # Models whose probabilities feed the ensemble verdict (validated models only)
+        ensemble_model_keys = {"hf_urlbert", "cnn", "rnn", "transformer"}
 
         models = [
             ("hf_urlbert", self.phishing_classifier),
@@ -114,13 +124,19 @@ class OSINTThreatAnalyzer:
             if model is None:
                 continue
             try:
-                result = model.analyze_url(url)
+                # PhishingURLClassifier uses analyze_url(); CNN/RNN/Transformer/XGBoost use predict()
+                if hasattr(model, 'analyze_url'):
+                    result = model.analyze_url(url)
+                else:
+                    result = model.predict(url)
                 results[key] = result
-                prob = result.get("phishing_probability") or result.get("confidence") or 0
-                total_prob += prob
-                total_models += 1
-                if result.get("classification") in ("PHISHING", "SUSPICIOUS"):
-                    phishing_count += 1
+                # Only include validated models in the ensemble average
+                if key in ensemble_model_keys:
+                    prob = result.get("phishing_probability") or result.get("confidence") or 0
+                    total_prob += prob
+                    total_models += 1
+                    if result.get("classification") in ("PHISHING", "SUSPICIOUS"):
+                        phishing_count += 1
             except Exception as e:
                 results[key] = {"error": str(e)}
 
@@ -142,6 +158,7 @@ class OSINTThreatAnalyzer:
                 "phishing_probability": round(avg_prob, 4),
                 "model_count": total_models,
                 "phishing_votes": phishing_count,
+                "note": "Ensemble averages 4 validated models (HF UrlBERT, CNN, RNN, Transformer). XGBoost shown separately — trained on synthetic data with no validated accuracy.",
             },
             "inference_latency_ms": latency_ms,
         }

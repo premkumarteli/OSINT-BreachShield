@@ -1,4 +1,5 @@
 import time
+import torch
 from .feature_extractor import URLFeatureExtractor
 
 HF_TRANSFORMERS_AVAILABLE = None  # lazy check
@@ -9,7 +10,6 @@ def _check_transformers():
     if HF_TRANSFORMERS_AVAILABLE is None:
         try:
             from transformers import AutoTokenizer, AutoModelForSequenceClassification
-            import torch
             HF_TRANSFORMERS_AVAILABLE = True
         except ImportError:
             HF_TRANSFORMERS_AVAILABLE = False
@@ -41,7 +41,6 @@ class PhishingURLClassifier:
             return
         try:
             from transformers import AutoTokenizer, AutoModelForSequenceClassification
-            import torch
             self.hf_tokenizer = AutoTokenizer.from_pretrained(self.model_repo)
             self.hf_model = AutoModelForSequenceClassification.from_pretrained(self.model_repo)
             self.hf_model.eval()
