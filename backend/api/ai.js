@@ -160,12 +160,21 @@ router.post('/ai/ollama-models/switch', verifyOtpToken, (req, res) => {
 // 11. GET /api/sources (Active Multi-Source OSINT Registry)
 router.get('/sources', verifyOtpToken, (req, res) => {
   const sources = getEnabledSources();
-  const summary = sources.map(s => ({
-    sourceName: s.sourceName,
-    sourceType: s.sourceName.includes('Telegram') ? 'TELEGRAM' : (s.sourceName.includes('Phishing') ? 'PHISHING_FEED' : (s.sourceName.includes('Catalog') ? 'BREACH_CATALOG' : 'THREAT_INTEL')),
-    isActive: true,
-    description: s.sourceName
-  }));
+  const summary = sources.map(s => {
+    const type = s.sourceName.includes('Telegram') ? 'TELEGRAM' : (s.sourceName.includes('Phishing') ? 'PHISHING_FEED' : (s.sourceName.includes('Catalog') ? 'BREACH_CATALOG' : 'THREAT_INTEL'));
+    // Only the rule-based heuristic adapters are always simulated; Telegram is
+    // live (or demo-mode per-request), the catalog queries a real local store.
+    const simulated = s.sourceName.includes('Phishing') || s.sourceName.includes('ThreatIntel');
+    return {
+      sourceName: s.sourceName,
+      sourceType: type,
+      isActive: true,
+      isSimulated: simulated,
+      description: simulated
+        ? 'Rule-based heuristic source — simulated results, no live feed consulted'
+        : 'Queries live/registered intelligence source'
+    };
+  });
   res.json({ count: summary.length, sources: summary });
 });
 

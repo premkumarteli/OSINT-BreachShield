@@ -103,8 +103,11 @@ async function executeSearch(query, verifiedTarget, options = {}) {
     year: hit.year || new Date().getFullYear().toString(),
     category: 'Multi-Source Intelligence',
     sourceType: hit.sourceType || 'LIVE_SCRAPER',
+    isSimulated: Boolean(hit.isSimulated),
     dataClasses: Array.isArray(hit.dataClasses) && hit.dataClasses.length ? hit.dataClasses : ['IDENTITY'],
-    details: 'Real-time threat spill captured across multi-source intelligence adapters.'
+    details: hit.isSimulated
+      ? 'Simulated / rule-based heuristic match for demonstration (no live feed consulted).'
+      : 'Real-time threat spill captured across multi-source intelligence adapters.'
   }));
 
   return {

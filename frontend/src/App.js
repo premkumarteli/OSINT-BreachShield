@@ -182,22 +182,22 @@ function App() {
     }, 12);
   };
 
-  // OTP Countdown Timers
-  useEffect(() => {
-    if (step !== 'otp' || timeLeft <= 0) return undefined;
-    const timer = setInterval(() => {
-      setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [step, timeLeft]);
+    // OTP Countdown Timers — only depend on step; functional updater handles the 0-stop logic
+    useEffect(() => {
+      if (step !== 'otp') return undefined;
+      const timer = setInterval(() => {
+        setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }, [step]);
 
-  useEffect(() => {
-    if (step !== 'otp' || cooldown <= 0) return undefined;
-    const timer = setInterval(() => {
-      setCooldown(prev => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [step, cooldown]);
+    useEffect(() => {
+      if (step !== 'otp') return undefined;
+      const timer = setInterval(() => {
+        setCooldown(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }, [step]);
 
   useEffect(() => {
     if (!result) return undefined;
@@ -883,7 +883,7 @@ function App() {
                                 )}
                               </div>
                               <div className="k-anon-privacy">
-                                Your raw email never left this browser — only the SHA-256 prefix was queried.
+                                k-Anonymity protocol: Only the 5-character SHA-256 prefix was queried over the network; full zero-knowledge match evaluated locally in memory.
                               </div>
                             </div>
                           </div>

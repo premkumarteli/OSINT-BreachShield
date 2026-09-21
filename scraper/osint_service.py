@@ -30,15 +30,26 @@ phone = os.environ.get('TG_PHONE')
 bot_username = os.environ.get('TG_BOT_USERNAME', 'The_Devil_OSINT_bot')
 
 if not api_id_raw or not api_hash or not phone:
-    print("[CRITICAL] Missing required Telegram credentials in environment variables.", file=sys.stderr)
-    print("Please set TG_API_ID, TG_API_HASH, and TG_PHONE in .env. Exiting.", file=sys.stderr)
-    sys.exit(1)
-
-try:
-    api_id = int(api_id_raw)
-except ValueError:
-    print(f"[CRITICAL] TG_API_ID must be an integer, received: {api_id_raw}", file=sys.stderr)
-    sys.exit(1)
+    print("[WARNING] Missing required Telegram credentials (TG_API_ID, TG_API_HASH, TG_PHONE).", file=sys.stderr)
+    print("The service will boot in DEMO MODE - /query returns simulated demo packets.", file=sys.stderr)
+    print("Set the credentials in .env and restart to enable live Telegram intelligence.", file=sys.stderr)
+    TELEGRAM_AVAILABLE = False
+    api_id = None
+    phone_number = None
+else:
+    TELEGRAM_AVAILABLE = True
+    try:
+        api_id = int(api_id_raw)
+    except ValueError:
+        print(f"[CRITICAL] TG_API_ID must be an integer, received: {api_id_raw}", file=sys.stderr)
+        print("The service will boot in DEMO MODE - /query returns simulated demo packets.", file=sys.stderr)
+        API_ID_INVALID = True
+        TELEGRAM_AVAILABLE = False
+        api_id = None
+        phone_number = None
+    else:
+        API_ID_INVALID = False
+        phone_number = phone
 
 app = FastAPI(title="OSINT Breach Intelligence Scraper with AI Threat Analysis")
 
@@ -142,11 +153,15 @@ else:
     session_name = os.path.abspath(session_env)
 
 print(f"Using session file: {session_name}")
-try:
-    client = TelegramClient(session_name, api_id=api_id, api_hash=api_hash)
-except TypeError:
-    # Fallback for older Telethon versions
-    client = TelegramClient(session_name, api_id, api_hash)
+if not TELEGRAM_AVAILABLE:
+    client = None
+    print("[Telethon] Skipped Telegram client creation (DEMO MODE - no credentials).", flush=True)
+else:
+    try:
+        client = TelegramClient(session_name, api_id=api_id, api_hash=api_hash)
+    except TypeError:
+        # Fallback for older Telethon versions
+        client = TelegramClient(session_name, api_id, api_hash)
 
 # A single Telegram chat is shared by this service account. To avoid cross-talk
 # when multiple HTTP users hit the API at the same time, we serialize all
@@ -243,19 +258,22 @@ def public_pagination():
 # We'll run the Telethon client in a background task
 @app.on_event('startup')
 async def startup_event():
-    try:
-        if not client.is_connected():
-            await client.connect()
-        if not await client.is_user_authorized():
-            print("[Telethon Notice] Telegram session is not authorized. Server running in non-interactive mode. (Run 'python scraper/login_telegram.py' if interactive login is needed).")
-        else:
-            print("[Telethon OK] Telegram client connected & authorized successfully.")
-    except Exception as exc:
-        print(f"[Telethon Startup Warning] Telegram connection error: {exc}")
+    if TELEGRAM_AVAILABLE and client is not None:
+        try:
+            if not client.is_connected():
+                await client.connect()
+            if not await client.is_user_authorized():
+                print("[Telethon Notice] Telegram session is not authorized. Server running in non-interactive mode. (Run 'python scraper/login_telegram.py' if interactive login is needed).")
+            else:
+                print("[Telethon OK] Telegram client connected & authorized successfully.")
+        except Exception as exc:
+            print(f"[Telethon Startup Warning] Telegram connection error: {exc}")
 
 
     # background keepalive to keep Telethon session fresh
     async def _keep_alive():
+        if not TELEGRAM_AVAILABLE or client is None:
+            return
         while True:
             try:
                 if client.is_connected() and await client.is_user_authorized():
@@ -290,7 +308,7 @@ async def startup_event():
 @app.get('/health')
 async def health():
     try:
-        ok = bool(client.is_connected())
+        ok = bool(client.is_connected()) if (TELEGRAM_AVAILABLE and client is not None) else False
     except Exception:
         ok = False
     return { 'ok': ok, 'service': 'python-telethon', 'time': asyncio.get_event_loop().time() }
@@ -317,6 +335,8 @@ async def send_query(q: Query):
 
         try:
                 try:
+                    if client is None:
+                        return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
                     if not client.is_connected():
                         await client.connect()
                     authorized = await client.is_user_authorized()
@@ -421,6 +441,9 @@ async def send_query(q: Query):
                 valid_data_messages = [m for m in messages if not any(kw in m.lower() for kw in ['subscription is over', 'trial period lasted', '/shop', '/referral', '/mirrors'])]
                 if valid_data_messages:
                     messages = valid_data_messages
+                else:
+                    # Only paywall/subscription notices captured - fall back to demo_info
+                    return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
 
                 full_text = "\n\n".join(messages)
 

@@ -27,6 +27,7 @@ def test_url_feature_extractor():
 
 def test_phishing_url_classifier_real_model():
     clf = PhishingURLClassifier()
+    clf._ensure_loaded()
     assert clf.hf_model is not None, "Real Hugging Face model must be loaded"
     
     # Legitimate URL test

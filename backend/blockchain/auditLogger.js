@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { computeEventHash, createCanonicalJson } = require('./auditHasher');
 const { query } = require('../auth/db');
 const fs = require('fs');

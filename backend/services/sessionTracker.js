@@ -56,8 +56,16 @@ async function flushPersistedData() {
       await fs.promises.mkdir(DATA_DIR, { recursive: true });
     }
     const data = {
-      active: Array.from(activeSessions.values()),
-      history: sessionHistory.slice(-500)
+      active: Array.from(activeSessions.values()).map(s => {
+        const copy = { ...s };
+        delete copy.ip; // Strictly redact raw IP from persistent storage for privacy
+        return copy;
+      }),
+      history: sessionHistory.slice(-500).map(s => {
+        const copy = { ...s };
+        delete copy.ip;
+        return copy;
+      })
     };
     await Promise.all([
       fs.promises.writeFile(SESSIONS_FILE, JSON.stringify(data, null, 2), 'utf8'),

@@ -37,6 +37,9 @@ export default function UserMenu() {
 
   const logout = async () => {
     try { await api.post('/api/auth/logout'); } catch (_) {}
+    sessionStorage.removeItem('osint_token');
+    sessionStorage.removeItem('osint_verified_email');
+    sessionStorage.removeItem('osint_target_email');
     navigate('/search', { replace: true });
   };
 

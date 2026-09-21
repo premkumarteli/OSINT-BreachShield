@@ -65,6 +65,7 @@ describe('Telegram Scraper Live Feed Redaction Verification', () => {
           EMAIL_USER: '',
           EMAIL_PASS: '',
           OTP_EXPIRY_MINUTES: '5',
+          SKIP_OTP: 'false',
           ENABLE_TELEGRAM_SCRAPER: 'true'
         },
         stdio: ['ignore', 'pipe', 'pipe']

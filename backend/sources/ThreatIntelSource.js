@@ -17,14 +17,16 @@ class ThreatIntelSource extends BreachSource {
           source: 'Public_Threat_Intel_Feed',
           year: new Date().getFullYear().toString(),
           dataClasses: ['MALICIOUS_IOC', 'THREAT_INDICATOR'],
-          sourceType: 'LIVE_SCRAPER',
-          raw: `[THREAT INTEL REPUTATION] Target ${normalizedTarget} flagged with elevated risk indicators.`
+          sourceType: 'LOCAL',
+          isSimulated: true,
+          raw: `[RULE-BASED REPUTATION] Target ${normalizedTarget} matched local heuristic (no live intel feed consulted).`
         });
 
         packets.push({
           query: normalizedTarget,
-          info: `[PUBLIC THREAT INTEL FEED]\nIndicator: ${normalizedTarget}\nRisk Tag: HIGH_SUSPICION_DOMAIN\nThreat Score: 85/100`,
-          source: 'Public_Threat_Intel_Feed'
+          info: `[SIMULATED THREAT INTEL MATCH - NO LIVE FEED CONSULTED]\nIndicator: ${normalizedTarget}\nRisk Tag: HIGH_SUSPICION_DOMAIN\nNOTE: Rule-based heuristic result shown for demonstration only.`,
+          source: 'Public_Threat_Intel_Feed',
+          isSimulated: true
         });
       }
     }

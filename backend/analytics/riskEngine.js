@@ -25,7 +25,10 @@ function analyzeExposure(rawText = '', query = '', aiAnalysis = null) {
         hasDocument: false,
         hasAddress: false,
         hasFatherName: false,
-        recordCount: 0
+        recordCount: 0,
+        correlatedRecordPairs: 0,
+        totalRecordPairs: 0,
+        sharedFieldTypes: []
       }
     };
   }
@@ -91,17 +94,54 @@ function analyzeExposure(rawText = '', query = '', aiAnalysis = null) {
     breakdown.push({ factor: 'Multiple Leak Sources', count: Math.max(recordCount, breachSources.length), points: 15 });
   }
 
-  // AI Factors
-  let phishingProb = 0.0;
-  let correlationScore = 0.0;
-  if (aiAnalysis) {
-    phishingProb = Number(aiAnalysis.max_phishing_probability || 0.0);
-    if (phishingProb > 0.40) {
-      const phishPts = Math.min(30, Math.round(phishingProb * 30));
-      rawScore += phishPts;
-      breakdown.push({ factor: 'AI Phishing Probability', count: 1, points: phishPts });
+  // 2b. Cross-Record Entity Correlation
+    // Determines how many record pairs share the same identity fields (email/phone/document).
+    // A non-zero matched-pair count means the same person's data appears across distinct leaks.
+    const blockEntities = recordBlocks.map(block => ({
+      emails: new Set((block.match(emailRegex) || []).map(e => e.toLowerCase())),
+      phones: new Set(Array.from(block.matchAll(phoneRegex)).map(m => (m[1] || m[0]).replace(/\D/g, ''))),
+      docs: new Set(Array.from(block.matchAll(docRegex)).map(m => (m[1] || '').trim().toLowerCase()))
+    }));
+    let correlatedPairs = 0;
+    let totalRecordPairs = 0;
+    const sharedFieldTypes = new Set();
+    for (let i = 0; i < blockEntities.length; i++) {
+      for (let j = i + 1; j < blockEntities.length; j++) {
+        totalRecordPairs++;
+        const a = blockEntities[i];
+        const b = blockEntities[j];
+        const sharedEmails = [...a.emails].filter(x => b.emails.has(x)).length > 0;
+        const sharedPhones = [...a.phones].filter(x => b.phones.has(x)).length > 0;
+        const sharedDocs = [...a.docs].filter(x => b.docs.has(x)).length > 0;
+        if (sharedEmails || sharedPhones || sharedDocs) {
+          correlatedPairs++;
+          if (sharedEmails) sharedFieldTypes.add('email');
+          if (sharedPhones) sharedFieldTypes.add('phone');
+          if (sharedDocs) sharedFieldTypes.add('document');
+        }
+      }
     }
-  }
+
+    // AI Factors
+    let phishingProb = 0.0;
+    const correlationScore = totalRecordPairs > 0 ? (correlatedPairs / totalRecordPairs) : 0.0;
+
+    // Cross-Record Entity Correlation — feeds the risk score when the same
+    // identity fields recur across distinct leak records.
+    if (correlatedPairs > 0) {
+      const corrPts = Math.min(15, Math.round(correlatedPairs * 3));
+      rawScore += corrPts;
+      breakdown.push({ factor: 'Cross-Record Entity Correlation', count: correlatedPairs, points: corrPts });
+    }
+
+    if (aiAnalysis) {
+      phishingProb = Number(aiAnalysis.max_phishing_probability || 0.0);
+      if (phishingProb > 0.40) {
+        const phishPts = Math.min(30, Math.round(phishingProb * 30));
+        rawScore += phishPts;
+        breakdown.push({ factor: 'AI Phishing Probability', count: 1, points: phishPts });
+      }
+    }
 
   // Base score for confirmed breach
   rawScore = Math.max(20, rawScore);
@@ -121,12 +161,36 @@ function analyzeExposure(rawText = '', query = '', aiAnalysis = null) {
     riskColor = '#ffcc00';
   }
 
+  // Dynamic Recency: derived from latest breach year detected in text (decay over time)
+  const currentYear = new Date().getFullYear();
+  const yearMatches = Array.from(text.matchAll(/\b(20[1-3][0-9])\b/g)).map(m => parseInt(m[1], 10));
+  const latestYear = yearMatches.length > 0 ? Math.max(...yearMatches) : currentYear;
+  const ageYears = Math.max(0, currentYear - latestYear);
+  const recencyFactor = Math.max(0.20, Math.min(1.0, 1.0 - (ageYears * 0.10)));
+
+  // Dynamic Source Reliability: evaluated across recognized source categories
+  let reliabilitySum = 0;
+  let reliabilityCount = 0;
+  if (/public_breach|verified\s*catalog|\*\*[\s💾]*[a-zA-Z0-9._ -]+\*\*/i.test(text)) {
+    reliabilitySum += 0.95;
+    reliabilityCount++;
+  }
+  if (/telegram|bot|live_osint_feed/i.test(text)) {
+    reliabilitySum += 0.80;
+    reliabilityCount++;
+  }
+  if (/phishing|ioc|threat\s*intel|rule-based/i.test(text)) {
+    reliabilitySum += 0.65;
+    reliabilityCount++;
+  }
+  const sourceReliability = reliabilityCount > 0 ? (reliabilitySum / reliabilityCount) : 0.85;
+
   const factors = {
     phishing_probability: roundFour(phishingProb),
-    correlation_score: roundFour(recordCount > 1 ? 0.75 : 0.25),
-    source_reliability: 0.90,
+    correlation_score: roundFour(correlationScore),
+    source_reliability: roundFour(sourceReliability),
     severity: roundFour(severityFactor),
-    recency: 0.95
+    recency: roundFour(recencyFactor)
   };
 
   return {
@@ -142,7 +206,10 @@ function analyzeExposure(rawText = '', query = '', aiAnalysis = null) {
       hasDocument: docsFound.length > 0 || /document\s*number/i.test(text),
       hasAddress: addressMatches.length > 0 || /adres/i.test(text),
       hasFatherName: fatherMatches.length > 0 || /father/i.test(text),
-      recordCount
+      recordCount,
+      correlatedRecordPairs: correlatedPairs,
+      totalRecordPairs,
+      sharedFieldTypes: [...sharedFieldTypes]
     }
   };
 }

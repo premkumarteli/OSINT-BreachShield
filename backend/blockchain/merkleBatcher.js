@@ -114,6 +114,7 @@ async function flushBatch() {
       timestamp: new Date().toISOString(),
       leafCount: batch.length,
       merkleRoot: root,
+      retryCount: batch[0]?.retryCount || 0,
       proofs: proofs,
       leaves: batch.map((event, i) => ({
         eventId: event.eventId,
@@ -225,7 +226,8 @@ async function flushBatch() {
         batchRecord.status = 'failed';
         batchRecord.error = anchorErr.message;
         
-        // Re-queue events for retry
+        // Re-queue events for retry with incremented count
+        batch.forEach(e => { e.retryCount = (e.retryCount || 0) + 1; });
         batchQueue.unshift(...batch);
         writeQueue(batchQueue);
         

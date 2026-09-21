@@ -15,4 +15,22 @@ describe('BreachSource Registry (sources/registry.js) - Exclusive Telegram OSINT
     const scraper = new TelegramScraperSource('http://127.0.0.1:8001/query');
     assert.equal(scraper.sourceName, 'TelegramScraperSource');
   });
+
+  it('5.3: rule-based heuristic sources are labeled isSimulated / LOCAL, never claiming live data', async () => {
+    const sources = getEnabledSources({ pythonServiceUrl: 'http://127.0.0.1:8001/query' });
+    const phish = sources.find(s => s.constructor.name === 'PhishingFeedSource');
+    const intel = sources.find(s => s.constructor.name === 'ThreatIntelSource');
+    assert.ok(phish && intel, 'Both heuristic sources registered');
+
+    const phishRes = await phish.search('is@verify.com', 'A'.repeat(64));
+    const intelRes = await intel.search('login.secure.example.com', 'B'.repeat(64));
+
+    for (const res of [phishRes, intelRes]) {
+      assert.ok(res.hits.length === 1, 'Heuristic match produces a hit');
+      assert.ok(res.hits[0].isSimulated === true, 'Hit must be flagged simulated');
+      assert.equal(res.hits[0].sourceType, 'LOCAL');
+      assert.ok(/no live|SIMULATED/i.test(res.packets[0].info), 'Packet text must not claim a live feed');
+      assert.ok(!/\bPUBLIC (PHISHING|THREAT INTEL) FEED\b/i.test(res.packets[0].info), 'Must not impersonate a public live feed');
+    }
+  });
 });

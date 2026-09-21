@@ -6,9 +6,11 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "dev:chain": "npx hardhat node --config ../contracts/hardhat.config.js",
-    "dev:all": "npx concurrently --names chain,backend --kill-others \"npx hardhat node --config ../contracts/hardhat.config.js\" \"nodemon index.js\"",
-    "test": "node --test --test-concurrency=1 test/admin_api.test.js test/auth_search.test.js test/challenger_backend.test.js test/admin_ingest_auth.test.js test/source_registry.test.js test/scraper_redaction.test.js"
+    "dev:chain": "npm --prefix ../contracts run node",
+    "dev:all": "npx concurrently --names chain,backend --kill-others \"npm --prefix ../contracts run node\" \"nodemon index.js\"",
+    "test": "node --test --test-concurrency=1 test/admin_api.test.js test/auth_search.test.js test/challenger_backend.test.js test/admin_ingest_auth.test.js test/source_registry.test.js test/scraper_redaction.test.js test/stress_challenger.test.js test/k_anonymity.test.js test/risk_engine.test.js",
+    "test:blockchain": "node --test test/ai_blockchain.test.js",
+    "test:integrity": "node test/verify_audit_integrity.js"
   },
   "keywords": [],
   "author": "",
@@ -31,9 +33,7 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
     "concurrently": "^10.0.5",
-    "hardhat": "^3.15.0",
     "nodemon": "^3.1.7"
   }
 }

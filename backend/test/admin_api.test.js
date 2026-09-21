@@ -4,6 +4,10 @@
  * Validates admin OTP auth, role enforcement, active session presence, session termination,
  * IP/phone masking, gateway telemetry, test SMS dispatch, live settings mutation,
  * alerts resolution, and breach intelligence re-sync.
+ *
+ * NOTE: OTP security enforcement tests (SKIP_OTP=false) are in auth_search.test.js,
+ * challenger_backend.test.js, and stress_challenger.test.js which spawn their own
+ * servers with SKIP_OTP='false'.
  */
 
 const { describe, it, before, after } = require('node:test');
@@ -14,6 +18,8 @@ const { app } = require('../server');
 const { JWT_SECRET } = require('../config/env');
 const { registerOrTouchSession, touchHeartbeat, getActiveSessions, getSessionHistory } = require('../services/sessionTracker');
 const { logActivity, addAlert } = require('../services/auditService');
+
+const configuredAdminEmail = (process.env.ADMIN_EMAIL || 'admin@breachshield.io').trim().toLowerCase();
 
 let server;
 let baseUrl;
@@ -27,7 +33,7 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${port}`;
 
   adminToken = jwt.sign(
-    { sub: 'admin@breachshield.io', email: 'admin@breachshield.io', role: 'admin' },
+    { sub: configuredAdminEmail, email: configuredAdminEmail, role: 'admin' },
     JWT_SECRET,
     { expiresIn: '1h' }
   );
@@ -61,7 +67,7 @@ describe('BreachShield Admin Control API Test Suite', () => {
       const res = await fetch(`${baseUrl}/api/admin/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'admin@breachshield.io' })
+        body: JSON.stringify({ email: configuredAdminEmail })
       });
       assert.equal(res.status, 200);
       const data = await res.json();

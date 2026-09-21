@@ -1,26 +1,49 @@
+/* global globalThis */
 import axios from 'axios';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
 
 /**
+ * Canonicalizes an email or phone into the exact string the backend hashes.
+ *
+ * MUST mirror backend/ingest/kAnonymityStore.js normalizeTarget() line-for-line.
+ * If they drift, the client hashes a different byte string than the server,
+ * producing a different SHA-256 prefix and silently missing records. Any change
+ * here must be applied to the backend copy (and covered by the contract test
+ * in kAnonymity.contract.test.js).
+ */
+export function normalizeTarget(raw) {
+  const str = String(raw || '').trim().toLowerCase();
+  // Strip whitespace/dashes from phone numbers
+  if (/^[\d+\s()-]+$/.test(str)) {
+    let cleanPhone = str.replace(/[\s()-]/g, '');
+    if (cleanPhone.startsWith('+')) return cleanPhone;
+    if (cleanPhone.startsWith('91') && cleanPhone.length >= 11) return '+' + cleanPhone;
+    if (cleanPhone.length >= 9 && cleanPhone.length <= 11) return '+91' + cleanPhone;
+    return cleanPhone;
+  }
+  return str;
+}
+
+/**
  * Computes SHA-256 hash using native Web Crypto API in browser or Node/Jest fallback.
  */
 export async function computeSha256(text) {
-  const normalized = String(text || '').trim().toLowerCase();
+  const normalized = normalizeTarget(text);
 
   try {
-    if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle && typeof TextEncoder !== 'undefined') {
-      const msgUint8 = new TextEncoder().encode(normalized);
-      const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgUint8);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-    }
-  } catch (_) {}
+    // Pick an implementation that actually exposes `subtle`. In jsdom the
+    // window.crypto object exists but lacks `subtle`, which must not shadow
+    // Node's global.crypto / globalThis.crypto (which provides it).
+    const candidates = [];
+    if (typeof window !== 'undefined' && window.crypto) candidates.push(window.crypto);
+    if (typeof global !== 'undefined' && global.crypto) candidates.push(global.crypto);
+    if (typeof globalThis !== 'undefined' && globalThis.crypto) candidates.push(globalThis.crypto);
+    const cryptoObj = candidates.find(c => c && c.subtle);
 
-  try {
-    if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle) {
+    if (cryptoObj && cryptoObj.subtle && typeof TextEncoder !== 'undefined') {
       const msgUint8 = new TextEncoder().encode(normalized);
-      const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', msgUint8);
+      const hashBuffer = await cryptoObj.subtle.digest('SHA-256', msgUint8);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
     }

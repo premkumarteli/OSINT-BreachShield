@@ -73,9 +73,8 @@ router.post('/auth/send-otp', async (req, res) => {
     const targetEmail = (email || '').trim().toLowerCase();
 
     const allowedAdminEmails = [configuredAdminEmail, smtpEmail].filter(Boolean);
-    const skipOtp = (process.env.SKIP_OTP || '').toLowerCase() === 'true';
 
-    if (!targetEmail || (!allowedAdminEmails.includes(targetEmail) && !skipOtp)) {
+    if (!targetEmail || !allowedAdminEmails.includes(targetEmail)) {
       return res.status(403).json({ error: 'Unauthorized administrator email identifier.' });
     }
 

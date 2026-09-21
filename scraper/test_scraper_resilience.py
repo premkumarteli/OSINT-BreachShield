@@ -34,7 +34,7 @@ class TestScraperResilience(unittest.IsolatedAsyncioTestCase):
             self.assertIn("pagination", res)
             self.assertEqual(res["pagination"], {"current": 1, "total": 1})
             self.assertIn("OSINT TARGET: test_user@example.com", res["response"])
-            self.assertIn("HIGH RISK EXPOSURE", res["response"])
+            self.assertIn("DEMO MODE", res["response"])
             print("[PASS] test_01: Disconnected/Unauthorized fallback returns structured demo_info")
 
     async def test_02_telegram_rate_limit_flood_wait_fallback(self):

@@ -304,7 +304,7 @@ def main():
     # Save all results
     results = {
         "test_set_size": len(test_labels),
-        "test_distribution": {k: v for k, v in test_dist.items()},
+        "test_distribution": {int(k): v for k, v in test_dist.items()},
         "naive_baseline_accuracy": naive_accuracy / 100,
         "models": {
             name: {

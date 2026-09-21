@@ -25,14 +25,16 @@ class PhishingFeedSource extends BreachSource {
           source: 'Public_Phishing_Feed',
           year: new Date().getFullYear().toString(),
           dataClasses: ['PHISHING_URL', 'MALICIOUS_DOMAIN'],
-          sourceType: 'LIVE_SCRAPER',
-          raw: `[PHISHING FEED MATCH] Domain ${targetDomain} identified in active phishing database: ${matchingUrl}`
+          sourceType: 'LOCAL',
+          isSimulated: true,
+          raw: `[RULE-BASED MATCH] Domain ${targetDomain} matched local phishing heuristic (no live feed consulted). Simulated URL shown for analysis only.`
         });
 
         packets.push({
           query: normalizedTarget,
-          info: `[PUBLIC PHISHING FEED] Active threat record matching domain: ${targetDomain}\nURL: ${matchingUrl}\nThreat Type: Phishing / Credential Harvesting`,
-          source: 'Public_Phishing_Feed'
+          info: `[SIMULATED PHISHING MATCH - NO LIVE FEED CONSULTED]\nDomain: ${targetDomain}\nURL: ${matchingUrl}\nThreat Type: Phishing / Credential Harvesting\nNOTE: Rule-based heuristic result shown for demonstration only.`,
+          source: 'Public_Phishing_Feed',
+          isSimulated: true
         });
       }
     } catch (err) {

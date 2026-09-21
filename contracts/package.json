@@ -3,7 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "description": "Hardhat configuration for AnchorRegistry.sol",
+  "scripts": {
+    "node": "hardhat node",
+    "deploy": "hardhat run scripts/deploy.js --network local",
+    "compile": "hardhat compile"
+  },
   "dependencies": {
-    "hardhat": "~2.22.0"
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.2",
+    "hardhat": "^2.28.0"
   }
 }

@@ -61,8 +61,6 @@ class OllamaClient:
                 data = json.loads(resp.read().decode())
                 models = [m.get("name", "") for m in data.get("models", [])]
                 self._available = any(self.model in m for m in models)
-                if not self._available and models:
-                    self._available = True
                 return self._available
         except Exception:
             self._available = False

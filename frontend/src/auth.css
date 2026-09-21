@@ -322,6 +322,73 @@
   text-decoration: underline;
 }
 
+/* OTP Verification Styles */
+.otp-digit-input {
+  letter-spacing: 6px;
+  font-size: 1.25rem;
+  text-align: center;
+  font-family: 'Fira Mono', monospace;
+  font-weight: 700;
+}
+
+.otp-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 640px;
+  margin-top: 14px;
+  padding: 0 4px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.otp-expiry-hint {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.otp-expiry-hint strong {
+  color: #00eaff;
+  font-family: 'Orbitron', monospace;
+}
+
+.otp-resend-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 234, 255, 0.35);
+  color: #00eaff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.otp-resend-btn:hover:not(:disabled) {
+  background: rgba(0, 234, 255, 0.15);
+  border-color: #00eaff;
+  box-shadow: 0 0 10px rgba(0, 234, 255, 0.3);
+}
+
+.otp-resend-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #64748b;
+}
+
+/* Slide in animation */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+  animation: slideIn 0.35s ease-out forwards;
+}
+
 @media (max-width: 768px) {
   .exposure-summary-card {
     flex-direction: column;

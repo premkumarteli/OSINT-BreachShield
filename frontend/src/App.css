@@ -4,6 +4,11 @@
 
 /* Base */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@600;700&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 :root {
   /* Video-matching accent palette (cyan/blue) */
   --accent: #00eaff;         /* primary neon cyan */
@@ -127,7 +132,7 @@ body::before {
 }
 
 .inline-disclaimer {
-  margin-top: 150px;
+  margin-top: 24px;
   background: rgba(0, 20, 40, 0.6);
   border: 1px solid rgba(0, 234, 255, 0.25);
   color: #c6f7ff;
@@ -181,9 +186,12 @@ body::before {
 
 .dashboard {
   position: relative;
-  z-index: 1; /* make sure your content is above overlay */
-  display: flex; /* layout sidebar + results */
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   height: 100vh;
+  width: 100%;
 }
 
 .app-container {
@@ -220,12 +228,14 @@ body::before {
 .results {
   position: fixed;
   inset: 0;
-  pointer-events: none; /* allow clicks to go through except on the packet */
+  pointer-events: auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 20;
-  padding: 24px; /* keep spacing on small screens */
+  padding: 24px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Center the search row */
@@ -274,16 +284,18 @@ body::before {
 /* Search input with neon glow */
 /* Input */
 .search-input {
-  flex: 1;
-  font-size: 1.1rem;
-  padding: 14px 18px;
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 1.05rem;
+  height: 50px;
+  padding: 0 18px;
   background: rgba(0, 20, 40, 0.5);
   border: 1px solid rgba(0, 180, 255, 0.3);
   border-radius: 8px;
   color: #8eeaff;
   box-shadow: var(--accent-glow-soft);
   transition: all 0.25s ease;
-  width: 340px;
+  width: 100%;
 }
 
 .search-input::placeholder {
@@ -299,15 +311,16 @@ body::before {
 /* Search Type Dropdown */
 .search-type-select {
   font-size: 1rem;
-  padding: 14px 12px;
+  height: 50px;
+  padding: 0 12px;
   background: rgba(0, 20, 40, 0.7);
   border: 1px solid rgba(0, 180, 255, 0.3);
   border-radius: 8px;
   color: #8eeaff;
   box-shadow: var(--accent-glow-soft);
   transition: all 0.25s ease;
-  margin-right: 12px;
-  min-width: 100px;
+  margin-right: 0;
+  min-width: 110px;
   cursor: pointer;
 }
 
@@ -416,17 +429,24 @@ body::before {
 
 /* Button */
 .search-btn {
+  height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   color: #fff;
   border: none;
-  padding: 14px 24px;
+  padding: 0 24px;
   border-radius: 8px;
   font-weight: bold;
+  font-size: 0.92rem;
   letter-spacing: 1px;
   cursor: pointer;
   text-transform: uppercase;
   transition: all 0.25s ease;
   box-shadow: var(--accent-glow-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .search-btn:hover {
@@ -882,33 +902,37 @@ body::before {
   }
   .terminal::-webkit-scrollbar { display: none; }
   .search-card {
-    top: 26vh; /* center-ish vertically on phones */
+    top: 34vh; /* adjusted from 26vh to prevent collision with hero header */
     width: 92%;
     max-width: 92%;
-    padding: 10px 14px;
+    padding: 14px;
   }
   .hero-credit { font-size: 0.95rem; }
   .search-row {
     flex-direction: column;
     gap: 10px;
-    max-width: 94%;
+    width: 100%;
+    max-width: 100%;
   }
   .search-type-select {
     width: 100%;
     margin-right: 0;
-    margin-bottom: 10px;
+    margin-bottom: 0;
     font-size: 1rem;
-    padding: 12px;
+    height: 48px;
+    padding: 0 12px;
   }
   .search-input {
     width: 100%;
     font-size: 1rem;
-    padding: 12px 14px;
+    height: 48px;
+    padding: 0 14px;
   }
   .search-btn {
     width: 100%;
     font-size: 1rem;
-    padding: 12px 14px;
+    height: 48px;
+    padding: 0 14px;
   }
 
   .searching-text {
@@ -979,12 +1003,7 @@ body::before {
 /* ===== RESULTS REDESIGN ===== */
 .results-redesigned {
   width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  z-index: 20;
 }
 
 .packet-redesigned {
@@ -992,8 +1011,9 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  width: 90%;
+  width: 100%;
   max-width: 960px;
+  margin: 20px auto 60px auto;
 }
 
 .results-header-bar {
@@ -1160,7 +1180,7 @@ body::before {
 }
 .breach-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 14px;
 }
 .breach-card {
@@ -1191,6 +1211,7 @@ body::before {
   font-size: 0.85rem;
   color: #eafaff;
   font-weight: 700;
+  word-break: break-word;
 }
 .card-category-tag {
   font-size: 0.7rem;
@@ -1501,10 +1522,10 @@ html { scroll-behavior: smooth; }
   to { opacity: 1; transform: translateX(0); }
 }
 
-/* Score ring rotation on load */
+/* Score ring reveal on load - keep numbers upright with a smooth scale-fade */
 @keyframes ringReveal {
-  from { transform: rotate(-90deg) scale(0.8); opacity: 0; }
-  to { transform: rotate(0deg) scale(1); opacity: 1; }
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 .risk-score-ring {
   animation: ringReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, ringPulse 3s ease-in-out 0.6s infinite;
@@ -1716,3 +1737,23 @@ html { scroll-behavior: smooth; }
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Slide In Animation */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.slide-in {
+  animation: slideIn 0.35s ease-out forwards;
+}
+
+/* Accessibility: respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

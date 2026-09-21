@@ -21,15 +21,17 @@ class XGBoostPhishingClassifier:
         self.model = None
         if XGBOOST_AVAILABLE:
             try:
-                self.model = xgb.XGBClassifier(
+                xgb_params = dict(
                     n_estimators=100,
                     max_depth=6,
                     learning_rate=0.1,
-                    use_label_encoder=False,
                     eval_metric='logloss',
                     random_state=42,
                     verbosity=0,
                 )
+                if int(xgb.__version__.split('.')[0]) < 2:
+                    xgb_params['use_label_encoder'] = False
+                self.model = xgb.XGBClassifier(**xgb_params)
                 self._train_default_model()
             except Exception:
                 self.model = None

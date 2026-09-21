@@ -1,10 +1,14 @@
-/** @type import('hardhat/config').HardhatUserConfig */
+const path = require('path');
+require('dotenv').config();
+require('@nomicfoundation/hardhat-ethers');
+
 module.exports = {
   solidity: "0.8.20",
   paths: {
-    sources: "./contracts",
-    artifacts: "./artifacts",
-    cache: "./cache",
+    root: __dirname,
+    sources: path.resolve(__dirname, "contracts"),
+    artifacts: path.resolve(__dirname, "artifacts"),
+    cache: path.resolve(__dirname, "cache"),
   },
   networks: {
     hardhat: {

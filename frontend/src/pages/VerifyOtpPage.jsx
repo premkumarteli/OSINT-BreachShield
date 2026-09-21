@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import api from '../lib/api';
-import bgVideo1 from '../bg1.mp4';
 import '../App.css';
 import '../auth.css';
+
+const bgVideo1 = '/bg1.mp4';
 
 export default function VerifyOtpPage() {
   const navigate = useNavigate();
@@ -122,7 +123,7 @@ export default function VerifyOtpPage() {
       </div>
 
       <div className="search-card" role="region" aria-label="otp-verification-card">
-        <form onSubmit={handleVerify} style={{ width: '100%' }}>
+        <form onSubmit={handleVerify} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="search-row centered">
             <input
               className="search-input otp-digit-input"

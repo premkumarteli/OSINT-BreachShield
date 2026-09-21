@@ -43,6 +43,13 @@ class TelegramScraperSource extends BreachSource {
       packets = data.packets || (botText ? [{ query: normalizedTarget, info: botText, source: 'LIVE_OSINT_FEED' }] : []);
       pagination = data.pagination || null;
 
+      // Tag any packet that carries demo/fallback text so the UI can label it honestly.
+      packets = packets.map(pkt => {
+        const info = pkt.info || '';
+        const simulated = /demo mode|simulated|no live data|demonstration/i.test(info);
+        return simulated ? { ...pkt, isSimulated: true } : pkt;
+      });
+
       // Extract high-level Finding metadata
       if (botText && !/no\s*results?(\s*found)?/i.test(botText)) {
         const exposureCheck = analyzeExposure(botText, normalizedTarget);
@@ -54,12 +61,19 @@ class TelegramScraperSource extends BreachSource {
         if (exposureCheck.entities.hasAddress) dataClasses.push('PHYSICAL_ADDRESS');
         if (dataClasses.length === 0) dataClasses.push('IDENTITY');
 
+        // Flag demo-mode / fallback text: the upstream scraper served simulated
+        // packets (e.g. no Telegram credentials, paywall, rate-limit fallback).
+        const isSimulated = /demo mode|simulated|no live data|demonstration/i.test(botText);
+
         hits.push({
-          source: 'Live_OSINT_Feed',
+          source: isSimulated ? 'Demo_Simulated_Feed' : 'Live_OSINT_Feed',
           year: new Date().getFullYear().toString(),
           dataClasses,
-          sourceType: 'LIVE_SCRAPER',
-          raw: botText
+          sourceType: isSimulated ? 'LOCAL' : 'LIVE_SCRAPER',
+          isSimulated,
+          raw: isSimulated
+            ? '[SIMULATED DEMO RESPONSE] Upstream scraper returned demo/fallback text, not live breach data.'
+            : botText
         });
 
         // Auto-Cache Live Found Breach (METADATA ONLY — NO RAW PERSISTENCE)

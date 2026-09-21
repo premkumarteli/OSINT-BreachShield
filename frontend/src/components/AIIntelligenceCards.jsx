@@ -83,13 +83,13 @@ export default function AIIntelligenceCards({ analytics, auditLedger, blockchain
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
             {urlAnalyses.map((u, i) => (
               <div key={i} style={{ background: '#030712', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ maxWidth: '70%' }}>
+                <div style={{ flex: '1 1 240px', minWidth: 0 }}>
                   <div style={{ color: '#00f3ff', fontFamily: 'monospace', wordBreak: 'break-all', fontSize: '13px' }}>{u.url}</div>
                   <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
                     Model: <strong>{u.model || u.model_name}</strong> | Latency: <strong>{u.inference_latency_ms}ms</strong>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <span style={{
                     padding: '4px 10px',
                     borderRadius: '4px',
@@ -116,14 +116,15 @@ export default function AIIntelligenceCards({ analytics, auditLedger, blockchain
         <p style={{ color: '#94a3b8', fontSize: '13px', margin: '4px 0 12px 0' }}>
           Compare phishing classification across HF UrlBERT, CNN, RNN, Transformer, and XGBoost architectures.
         </p>
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
           <input
             type="text"
             value={compareUrl}
             onChange={(e) => setCompareUrl(e.target.value)}
             placeholder="Enter URL to compare (e.g. https://suspicious-site.xyz/login)"
             style={{
-              flex: 1,
+              flex: '1 1 260px',
+              minWidth: 0,
               background: '#030712',
               border: '1px solid rgba(168,85,247,0.3)',
               borderRadius: '6px',
@@ -139,6 +140,7 @@ export default function AIIntelligenceCards({ analytics, auditLedger, blockchain
             onClick={handleCompare}
             disabled={comparing || !compareUrl.trim()}
             style={{
+              flex: '0 0 auto',
               background: comparing ? '#1a1a2e' : 'rgba(168,85,247,0.2)',
               color: '#a855f7',
               border: '1px solid #a855f7',
@@ -178,7 +180,7 @@ export default function AIIntelligenceCards({ analytics, auditLedger, blockchain
             </div>
 
             {/* Individual model cards — validated models */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '10px' }}>
               {Object.entries(compareResult.models || {}).filter(([key]) => key !== 'xgboost').map(([key, model]) => {
                 const color = MODEL_COLORS[key] || { bg: '#64748b', label: key };
                 return (
@@ -222,7 +224,7 @@ export default function AIIntelligenceCards({ analytics, auditLedger, blockchain
                 <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
                   Not part of ensemble — experimental model
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '10px' }}>
                   <div style={{ background: '#030712', padding: '14px', borderRadius: '8px', border: '1px solid #64748b33' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <span style={{ color: '#64748b', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>XGBoost (experimental)</span>

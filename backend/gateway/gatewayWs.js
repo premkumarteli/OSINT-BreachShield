@@ -53,6 +53,17 @@ function setupGatewayWebSocket(server) {
         return;
       }
 
+      // JSON primitives (null, numbers, strings, booleans) are not valid
+      // gateway payloads; treat them as malformed to avoid crashes below.
+      if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+        console.warn('[Gateway WS] Non-object JSON message received:', msgStr);
+        if (!isAuthenticated) {
+          ws.send(JSON.stringify({ type: 'AUTH_FAILED', error: 'Invalid message format' }));
+          ws.close(1008, 'Invalid message format');
+        }
+        return;
+      }
+
       // 1. Initial Handshake & JWT Authentication
       if (!isAuthenticated) {
         const { deviceId, gatewayToken, token } = data;

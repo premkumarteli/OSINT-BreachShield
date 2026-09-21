@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import bgVideo1 from '../bg1.mp4';
 import '../App.css';
 import '../auth.css';
 
+const bgVideo1 = '/bg1.mp4';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SearchPage() {

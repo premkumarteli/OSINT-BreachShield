@@ -3,10 +3,11 @@ import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import api from '../lib/api';
 import BreachTimeline from '../components/BreachTimeline';
 import AIIntelligenceCards from '../components/AIIntelligenceCards';
-import bgVideo2 from '../bg2.mp4';
 import '../App.css';
 import '../auth.css';
 import '../results.css';
+
+const bgVideo2 = '/bg2.mp4';
 
 export default function ResultsPage() {
   const navigate = useNavigate();
@@ -156,6 +157,12 @@ export default function ResultsPage() {
                   {exposure.entities?.recordCount > 0 && (
                     <span className="entity-chip info-chip">{exposure.entities.recordCount} Record(s) Found</span>
                   )}
+                  {exposure.entities?.correlatedRecordPairs > 0 && (
+                    <span className="entity-chip correlation-chip">
+                      {exposure.entities.correlatedRecordPairs} Correlated Record Pair(s):
+                      {(exposure.entities.sharedFieldTypes || []).map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(', ')}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -175,6 +182,67 @@ export default function ResultsPage() {
                         <span className="factor-text">{item.factor}</span>
                         <span className="factor-pts">+{item.points}</span>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Factor Attribution — normalized risk factors incl. entity correlation */}
+            {exposure.factors && (
+              <div className="factor-attribution">
+                <h3 className="section-title">
+                  <span className="section-icon">⚖️</span>
+                  Risk Factor Attribution
+                </h3>
+                <p className="factor-note">
+                  Normalized factors that feed the exposure score. Entity correlation reflects how many
+                  distinct leak records share the same identity fields (email / phone / document).
+                </p>
+                <div className="factors-grid">
+                  {[
+                    {
+                      key: 'correlation_score',
+                      label: 'Entity Correlation',
+                      value: exposure.factors.correlation_score || 0,
+                      hint: exposure.entities?.correlatedRecordPairs > 0
+                        ? `${exposure.entities.correlatedRecordPairs} record pair(s) share identity fields (${(exposure.entities.sharedFieldTypes || []).join(', ') || 'n/a'})`
+                        : 'No shared identity fields across leaks'
+                    },
+                    {
+                      key: 'phishing_probability',
+                      label: 'AI Phishing Probability',
+                      value: exposure.factors.phishing_probability || 0,
+                      hint: 'Bulk URL scan phishing likelihood from AI models'
+                    },
+                    {
+                      key: 'severity',
+                      label: 'Severity',
+                      value: exposure.factors.severity || 0,
+                      hint: 'Sensitivity of exposed data classes'
+                    },
+                    {
+                      key: 'recency',
+                      label: 'Recency',
+                      value: exposure.factors.recency || 0,
+                      hint: 'How recent the threat intelligence is'
+                    },
+                    {
+                      key: 'source_reliability',
+                      label: 'Source Reliability',
+                      value: exposure.factors.source_reliability || 0,
+                      hint: 'Trustworthiness of the intelligence feed'
+                    }
+                  ].map(f => (
+                    <div key={f.key} className={`factor-card ${f.key === 'correlation_score' && exposure.entities?.correlatedRecordPairs > 0 ? 'correlation-highlight' : ''}`}>
+                      <div className="factor-label-row">
+                        <span className="factor-text">{f.label}</span>
+                        <span className="factor-pts">{(f.value * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="factor-bar-track">
+                        <div className="factor-bar" style={{ width: `${Math.min(100, f.value * 100)}%` }}></div>
+                      </div>
+                      <span className="factor-hint">{f.hint}</span>
                     </div>
                   ))}
                 </div>
@@ -250,6 +318,9 @@ export default function ResultsPage() {
                             <span className="preview-title">{rec.title}</span>
                             <span className="preview-year">{rec.year}</span>
                           </div>
+                          {rec.isSimulated && (
+                            <span className="simulated-badge">SIMULATED</span>
+                          )}
                           <div className="preview-tags">
                             {(rec.dataClasses || []).slice(0, 4).map((dc, i) => (
                               <span key={i} className="preview-tag">{dc.replace(/_/g, ' ')}</span>
@@ -282,6 +353,9 @@ export default function ResultsPage() {
                           </div>
                           <span className="card-year-badge">{rec.year}</span>
                         </div>
+                        {rec.isSimulated && (
+                          <span className="simulated-badge">SIMULATED</span>
+                        )}
                         <div className="card-pills-row">
                           {(rec.dataClasses || []).map((dc, dcIdx) => (
                             <span key={dcIdx} className="data-pill">{dc.replace(/_/g, ' ')}</span>
@@ -325,6 +399,7 @@ export default function ResultsPage() {
                 <div className="terminal-body">
                   {packets.map((pkt, pIdx) => (
                     <pre key={pIdx} className="terminal-output">
+                      {pkt.isSimulated && <span className="simulated-badge">SIMULATED</span>}
                       {pkt.info || 'No breach details available.'}
                     </pre>
                   ))}

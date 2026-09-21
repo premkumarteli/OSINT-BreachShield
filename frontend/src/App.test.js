@@ -178,7 +178,14 @@ describe('ResultsPage (/results route)', () => {
             score: 75,
             riskLevel: 'HIGH',
             riskColor: '#ff3b3b',
-            entities: { recordCount: 3, phoneCount: 1, hasDocument: true },
+            entities: { recordCount: 3, phoneCount: 1, hasDocument: true, correlatedRecordPairs: 1, totalRecordPairs: 1, sharedFieldTypes: ['email'] },
+            factors: {
+              correlation_score: 1,
+              phishing_probability: 0,
+              severity: 0.95,
+              recency: 0.95,
+              source_reliability: 0.9
+            },
             breakdown: [
               { factor: 'Multiple database breach occurrences', points: 40 },
               { factor: 'Phone number linked to dark web dump', points: 35 }
@@ -211,6 +218,11 @@ describe('ResultsPage (/results route)', () => {
       expect(screen.getByText('75')).toBeInTheDocument();
       expect(screen.getByText(/THREAT LEVEL: HIGH/i)).toBeInTheDocument();
       expect(screen.getByText(/Multiple database breach occurrences/i)).toBeInTheDocument();
+      // Entity correlation surfaced in UI
+      expect(screen.getByText(/Risk Factor Attribution/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Entity Correlation/i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Correlated Record Pair/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 record pair\(s\) share identity fields/i)).toBeInTheDocument();
     });
 
     // Check View Mode Switcher
@@ -220,5 +232,54 @@ describe('ResultsPage (/results route)', () => {
     fireEvent.click(timelineBtn);
     expect(screen.getByText(/CHRONOLOGICAL EXPOSURE TIMELINE/i)).toBeInTheDocument();
     expect(screen.getByText(/Collection #1/i)).toBeInTheDocument();
+  });
+
+  test('renders SIMULATED badge and honest details for rule-based heuristic records', async () => {
+    sessionStorage.setItem('osint_verified_email', 'victim@domain.com');
+
+    const mockSearchResponse = {
+      success: true,
+      data: {
+        packets: [
+          { info: '[SIMULATED PHISHING MATCH - NO LIVE FEED CONSULTED]' }
+        ],
+        records: [
+          {
+            id: 1,
+            source: 'Public_Phishing_Feed',
+            title: 'Public_Phishing_Feed Threat Intelligence Spill',
+            year: '2026',
+            category: 'Multi-Source Intelligence',
+            sourceType: 'LOCAL',
+            isSimulated: true,
+            dataClasses: ['PHISHING_URL', 'MALICIOUS_DOMAIN'],
+            details: 'Simulated / rule-based heuristic match for demonstration (no live feed consulted).'
+          }
+        ],
+        analytics: { exposure: { score: 30, riskLevel: 'MEDIUM', entities: {}, breakdown: [] }, timeline: [] }
+      }
+    };
+
+    api.post.mockResolvedValueOnce({ data: mockSearchResponse });
+
+    render(
+      <MemoryRouter initialEntries={['/results']}>
+        <Routes>
+          <Route path="/results" element={<ResultsPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      // Badge visible in the overview preview list
+      expect(screen.getAllByText('SIMULATED').length).toBeGreaterThan(0);
+    });
+
+    // Cards view shows honest details wording on simulated records
+    const cardsBtn = screen.getByRole('button', { name: /cards-view/i });
+    fireEvent.click(cardsBtn);
+    await waitFor(() => {
+      expect(screen.getByText(/no live feed consulted/i)).toBeInTheDocument();
+    });
   });
 });

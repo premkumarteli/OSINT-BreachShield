@@ -12,6 +12,7 @@ class OSINTThreatAnalyzer:
     def __init__(self):
         self._phishing_classifier = None
         self._entity_correlator = None
+        self._severity_classifier = None
         self._cnn = None
         self._rnn = None
         self._transformer = None
@@ -30,6 +31,13 @@ class OSINTThreatAnalyzer:
             from .entity_correlator import EntityCorrelator
             self._entity_correlator = EntityCorrelator()
         return self._entity_correlator
+
+    @property
+    def severity_classifier(self):
+        if self._severity_classifier is None:
+            from .severity_classifier import SeverityClassifier
+            self._severity_classifier = SeverityClassifier()
+        return self._severity_classifier
 
     @property
     def cnn(self):
@@ -80,8 +88,10 @@ class OSINTThreatAnalyzer:
         max_phish_prob = max(valid_probs, default=0.0)
         has_phishing_url = any(u.get("classification") in ["PHISHING", "SUSPICIOUS"] for u in url_analyses)
 
-        from .entity_correlator import EntityCorrelator
-        entities = EntityCorrelator.extract_entities(text)
+        entities = self.entity_correlator.extract_entities(text)
+
+        severity = self.severity_classifier.classify(text, query=query)
+        severity_analysis = severity if severity.get("success") else None
 
         latency_ms = int((time.perf_counter() - start_t) * 1000)
 
@@ -91,6 +101,7 @@ class OSINTThreatAnalyzer:
             "max_phishing_probability": round(float(max_phish_prob), 4),
             "has_phishing_url": has_phishing_url,
             "extracted_entities": entities,
+            "severity_analysis": severity_analysis,
             "inference_latency_ms": max(1, latency_ms)
         }
 
