@@ -2,49 +2,123 @@ import docx
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.section import WD_SECTION
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
 import os
+import re
 
+template_path = r'C:\Users\prem\OSINT-breach-Finder-main\docs\paper\templates\conference_template_std.docx'
 output_docx = r'C:\Users\prem\OSINT-breach-Finder-main\docs\paper\BreachShield_IEEE_Paper.docx'
 figures_dir = r'C:\Users\prem\OSINT-breach-Finder-main\docs\paper\figures'
 
 EXACT_TITLE = "BreachShield: A Privacy-Preserving OSINT Breach Intelligence Platform with k-Anonymous Search and Blockchain-Anchored Audit Logging"
 
-doc = docx.Document()
+EXACT_ABSTRACT = (
+    "Breach-checking services face a structural privacy tension: to learn whether an identifier has been compromised, "
+    "a user is typically asked to submit that identifier, in the clear, to a third-party server. This paper presents "
+    "BreachShield, an OSINT-based breach intelligence platform that avoids this exposure through a client-side k-anonymity "
+    "search protocol (5-hex-character SHA-256 prefix disclosure), combined with a dual-channel out-of-band OTP identity gate, "
+    "a pluggable multi-source OSINT registry, a dynamically-computed exposure risk-scoring engine, a gradient-boosted "
+    "breach-severity classifier (XGBoost, 89.2% test accuracy on 1,034 curated records), and a Merkle-tree-batched audit log "
+    "anchored to a local EVM smart contract. The platform's backend and frontend test suites pass in full (101/101 and 50/50 "
+    "respectively), and a live pretrained URL-transformer phishing classifier is confirmed functioning on the production search path. "
+    "We document the system at the level of its real class structures, call sequences, and data flow, report a comparative benchmark "
+    "of tree-based against deep-learning severity classification, and give a transparent account of the platform's current "
+    "limitations — including an unresolved blockchain auto-deployment defect, two not-yet-integrated OSINT source adapters, and a "
+    "data-scarce CRITICAL severity class — together with a concrete remediation plan."
+)
 
-# IEEE A4 standard page geometry
-sec0 = doc.sections[0]
-sec0.page_width = Inches(8.27)
-sec0.page_height = Inches(11.69)
-sec0.top_margin = Inches(0.70)
-sec0.bottom_margin = Inches(0.75)
-sec0.left_margin = Inches(0.55)
-sec0.right_margin = Inches(0.55)
+EXACT_INDEX_TERMS = (
+    "OSINT, breach intelligence, dark web monitoring, k-anonymity, XGBoost, blockchain audit log, "
+    "tamper-evident logging, phishing detection."
+)
 
-# Title
-p_title = doc.add_paragraph()
+# Load the official IEEE standard conference template
+doc = docx.Document(template_path)
+
+# Clear all placeholder elements from body except final sectPr
+body_el = doc._body._element
+children = list(body_el)
+for child in children:
+    if child.tag.endswith('sectPr'):
+        continue
+    body_el.remove(child)
+
+# Title (style: paper title, 24pt, centered)
+p_title = doc.add_paragraph(style='paper title')
 p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p_title.paragraph_format.space_before = Pt(0)
-p_title.paragraph_format.space_after = Pt(4)
-p_title.paragraph_format.line_spacing = 1.05
+p_title.paragraph_format.space_after = Pt(6)
 r_title = p_title.add_run(EXACT_TITLE)
 r_title.font.name = 'Times New Roman'
-r_title.font.size = Pt(18)
-r_title.font.bold = True
+r_title.font.size = Pt(24)
 
+# Authors Block (Clean 2-block layout matching exact user specification)
 def set_cell_no_borders(cell):
     tcPr = cell._tc.get_or_add_tcPr()
     for b in tcPr.xpath('./w:tcBorders'):
         tcPr.remove(b)
     borders_el = parse_xml(f'<w:tcBorders {nsdecls("w")}><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>')
-    succ = tcPr.xpath('./w:shd | ./w:noWrap | ./w:tcMar | ./w:textDirection | ./w:tcFitText | ./w:vAlign | ./w:hideMark | ./w:headers')
-    if succ:
-        succ[0].addprevious(borders_el)
-    else:
-        tcPr.append(borders_el)
+    tcPr.append(borders_el)
 
+tbl_auth = doc.add_table(rows=1, cols=2)
+tbl_auth.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+cell0 = tbl_auth.cell(0, 0)
+cell0.width = Inches(3.7)
+p0 = cell0.paragraphs[0]
+p0.alignment = WD_ALIGN_PARAGRAPH.CENTER
+p0.paragraph_format.space_before = Pt(2)
+p0.paragraph_format.space_after = Pt(4)
+p0.paragraph_format.line_spacing = 1.05
+r0 = p0.add_run("Arvind D. H., Girishkumar N. M., Manoj, Premkumar Teli\n")
+r0.font.name = 'Times New Roman'; r0.font.size = Pt(9.5); r0.font.bold = True
+r0_aff = p0.add_run("Dept. of Information Science and Engineering\nAcharya Institute of Technology, Bengaluru, India")
+r0_aff.font.name = 'Times New Roman'; r0_aff.font.size = Pt(8.5); r0_aff.font.italic = True
+
+cell1 = tbl_auth.cell(0, 1)
+cell1.width = Inches(3.3)
+p1 = cell1.paragraphs[0]
+p1.alignment = WD_ALIGN_PARAGRAPH.CENTER
+p1.paragraph_format.space_before = Pt(2)
+p1.paragraph_format.space_after = Pt(4)
+p1.paragraph_format.line_spacing = 1.05
+r1 = p1.add_run("Sushma T. M.\n")
+r1.font.name = 'Times New Roman'; r1.font.size = Pt(9.5); r1.font.bold = True
+r1_aff = p1.add_run("Project Guide, Assistant Professor\nDept. of Information Science and Engineering\nAcharya Institute of Technology")
+r1_aff.font.name = 'Times New Roman'; r1_aff.font.size = Pt(8.5); r1_aff.font.italic = True
+
+set_cell_no_borders(cell0)
+set_cell_no_borders(cell1)
+
+# Transition paragraph: ends Section 0 (1 column) and starts Section 1 (2 columns)
+p_trans = doc.add_paragraph()
+p_trans.paragraph_format.space_before = Pt(0)
+p_trans.paragraph_format.space_after = Pt(4)
+pPr = p_trans._p.get_or_add_pPr()
+sectPr0 = parse_xml(f'''<w:sectPr {nsdecls("w")}>
+    <w:type w:val="continuous"/>
+    <w:pgSz w:w="11906" w:h="16838" w:code="9"/>
+    <w:pgMar w:top="540" w:right="893" w:bottom="1440" w:left="893" w:header="720" w:footer="720" w:gutter="0"/>
+    <w:cols w:space="720"/>
+    <w:docGrid w:linePitch="360"/>
+</w:sectPr>''')
+pPr.append(sectPr0)
+
+# Configure the body sectPr for Section 1 (2 columns, 360 twips space, standard IEEE margins)
+body_sect = doc._body._element.xpath('./w:sectPr')[0]
+for c in body_sect.xpath('./w:cols'):
+    body_sect.remove(c)
+cols_xml = parse_xml(f'<w:cols {nsdecls("w")} w:num="2" w:space="360"/>')
+body_sect.append(cols_xml)
+
+for m in body_sect.xpath('./w:pgMar'):
+    m.attrib['{http://schemas.openxmlformats.org/wordprocessingml/2006/main}top'] = '1080'
+    m.attrib['{http://schemas.openxmlformats.org/wordprocessingml/2006/main}bottom'] = '1440'
+    m.attrib['{http://schemas.openxmlformats.org/wordprocessingml/2006/main}left'] = '907'
+    m.attrib['{http://schemas.openxmlformats.org/wordprocessingml/2006/main}right'] = '907'
+
+# Helper functions for adding paper components
 def set_table_borders(table, xml_str):
     tblPr = table._tbl.tblPr
     for b in tblPr.xpath('./w:tblBorders'):
@@ -66,106 +140,36 @@ def set_row_cant_split(row):
         else:
             trPr.append(cs)
 
-def set_section_columns(section, num_cols=2, space_twips=360):
-    sectPr = section._sectPr
-    for c in sectPr.xpath('./w:cols'):
-        sectPr.remove(c)
-    cols_xml = parse_xml(f'<w:cols {nsdecls("w")} w:num="{num_cols}" w:space="{space_twips}"/>')
-    succ = sectPr.xpath('./w:formProt | ./w:vAlign | ./w:noEndnote | ./w:titlePg | ./w:textDirection | ./w:bidi | ./w:rtlGutter | ./w:docGrid | ./w:printerSettings | ./w:sectPrChange')
-    if succ:
-        succ[0].addprevious(cols_xml)
-    else:
-        sectPr.append(cols_xml)
-
-# Authors Table (Clean 2-block layout matching IEEEtran \and)
-table_auth = doc.add_table(rows=1, cols=2)
-table_auth.alignment = WD_TABLE_ALIGNMENT.CENTER
-
-cell0 = table_auth.cell(0, 0)
-p0 = cell0.paragraphs[0]
-p0.alignment = WD_ALIGN_PARAGRAPH.CENTER
-p0.paragraph_format.space_before = Pt(2)
-p0.paragraph_format.space_after = Pt(4)
-p0.paragraph_format.line_spacing = 1.05
-r0_names = p0.add_run("Arvind D. H., Girishkumar N. M., Manoj, Premkumar Teli\n")
-r0_names.font.name = 'Times New Roman'; r0_names.font.size = Pt(9.5); r0_names.font.bold = True
-r0_affil = p0.add_run("Department of Information Science and Engineering\nAcharya Institute of Technology, Bengaluru, India")
-r0_affil.font.name = 'Times New Roman'; r0_affil.font.size = Pt(8.5); r0_affil.font.italic = True
-
-cell1 = table_auth.cell(0, 1)
-p1 = cell1.paragraphs[0]
-p1.alignment = WD_ALIGN_PARAGRAPH.CENTER
-p1.paragraph_format.space_before = Pt(2)
-p1.paragraph_format.space_after = Pt(4)
-p1.paragraph_format.line_spacing = 1.05
-r1_name = p1.add_run("Sushma T. M.\n")
-r1_name.font.name = 'Times New Roman'; r1_name.font.size = Pt(9.5); r1_name.font.bold = True
-r1_affil = p1.add_run("Project Guide, Assistant Professor, Dept. of Information Science & Engineering\nAcharya Institute of Technology, Bengaluru, India")
-r1_affil.font.name = 'Times New Roman'; r1_affil.font.size = Pt(8.5); r1_affil.font.italic = True
-
-for cell in [cell0, cell1]:
-    set_cell_no_borders(cell)
-
-# 2-Column Body Section
-sec_body = doc.add_section(WD_SECTION.CONTINUOUS)
-sec_body.page_width = Inches(8.27)
-sec_body.page_height = Inches(11.69)
-sec_body.top_margin = Inches(0.70)
-sec_body.bottom_margin = Inches(0.75)
-sec_body.left_margin = Inches(0.55)
-sec_body.right_margin = Inches(0.55)
-
-set_section_columns(sec_body, 2, 360)
-
-def add_p(text, align=WD_ALIGN_PARAGRAPH.JUSTIFY, space_before=0, space_after=2.5, line_spacing=1.05):
-    p = doc.add_paragraph()
-    p.alignment = align
-    p.paragraph_format.space_before = Pt(space_before)
-    p.paragraph_format.space_after = Pt(space_after)
-    p.paragraph_format.line_spacing = line_spacing
-    r = p.add_run(text)
-    r.font.name = 'Times New Roman'
-    r.font.size = Pt(9.5)
+def add_p(text):
+    p = doc.add_paragraph(text, style='Body Text')
     return p
 
 def add_heading1(title):
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.paragraph_format.space_before = Pt(7)
-    p.paragraph_format.space_after = Pt(2)
-    p.paragraph_format.line_spacing = 1.0
+    clean = re.sub(r'^[IVXLCDM]+\.\s*', '', title)
+    p = doc.add_paragraph(clean, style='Heading 1')
     p.paragraph_format.keep_with_next = True
-    r = p.add_run(title)
-    r.font.name = 'Times New Roman'
-    r.font.size = Pt(9.5)
-    r.font.bold = True
     return p
 
 def add_heading2(title):
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    p.paragraph_format.space_before = Pt(5)
-    p.paragraph_format.space_after = Pt(1.5)
-    p.paragraph_format.line_spacing = 1.0
+    clean = re.sub(r'^[A-Z]\.\s*', '', title)
+    p = doc.add_paragraph(clean, style='Heading 2')
     p.paragraph_format.keep_with_next = True
-    r = p.add_run(title)
-    r.font.name = 'Times New Roman'
-    r.font.size = Pt(9.5)
-    r.font.bold = True
-    r.font.italic = True
     return p
 
 def add_heading3(title):
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    p.paragraph_format.space_before = Pt(3)
-    p.paragraph_format.space_after = Pt(1.0)
-    p.paragraph_format.line_spacing = 1.0
+    clean = re.sub(r'^\d+\)\s*', '', title)
+    p = doc.add_paragraph(clean, style='Heading 3')
     p.paragraph_format.keep_with_next = True
-    r = p.add_run(title)
-    r.font.name = 'Times New Roman'
-    r.font.size = Pt(9.0)
-    r.font.italic = True
+    return p
+
+def add_heading5(title):
+    p = doc.add_paragraph(title, style='Heading 5')
+    p.paragraph_format.keep_with_next = True
+    return p
+
+def add_reference(ref_text):
+    clean_ref = re.sub(r'^\[\d+\]\s*', '', ref_text)
+    p = doc.add_paragraph(clean_ref, style='references')
     return p
 
 def add_image(img_path, caption, width_in=3.35):
@@ -178,26 +182,14 @@ def add_image(img_path, caption, width_in=3.35):
         r_img = p_img.add_run()
         r_img.add_picture(img_path, width=Inches(width_in))
         
-        p_cap = doc.add_paragraph()
-        p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_cap.paragraph_format.space_before = Pt(1)
-        p_cap.paragraph_format.space_after = Pt(4)
+        clean_cap = re.sub(r'^Fig\.\s*\d+[\.\:]?\s*', '', caption)
+        p_cap = doc.add_paragraph(clean_cap, style='figure caption')
         p_cap.paragraph_format.keep_with_next = False
-        r_cap = p_cap.add_run(caption)
-        r_cap.font.name = 'Times New Roman'
-        r_cap.font.size = Pt(8.0)
-        r_cap.font.italic = True
 
 def add_table_clean(headers, rows, caption, col_widths=None, font_size=7.2):
-    p_cap = doc.add_paragraph()
-    p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_cap.paragraph_format.space_before = Pt(4)
-    p_cap.paragraph_format.space_after = Pt(1.5)
+    clean_cap = re.sub(r'^TABLE\s+[IVXLCDM0-9]+[\.\:\n\s]*', '', caption).strip()
+    p_cap = doc.add_paragraph(clean_cap, style='table head')
     p_cap.paragraph_format.keep_with_next = True
-    r_cap = p_cap.add_run(caption)
-    r_cap.font.name = 'Times New Roman'
-    r_cap.font.size = Pt(7.5)
-    r_cap.font.bold = True
     
     table = doc.add_table(rows=len(rows)+1, cols=len(headers))
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -207,6 +199,7 @@ def add_table_clean(headers, rows, caption, col_widths=None, font_size=7.2):
     for i, title in enumerate(headers):
         hdr_cells[i].text = title
         p = hdr_cells[i].paragraphs[0]
+        p.style = 'table col head'
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.space_before = Pt(1)
         p.paragraph_format.space_after = Pt(1)
@@ -221,6 +214,7 @@ def add_table_clean(headers, rows, caption, col_widths=None, font_size=7.2):
         for c_idx, val in enumerate(row):
             row_cells[c_idx].text = str(val)
             p = row_cells[c_idx].paragraphs[0]
+            p.style = 'table copy'
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx > 0 and len(str(val)) < 14 else WD_ALIGN_PARAGRAPH.LEFT
             p.paragraph_format.space_before = Pt(0.8)
             p.paragraph_format.space_after = Pt(0.8)
@@ -289,26 +283,21 @@ def add_algorithm(number, title, inputs, outputs, lines):
     p_space.paragraph_format.space_before = Pt(0)
     p_space.paragraph_format.space_after = Pt(2)
 
-# Abstract & Keywords
-p_abs = doc.add_paragraph()
-p_abs.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-p_abs.paragraph_format.space_before = Pt(1)
-p_abs.paragraph_format.space_after = Pt(2)
-p_abs.paragraph_format.line_spacing = 1.05
+# ==================== PAPER CONTENT ====================
+
+# Abstract (style: Abstract)
+p_abs = doc.add_paragraph(style='Abstract')
 r_abs_lbl = p_abs.add_run("Abstract—")
 r_abs_lbl.font.name = 'Times New Roman'; r_abs_lbl.font.size = Pt(9.0); r_abs_lbl.font.bold = True; r_abs_lbl.font.italic = True
-r_abs = p_abs.add_run("Breach-checking services face a structural privacy tension: to learn whether an identifier has been compromised, a user is typically asked to submit that identifier, in the clear, to a third-party server. This paper presents BreachShield, an OSINT-based breach intelligence platform that avoids this exposure through a client-side k-anonymity search protocol (5-hex-character SHA-256 prefix disclosure), combined with a dual-channel out-of-band OTP identity gate, a pluggable multi-source OSINT registry, a dynamically-computed exposure risk-scoring engine, a gradient-boosted breach-severity classifier (XGBoost, 89.2% test accuracy on 1,034 curated records), and a Merkle-tree-batched audit log anchored to a local EVM smart contract. The platform's backend and frontend test suites pass in full (101/101 and 50/50 respectively), and a live pretrained URL-transformer phishing classifier is confirmed functioning on the production search path. We document the system at the level of its real class structures, call sequences, and data flow, report a comparative benchmark of tree-based against deep-learning severity classification, and give a transparent account of the platform's current limitations — including an unresolved blockchain auto-deployment defect, two not-yet-integrated OSINT source adapters, and a data-scarce CRITICAL severity class — together with a concrete remediation plan.")
-r_abs.font.name = 'Times New Roman'; r_abs.font.size = Pt(9.0)
+r_abs_txt = p_abs.add_run(EXACT_ABSTRACT)
+r_abs_txt.font.name = 'Times New Roman'; r_abs_txt.font.size = Pt(9.0)
 
-p_key = doc.add_paragraph()
-p_key.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-p_key.paragraph_format.space_before = Pt(1)
-p_key.paragraph_format.space_after = Pt(5)
-p_key.paragraph_format.line_spacing = 1.05
-r_key_lbl = p_key.add_run("Index Terms—")
-r_key_lbl.font.name = 'Times New Roman'; r_key_lbl.font.size = Pt(9.0); r_key_lbl.font.bold = True; r_key_lbl.font.italic = True
-r_key = p_key.add_run("OSINT, breach intelligence, dark web monitoring, k-anonymity, XGBoost, blockchain audit log, tamper-evident logging, phishing detection.")
-r_key.font.name = 'Times New Roman'; r_key.font.size = Pt(9.0); r_key.font.italic = True
+# Keywords (style: Keywords)
+p_kw = doc.add_paragraph(style='Keywords')
+r_kw_lbl = p_kw.add_run("Index Terms—")
+r_kw_lbl.font.name = 'Times New Roman'; r_kw_lbl.font.size = Pt(9.0); r_kw_lbl.font.bold = True; r_kw_lbl.font.italic = True
+r_kw_txt = p_kw.add_run(EXACT_INDEX_TERMS)
+r_kw_txt.font.name = 'Times New Roman'; r_kw_txt.font.size = Pt(9.0); r_kw_txt.font.italic = True
 
 # Section I: Introduction
 add_heading1("I. INTRODUCTION")
@@ -514,7 +503,7 @@ t6_rows = [
 ]
 add_table_clean(t6_headers, t6_rows, "TABLE VI\nXGBOOST PER-CLASS METRICS (TEST SET)", col_widths=[0.85, 0.80, 0.80, 0.90], font_size=7.2)
 
-add_p("† CRITICAL tier support n = 9; wide confidence interval, not to be over-interpreted.", space_before=0, space_after=3.0)
+add_p("† CRITICAL tier support n = 9; wide confidence interval, not to be over-interpreted.")
 
 add_image(os.path.join(figures_dir, 'fig_per_class_f1.png'), "Fig. 4. Per-class F1-score across severity tiers for XGBoost against neural baselines.", width_in=3.35)
 
@@ -575,11 +564,11 @@ add_heading1("XI. CONCLUSION")
 add_p("BreachShield demonstrates a privacy-preserving breach intelligence architecture combining a k-anonymity search protocol, a benchmarked and reproducible ML severity classifier, and a Merkle-batched audit log, documented here down to its real class structures, call sequences, and scoring mechanism. The platform's core privacy and integrity guarantees — client-side hashing, OTP-gated accountable search, and tamper-evident audit anchoring — are implemented and verified; a small number of well-scoped items (source integrations, blockchain auto-deploy, class-imbalance correction, and a latency benchmark) remain open and are reported here as a concrete, prioritised roadmap rather than as unqualified claims.")
 
 # Acknowledgment
-add_heading1("ACKNOWLEDGMENT")
+add_heading5("ACKNOWLEDGMENT")
 add_p("The authors thank Prof. Sushma T. M. for guidance throughout Project Phase II (BIS786).")
 
 # References
-add_heading1("REFERENCES")
+add_heading5("REFERENCES")
 
 refs = [
     "[1] A. Aljofey, Q. Jiang, Q. Qu, M. Huang, and J.-P. Niyigena, “An Effective Phishing Detection Model Based on Character Level Convolutional Neural Network from URL,” Electronics, vol. 9, no. 9, p. 1514, 2020.",
@@ -604,16 +593,7 @@ refs = [
 ]
 
 for ref in refs:
-    p_ref = doc.add_paragraph()
-    p_ref.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p_ref.paragraph_format.space_before = Pt(0.5)
-    p_ref.paragraph_format.space_after = Pt(1.5)
-    p_ref.paragraph_format.line_spacing = 1.0
-    p_ref.paragraph_format.left_indent = Inches(0.22)
-    p_ref.paragraph_format.first_line_indent = Inches(-0.22)
-    r_ref = p_ref.add_run(ref)
-    r_ref.font.name = 'Times New Roman'
-    r_ref.font.size = Pt(8.0)
+    add_reference(ref)
 
 doc.save(output_docx)
-print(f"Successfully generated {output_docx}")
+print(f"Successfully generated {output_docx} with verified 2-section layout from template")
