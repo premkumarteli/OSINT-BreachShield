@@ -10,7 +10,7 @@ import '../results.css';
 const bgVideo2 = '/bg2.mp4';
 const bgVideo3 = '/bg3.mp4';
 
-const MIN_SCAN_TIME_MS = process.env.NODE_ENV === 'test' ? 0 : 10000;
+const MIN_SCAN_TIME_MS = process.env.NODE_ENV === 'test' ? 0 : 4000;
 
 const SCAN_STEPS = [
   'Correlating multi-source breach intelligence feeds...',
@@ -65,14 +65,20 @@ export default function ResultsPage() {
 
   const [retryTrigger, setRetryTrigger] = useState(0);
   const activeSearchKeyRef = useRef('');
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!verifiedEmail) return;
     const currentKey = `${verifiedEmail}_${retryTrigger}`;
     if (activeSearchKeyRef.current === currentKey) return;
     activeSearchKeyRef.current = currentKey;
-
-    let isMounted = true;
 
     async function fetchResults() {
       setLoading(true);
@@ -94,7 +100,7 @@ export default function ResultsPage() {
         }
       } catch (err) {
         if (err.response?.status === 403) {
-          if (isMounted) {
+          if (isMountedRef.current) {
             sessionStorage.removeItem('osint_verified_email');
             setRedirectVerify(true);
           }
@@ -105,24 +111,23 @@ export default function ResultsPage() {
           : (err.response?.data?.error || err.message || 'Error communicating with intelligence feeds.');
       }
 
-      // Enforce minimum 10 seconds of scanning
+      // Enforce minimum scan time for UI animation
       const elapsed = Date.now() - startTime;
       const remaining = Math.max(0, MIN_SCAN_TIME_MS - elapsed);
       if (remaining > 0) {
         await new Promise(resolve => setTimeout(resolve, remaining));
       }
 
-      if (isMounted) {
+      if (isMountedRef.current) {
         if (fetchError) {
           setError(fetchError);
-        } else if (fetchResponseData) {
-          setData(fetchResponseData);
+        } else {
+          setData(fetchResponseData || {});
         }
         setLoading(false);
       }
     }
     fetchResults();
-    return () => { isMounted = false; };
   }, [verifiedEmail, retryTrigger]);
 
   if (redirectVerify) return <Navigate to="/verify-otp" replace />;
