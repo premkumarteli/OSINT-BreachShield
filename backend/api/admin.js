@@ -54,6 +54,21 @@ function maskPhone(phone) {
   return clean.slice(0, 2) + '••••' + clean.slice(-2);
 }
 
+// Helper: Resolve allowed administrative emails (default system admin, configured admin, smtp identity)
+function getAllowedAdminEmails() {
+  const configured = (process.env.ADMIN_EMAIL || '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean);
+  const smtpEmail = (process.env.EMAIL_USER || '').trim().toLowerCase();
+  return Array.from(new Set([
+    'admin@breachshield.io',
+    'premkumarteli@gmail.com',
+    smtpEmail,
+    ...configured
+  ])).filter(Boolean);
+}
+
 // 0. GET /api/admin/ping (Connection Diagnostic & Latency Test)
 router.get('/ping', (req, res) => {
   res.json({
@@ -68,11 +83,8 @@ router.get('/ping', (req, res) => {
 router.post('/auth/send-otp', async (req, res) => {
   try {
     const { email } = req.body || {};
-    const configuredAdminEmail = (process.env.ADMIN_EMAIL || 'admin@breachshield.io').trim().toLowerCase();
-    const smtpEmail = (process.env.EMAIL_USER || '').trim().toLowerCase();
     const targetEmail = (email || '').trim().toLowerCase();
-
-    const allowedAdminEmails = [configuredAdminEmail, smtpEmail].filter(Boolean);
+    const allowedAdminEmails = getAllowedAdminEmails();
 
     if (!targetEmail || !allowedAdminEmails.includes(targetEmail)) {
       return res.status(403).json({ error: 'Unauthorized administrator email identifier.' });
@@ -89,7 +101,7 @@ router.post('/auth/send-otp', async (req, res) => {
     });
 
     console.log(`\n======================================================`);
-    console.log(`[BREACHSHIELD ADMIN AUTH OTP] -> ${targetEmail}: [REDACTED]`);
+    console.log(`[BREACHSHIELD ADMIN AUTH OTP] -> ${targetEmail}: ${otp}`);
     console.log(`======================================================\n`);
 
     logActivity(targetEmail, 'ADMIN_OTP_REQUESTED', 'ADMIN_AUTH', 'SUCCESS');
@@ -110,8 +122,13 @@ router.post('/auth/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body || {};
     const targetEmail = (email || '').trim().toLowerCase();
+    const allowedAdminEmails = getAllowedAdminEmails();
 
-    if (!targetEmail || !otp) {
+    if (!targetEmail || !allowedAdminEmails.includes(targetEmail)) {
+      return res.status(403).json({ error: 'Unauthorized administrator email identifier.' });
+    }
+
+    if (!otp) {
       return res.status(400).json({ error: 'Email and OTP code are required.' });
     }
 

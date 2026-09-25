@@ -18,8 +18,10 @@
 /* Background video styling */
 .bg-video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; pointer-events: none; }
 
-.auth-hero, .hero {
+.auth-hero, .auth-screen .hero {
   position: relative;
+  left: auto;
+  transform: none;
   width: 100%;
   max-width: 900px;
   text-align: center;
@@ -27,7 +29,7 @@
   z-index: 3;
   pointer-events: none;
 }
-.auth-hero .hero-title, .hero .hero-title {
+.auth-hero .hero-title, .auth-screen .hero .hero-title {
   font-family: 'Orbitron', system-ui;
   font-size: clamp(28px, 5vw, 64px);
   color: #eafaff;
@@ -36,13 +38,13 @@
   margin: 0 0 6px 0;
   white-space: normal;
 }
-.auth-hero .hero-credit, .hero .hero-credit {
+.auth-hero .hero-credit, .auth-screen .hero .hero-credit {
   color: #cbd5e1;
   font-size: clamp(12px, 1.6vw, 15px);
   text-shadow: 0 0 8px rgba(0,234,255,0.35);
   margin: 0;
 }
-.auth-hero strong, .hero strong { color: #00eaff; text-shadow: 0 0 12px rgba(0,234,255,0.55); }
+.auth-hero strong, .auth-screen .hero strong { color: #00eaff; text-shadow: 0 0 12px rgba(0,234,255,0.55); }
 
 .results-container {
   width: 100%;

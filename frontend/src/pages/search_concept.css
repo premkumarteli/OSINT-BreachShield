@@ -1,0 +1,1056 @@
+/* ==========================================================================
+   BreachShield - Enterprise OSINT Search UI Stylesheet
+   True Apple-Style Frosted Glassmorphism + VisionOS Cyber Aesthetic
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap');
+
+/* 1. Background Video (Vivid & Highly Visible: Map 75% / Card 25%) */
+.concept-bg-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: -3;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.concept-page-wrapper {
+  position: relative;
+  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  width: 100%;
+  background: transparent;
+  color: #f8fafc;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* 2. Ambient Atmosphere (Ultra-Subtle Tint, Keeping Video Clear) */
+.concept-background {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background: 
+    radial-gradient(circle at 50% 35%, rgba(0, 240, 255, 0.05) 0%, rgba(2, 6, 23, 0.08) 65%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.08) 0%, rgba(3, 7, 18, 0.22) 100%);
+}
+
+/* 3. Top Navbar (Compact 52px Header with Apple-Style Glass) */
+.concept-navbar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 52px;
+  height: 52px;
+  padding: 8px 36px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.concept-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.brand-icon-shield {
+  width: 28px;
+  height: 28px;
+  color: #00f0ff;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.4));
+}
+
+.brand-text-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.brand-subtext {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: #00f0ff;
+}
+
+.concept-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-link-item {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.nav-link-item:hover {
+  color: #00f0ff;
+}
+
+.nav-link-item.active {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.nav-link-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #00f0ff;
+  box-shadow: 0 0 6px #00f0ff;
+  border-radius: 2px;
+}
+
+.system-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #34d399;
+  backdrop-filter: blur(12px);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* 4. Main Body & Tightened Vertical Composition */
+.concept-main {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 4px 20px;
+  max-width: 1040px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.concept-hero {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* Prominent Wide-Tracked Title with Sharp Shiny White Specular Radiance */
+.concept-hero-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2.3rem, 4vw, 3.3rem);
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  color: #ffffff;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #ffffff 50%,
+    #e2e8f0 75%,
+    #cbd5e1 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 4px 0;
+  line-height: 1.12;
+  filter: 
+    drop-shadow(0 0 1px #ffffff)
+    drop-shadow(0 0 6px rgba(255, 255, 255, 0.7))
+    drop-shadow(0 0 14px rgba(0, 240, 255, 0.35));
+}
+
+.concept-hero-subtitle {
+  font-size: 0.86rem; /* Scaled down for 100vh fit */
+  line-height: 1.35;
+  color: #e2e8f0;
+  max-width: 580px;
+  margin: 0 auto 4px;
+  font-weight: 400;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.concept-hero-tags {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+  color: #38bdf8;
+  opacity: 0.9;
+}
+
+/* 5. True Apple-Style Glassmorphic Search Card with Optical Refraction */
+.concept-search-card {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  /* Top light highlight transitioning into ultra-translucent glass */
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(15, 40, 80, 0.28) 22%,
+    rgba(12, 32, 65, 0.22) 100%
+  );
+  backdrop-filter: blur(35px) brightness(1.1) saturate(1.1);
+  -webkit-backdrop-filter: blur(35px) brightness(1.1) saturate(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  padding: 16px 24px 14px;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+}
+
+/* Optical Refraction Lens: Magnifies (scale 1.03) and refracts background map */
+.concept-search-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  backdrop-filter: blur(35px);
+  -webkit-backdrop-filter: blur(35px);
+  transform: scale(1.03);
+  filter: brightness(1.15) saturate(1.10);
+  opacity: 0.85;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Glass Reflection Layer (Light catching top 35% of the glass pane) */
+.concept-search-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 35%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.02) 75%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+.concept-search-card:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(18, 48, 95, 0.32) 22%,
+    rgba(14, 38, 75, 0.26) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 
+    0 12px 38px rgba(0, 0, 0, 0.32),
+    inset 0 1px 1px rgba(255, 255, 255, 0.22);
+}
+
+.card-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.search-icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #00f0ff;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.search-icon-circle svg {
+  width: 17px;
+  height: 17px;
+}
+
+.card-header-text h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.01em;
+}
+
+.card-header-text p {
+  font-size: 0.74rem;
+  color: #cbd5e1;
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Form Styles */
+.form-field-group {
+  margin-bottom: 8px;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 3px;
+  letter-spacing: 0.02em;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field-icon {
+  position: absolute;
+  left: 12px;
+  width: 15px;
+  height: 15px;
+  color: #00f0ff;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+/* Glass Inputs */
+.concept-input {
+  width: 100%;
+  min-height: 38px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px 8px 36px;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.concept-input::placeholder {
+  color: #94a3b8;
+  font-size: 0.80rem;
+}
+
+.concept-input:focus {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.15);
+}
+
+/* Custom Glass Dropdown */
+.custom-dropdown-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.glass-dropdown-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 38px;
+  height: 38px;
+  padding: 8px 14px 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.glass-dropdown-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.glass-dropdown-btn.active {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.15);
+}
+
+.dropdown-btn-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.field-icon-inline {
+  width: 15px;
+  height: 15px;
+  color: #00f0ff;
+  opacity: 0.9;
+}
+
+.dropdown-chevron {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.dropdown-chevron.open {
+  transform: rotate(180deg);
+  color: #00f0ff;
+}
+
+/* Animated Glass Dropdown Menu Panel */
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: rgba(14, 30, 60, 0.75);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  border-radius: 10px;
+  padding: 4px;
+  animation: dropdownOpen 0.18s ease;
+}
+
+@keyframes dropdownOpen {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+  backdrop-filter: blur(10px);
+}
+
+.dropdown-item.selected {
+  background: rgba(0, 240, 255, 0.12);
+  color: #00f0ff;
+  font-weight: 600;
+}
+
+.dropdown-check {
+  font-size: 0.80rem;
+  color: #00f0ff;
+}
+
+/* 6. True Apple-Style Glass CTA Button */
+.concept-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  height: 38px;
+  padding: 7px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #00f0ff;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.25s ease;
+  margin-top: 6px;
+}
+
+.concept-cta-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(0, 240, 255, 0.5);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.25);
+}
+
+.concept-cta-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.concept-cta-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-icon-shield {
+  width: 15px;
+  height: 15px;
+}
+
+.btn-arrow {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.card-footer-reassurance {
+  text-align: center;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+/* 7. Bottom Feature Pillars (Cut from the EXACT same glass sheet) */
+.concept-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 820px;
+}
+
+.pillar-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: unset;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(15, 40, 80, 0.26) 24%,
+    rgba(12, 32, 65, 0.20) 100%
+  );
+  backdrop-filter: blur(35px) brightness(1.1) saturate(1.1);
+  -webkit-backdrop-filter: blur(35px) brightness(1.1) saturate(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 8px 14px;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+}
+
+.pillar-card:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(18, 48, 95, 0.30) 24%,
+    rgba(14, 38, 75, 0.24) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 
+    0 12px 36px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.pillar-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.pillar-icon-box svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pillar-card.cyan .pillar-icon-box {
+  color: #00f0ff;
+}
+
+.pillar-card.purple .pillar-icon-box {
+  color: #c084fc;
+}
+
+.pillar-card.green .pillar-icon-box {
+  color: #4ade80;
+}
+
+.pillar-text h3 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 2px 0;
+}
+
+.pillar-text p {
+  font-size: 0.68rem;
+  color: #cbd5e1;
+  margin: 0;
+  line-height: 1.25;
+}
+
+/* 8. Footer (Matches Header Theme & Compact 44px Height) */
+.concept-footer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 36px;
+  width: 100%;
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-brand-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+}
+
+.footer-divider {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.72rem;
+}
+
+.footer-copyright {
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-link {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.72rem;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: #00f0ff;
+}
+
+.footer-link-divider {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 0.68rem;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+}
+
+.footer-pillars-tagline {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #00f0ff;
+  letter-spacing: 0.06em;
+  opacity: 0.92;
+}
+
+/* Alert Boxes */
+.concept-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.concept-alert.error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  backdrop-filter: blur(10px);
+}
+
+/* ==========================================================================
+   OTP Verification Specific Glass Styles
+   ========================================================================== */
+
+/* ==========================================================================
+   OTP Verification Specific Glass Styles
+   ========================================================================== */
+
+/* Scaled, Proportional OTP Title */
+.otp-hero-section {
+  margin-bottom: 6px;
+}
+
+.otp-hero-title {
+  font-size: clamp(1.25rem, 2.1vw, 1.65rem) !important;
+  letter-spacing: 0.12em !important;
+  margin: 2px 0 4px 0 !important;
+  line-height: 1.15 !important;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.25) !important;
+}
+
+/* Security Status Badge */
+.otp-security-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  background: rgba(0, 240, 255, 0.06);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #38bdf8;
+  backdrop-filter: blur(12px);
+  margin-bottom: 3px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.security-status-dot {
+  width: 6px;
+  height: 6px;
+  background: #00f0ff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00f0ff;
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+/* Softer, Non-Distracting Email Badge */
+.otp-email-highlight {
+  color: #e2e8f0;
+  font-weight: 600;
+  background: rgba(0, 245, 255, 0.08);
+  border: 1px solid rgba(0, 245, 255, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  text-shadow: none;
+}
+
+/* Translucent Apple Glass Card for OTP with Compact Viewport Fit */
+.otp-card-refinement {
+  max-width: 480px !important;
+  padding: 16px 24px 14px !important;
+  margin-bottom: 8px !important;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(25, 55, 110, 0.22) 20%,
+    rgba(15, 38, 80, 0.18) 100%
+  ) !important;
+  backdrop-filter: blur(35px) !important;
+  -webkit-backdrop-filter: blur(35px) !important;
+}
+
+.otp-card-refinement .card-header-row {
+  margin-bottom: 8px !important;
+}
+
+.otp-card-refinement .card-header-text h2 {
+  font-size: 1.05rem !important;
+}
+
+.otp-card-refinement .card-header-text p {
+  font-size: 0.74rem !important;
+}
+
+.otp-input-label {
+  text-align: center;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+}
+
+/* Modern 6-Segmented Glass OTP Boxes (Optimized Size) */
+.otp-boxes-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+  cursor: text;
+}
+
+.otp-box-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 50px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: 'Orbitron', monospace;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #00f0ff;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.otp-box-cell.filled {
+  background: rgba(0, 240, 255, 0.08);
+  border-color: rgba(0, 240, 255, 0.35);
+}
+
+.otp-box-cell.focused {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #00f0ff;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+.otp-blinking-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 20px;
+  background: #00f0ff;
+  border-radius: 2px;
+  animation: cursor-blink 1s infinite;
+  box-shadow: 0 0 6px #00f0ff;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.otp-hidden-master-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: text;
+  z-index: 2;
+  font-size: 16px;
+}
+
+.otp-meta-glass-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.otp-timer-glass-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.70rem;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.otp-timer-glass-pill strong {
+  color: #00f0ff;
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+
+.otp-resend-glass-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 3px 10px;
+  color: #00f0ff;
+  font-size: 0.70rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: all 0.2s ease;
+}
+
+.otp-resend-glass-btn:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.14);
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.2);
+}
+
+.otp-resend-glass-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: #94a3b8;
+}
+
+.otp-change-email-wrap {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.otp-change-email-link {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.otp-change-email-link:hover {
+  color: #00f0ff;
+}
+
+/* Enhanced CTA Visual Feedback */
+.concept-cta-btn:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.22) 0%, rgba(14, 165, 233, 0.14) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.25);
+}
+
+.concept-cta-btn:not(:disabled):hover {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.32) 0%, rgba(14, 165, 233, 0.22) 100%);
+  border-color: rgba(0, 240, 255, 0.75);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 26px rgba(0, 240, 255, 0.4);
+}
+
+/* Responsive Queries */
+@media (max-width: 900px) {
+  .concept-page-wrapper {
+    height: auto;
+    max-height: none;
+    overflow-y: auto;
+  }
+  .concept-pillars-grid {
+    grid-template-columns: 1fr;
+  }
+  .concept-hero-title {
+    font-size: 2rem;
+    letter-spacing: 0.15em;
+  }
+  .concept-navbar {
+    padding: 10px 20px;
+    min-height: 52px;
+  }
+  .concept-footer {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+    padding: 12px;
+  }
+}
+
+@media (max-height: 600px) {
+  .concept-page-wrapper {
+    height: auto;
+    max-height: none;
+    overflow-y: auto;
+  }
+}

@@ -327,9 +327,9 @@ async def send_query(q: Query):
     )
 
     try:
-        # Prevent lock acquisition hang (max 8s wait)
+        # Prevent lock acquisition hang (wait up to 25s for active queries to complete)
         try:
-            await asyncio.wait_for(tg_lock.acquire(), timeout=8.0)
+            await asyncio.wait_for(tg_lock.acquire(), timeout=25.0)
         except asyncio.TimeoutError:
             return {'packets': [{'info': 'Service busy, try again later.'}], 'response': 'Service busy', 'pagination': {'current': 1, 'total': 1}}
 
@@ -376,33 +376,44 @@ async def send_query(q: Query):
                     return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
 
                 messages = []
+                has_leak_card = False
                 try:
-                    # Wait for bot response messages (up to 7.0s)
+                    # Wait for bot response messages (up to 22.0s for deep database lookups)
                     start_t = asyncio.get_event_loop().time()
-                    while (asyncio.get_event_loop().time() - start_t) < 7.0:
+                    while (asyncio.get_event_loop().time() - start_t) < 22.0:
                         try:
-                            msg_txt = await asyncio.wait_for(queue.get(), timeout=2.5)
+                            msg_txt = await asyncio.wait_for(queue.get(), timeout=3.5)
                             # If it's just a placeholder like 'searching...', wait for next edit/message
                             if any(p in msg_txt.lower() for p in ['searching', 'please wait', 'processing', 'loading']):
                                 continue
                             if msg_txt not in messages:
                                 messages.append(msg_txt)
-                            # If we received the summary header, continue waiting for the actual data card
-                            if any(kw in msg_txt for kw in ['🔎Request:', '🔬Subjects made:', 'The number of leaks:']) and len(messages) < 2:
-                                continue
-                            # If we received the data payload or a clean 'No results found', break early
-                            if any(kw in msg_txt for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'No results found', '🤷']):
+
+                            # If we received the actual leak data card, record and break early
+                            if any(kw in msg_txt for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'Passport number:', 'Adres:', 'Full name:', 'Region:']):
+                                has_leak_card = True
                                 break
+
+                            # If bot explicitly reports clean / no results
+                            if any(kw in msg_txt.lower() for kw in ['no results found', '🤷', 'number of results: 0', 'the number of leaks: 0']):
+                                break
+
+                            # If we received the summary header indicating leaks exist, continue waiting for the payload
+                            if any(kw in msg_txt.lower() for kw in ['request:', 'subjects made:', 'the number of leaks:', 'number of results:']) and len(messages) < 2:
+                                continue
                         except asyncio.TimeoutError:
-                            # Also poll recent messages in case event was already delivered
+                            # Poll recent messages in case event was already delivered to client session
                             try:
                                 bot_entity = await client.get_entity(bot_username)
-                                recent_msgs = await client.get_messages(bot_entity, limit=4)
+                                recent_msgs = await client.get_messages(bot_entity, limit=6)
                                 for rm in recent_msgs:
-                                    if rm.id > sent_msg.id and rm.text and not any(p in rm.text.lower() for p in ['searching', 'please wait']):
+                                    if not rm.out and rm.id > sent_msg.id and rm.text and not any(p in rm.text.lower() for p in ['searching', 'please wait']):
                                         if rm.text not in messages:
                                             messages.append(rm.text)
-                                if any(any(kw in m for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'No results found', '🤷']) for m in messages):
+                                        if any(kw in rm.text for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'Passport number:', 'Adres:', 'Full name:', 'Region:']):
+                                            has_leak_card = True
+                                            break
+                                if has_leak_card:
                                     break
                             except Exception:
                                 pass
@@ -422,13 +433,13 @@ async def send_query(q: Query):
                     except Exception:
                         pass
 
-                # If no message captured or empty, fallback gracefully
-                if not messages:
+                # If still missing leak payload, do a final direct message sweep
+                if not has_leak_card:
                     try:
                         bot_entity = await client.get_entity(bot_username)
-                        recent_msgs = await client.get_messages(bot_entity, limit=4)
+                        recent_msgs = await client.get_messages(bot_entity, limit=6)
                         for rm in recent_msgs:
-                            if rm.text and rm.id > sent_msg.id:
+                            if not rm.out and rm.text and rm.id > sent_msg.id:
                                 if rm.text not in messages:
                                     messages.append(rm.text)
                     except Exception:

@@ -681,7 +681,7 @@ function App() {
               <input
                 className="search-input"
                 type="text"
-                placeholder={searchType === 'Email' ? "Enter email (e.g. test@example.com)" :
+                placeholder={searchType === 'Email' ? "Enter email (e.g. name@domain.com)" :
                   searchType === 'Mobile' ? "Enter mobile (e.g. +919876543210)" :
                   "Enter any query (e.g. name, account)"}
                 value={query}
@@ -778,7 +778,7 @@ function App() {
         </div>
       )}
 
-      {!showSearchingAnimation && (
+      {!showSearchingAnimation && result && (
         <div className="results results-redesigned">
           {result && result.packets && (() => {
             const preferredPacket = (result.packets[1] !== undefined) ? result.packets[1] : result.packets[0];

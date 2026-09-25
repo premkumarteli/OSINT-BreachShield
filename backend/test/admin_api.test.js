@@ -74,6 +74,17 @@ describe('BreachShield Admin Control API Test Suite', () => {
       assert.equal(data.success, true);
     });
 
+    it('1.2b: Default system admin email admin@breachshield.io generates OTP successfully (200)', async () => {
+      const res = await fetch(`${baseUrl}/api/admin/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'admin@breachshield.io' })
+      });
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.success, true);
+    });
+
     it('1.3: Unauthenticated request to /api/admin/overview returns 401 Unauthorized', async () => {
       const res = await fetch(`${baseUrl}/api/admin/overview`);
       assert.equal(res.status, 401);

@@ -29,7 +29,7 @@ class TelegramScraperSource extends BreachSource {
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(() => controller.abort(), 35000);
       const resp = await fetch(this.pythonServiceUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,18 +40,29 @@ class TelegramScraperSource extends BreachSource {
 
       const data = await resp.json();
       botText = data.response || '';
-      packets = data.packets || (botText ? [{ query: normalizedTarget, info: botText, source: 'LIVE_OSINT_FEED' }] : []);
+      packets = (data.packets && data.packets.length > 0)
+        ? data.packets.map(p => ({
+            query: normalizedTarget,
+            info: p.info || '',
+            source: 'Telegram OSINT Feed',
+            ...p
+          }))
+        : (botText ? [{ query: normalizedTarget, info: botText, source: 'Telegram OSINT Feed' }] : []);
       pagination = data.pagination || null;
+
+      if (!botText && packets.length > 0) {
+        botText = packets.map(p => p.info || '').join('\n\n');
+      }
 
       // Tag any packet that carries demo/fallback text so the UI can label it honestly.
       packets = packets.map(pkt => {
         const info = pkt.info || '';
         const simulated = /demo mode|simulated|no live data|demonstration/i.test(info);
-        return simulated ? { ...pkt, isSimulated: true } : pkt;
+        return simulated ? { ...pkt, isSimulated: true, source: 'Telegram OSINT Feed' } : { ...pkt, source: 'Telegram OSINT Feed' };
       });
 
       // Extract high-level Finding metadata
-      if (botText && !/no\s*results?(\s*found)?/i.test(botText)) {
+      if (botText && !/no\s*results?(\s*found)?/i.test(botText) && !/service busy/i.test(botText)) {
         const exposureCheck = analyzeExposure(botText, normalizedTarget);
         const dataClasses = [];
         if (exposureCheck.entities.phoneCount > 0) dataClasses.push('PHONE');
@@ -66,25 +77,24 @@ class TelegramScraperSource extends BreachSource {
         const isSimulated = /demo mode|simulated|no live data|demonstration/i.test(botText);
 
         hits.push({
-          source: isSimulated ? 'Demo_Simulated_Feed' : 'Live_OSINT_Feed',
+          source: 'Telegram OSINT Feed',
+          title: 'Telegram Live OSINT Leak Intelligence',
           year: new Date().getFullYear().toString(),
           dataClasses,
           sourceType: isSimulated ? 'LOCAL' : 'LIVE_SCRAPER',
           isSimulated,
-          raw: isSimulated
-            ? '[SIMULATED DEMO RESPONSE] Upstream scraper returned demo/fallback text, not live breach data.'
-            : botText
+          raw: botText
         });
 
         // Auto-Cache Live Found Breach (METADATA ONLY — NO RAW PERSISTENCE)
         ingestRecord(
           normalizedTarget,
-          'Live_OSINT_Feed',
+          'Telegram_OSINT_Feed',
           dataClasses,
           new Date().getFullYear().toString(),
           {
             target: normalizedTarget,
-            source: 'Live_OSINT_Feed',
+            source: 'Telegram_OSINT_Feed',
             dataClasses,
             exposure_score: exposureCheck.score,
             threat_level: exposureCheck.riskLevel,

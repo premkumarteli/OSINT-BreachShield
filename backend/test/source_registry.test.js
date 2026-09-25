@@ -33,4 +33,11 @@ describe('BreachSource Registry (sources/registry.js) - Exclusive Telegram OSINT
       assert.ok(!/\bPUBLIC (PHISHING|THREAT INTEL) FEED\b/i.test(res.packets[0].info), 'Must not impersonate a public live feed');
     }
   });
+
+  it('5.4: getEnabledSources({ exclusiveTelegram: true }) returns exclusively TelegramScraperSource', () => {
+    const sources = getEnabledSources({ pythonServiceUrl: 'http://127.0.0.1:8001/query', exclusiveTelegram: true });
+    assert.equal(sources.length, 1);
+    assert.ok(sources[0] instanceof TelegramScraperSource);
+    assert.equal(sources[0].sourceName, 'TelegramScraperSource');
+  });
 });

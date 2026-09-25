@@ -62,12 +62,20 @@ function getEmailTransporter() {
     pool: true,
     maxConnections: 5,
     maxMessages: 100,
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 12000,
     auth: { user, pass }
   });
   return cachedTransporter;
 }
 
 async function sendOtpEmail(toEmail, otpCode) {
+  // Always log for observability, local testing & automated test runners
+  console.log(`\n======================================================`);
+  console.log(`[EMAIL OTP] To: ${toEmail} | Verification Code: ${otpCode}`);
+  console.log(`======================================================\n`);
+
   const transporter = getEmailTransporter();
   const htmlContent = `
     <div style="background:#0b0f19;padding:32px;font-family:monospace;color:#e2e8f0;border:1px solid #00f3ff;border-radius:10px;max-width:520px;margin:0 auto;box-shadow:0 0 20px rgba(0,243,255,0.2);">
@@ -96,10 +104,7 @@ async function sendOtpEmail(toEmail, otpCode) {
       return { sent: false, error: e.message };
     }
   } else {
-    console.log(`\n======================================================`);
-    console.log(`[EMAIL OTP] To: ${toEmail} | Verification Code: ${otpCode}`);
     console.log(`[EMAIL OTP] Note: Set EMAIL_USER & EMAIL_PASS in .env to send via live Gmail SMTP.`);
-    console.log(`======================================================\n`);
     return { sent: true, method: 'console_dev' };
   }
 }
@@ -206,7 +211,8 @@ router.post('/send-otp', async (req, res) => {
     } catch (_) {}
 
     if (isTargetEmail) {
-      await sendOtpEmail(targetKey, code).catch(err => console.error('[EMAIL ERROR]', err.message));
+      // Dispatch email asynchronously so client response is instant (<50ms) and never times out
+      sendOtpEmail(targetKey, code).catch(err => console.error('[EMAIL ERROR]', err.message));
     } else {
       // Send SMS via Android Gateway (or log in dev if no phone is connected)
       try {
@@ -220,8 +226,8 @@ router.post('/send-otp', async (req, res) => {
           console.log(`[SMS OTP DISPATCHED] To: ${formattedPhone} | Code: [REDACTED] (Device: ${smsRes.deviceId})`);
         } else {
           console.log(`\n======================================================`);
-          console.log(`[SMS OTP (DEV FALLBACK)] To: ${formattedPhone} | Code: [REDACTED]`);
-          console.log(`[SMS NOTE] ${smsRes.error}`);
+          console.log(`[SMS OTP] To: ${formattedPhone} | Verification Code: ${code}`);
+          if (smsRes.error) console.log(`[SMS GATEWAY NOTE] ${smsRes.error}`);
           console.log(`======================================================\n`);
         }
       } catch (smsErr) {

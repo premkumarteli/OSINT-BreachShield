@@ -4,7 +4,6 @@ export default function BreachTimeline({ events = [] }) {
   if (!events || events.length === 0) {
     return (
       <div className="timeline-empty">
-        <div className="empty-icon">⏱</div>
         <h3>No chronological breach timeline detected</h3>
         <p>Intelligence data contains unstructured records without explicit timestamp anchors.</p>
       </div>
@@ -29,7 +28,7 @@ export default function BreachTimeline({ events = [] }) {
               </div>
               <div className="timeline-card">
                 <div className="timeline-card-header">
-                  <span className="source-name">💾 {evt.source}</span>
+                  <span className="source-name">{evt.source}</span>
                   <span className={`category-tag ${String(evt.severity || 'high').toLowerCase()}`}>
                     {evt.category || 'Data Breach'}
                   </span>
