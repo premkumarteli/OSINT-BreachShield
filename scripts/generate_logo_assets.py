@@ -65,25 +65,47 @@ def main():
     icon_trans_scaled = icon_trans_raw.resize((new_icon_w, new_icon_h), Image.Resampling.LANCZOS)
     icon_solid_scaled = icon_solid_raw.resize((new_icon_w, new_icon_h), Image.Resampling.LANCZOS)
 
-    # Assemble Rebalanced Full Logo
-    gap = 22
-    total_w = new_icon_w + gap + new_text_w
-    total_h = new_icon_h
+    # 1. Vertical Stacked Logo (Icon on top, BreachShield text at bottom)
+    # Icon: 320x320
+    icon_w, icon_h = 320, 320
+    icon_stack_trans = icon_trans_raw.resize((icon_w, icon_h), Image.Resampling.LANCZOS)
+    icon_stack_solid = icon_solid_raw.resize((icon_w, icon_h), Image.Resampling.LANCZOS)
 
-    # Transparent version
-    logo_trans = Image.new("RGBA", (total_w, total_h), (0, 0, 0, 0))
-    logo_trans.paste(icon_trans_scaled, (0, 0), icon_trans_scaled)
-    text_y = (total_h - new_text_h) // 2
-    logo_trans.paste(text_trans_scaled, (new_icon_w + gap, text_y), text_trans_scaled)
+    # Text scaled proportionally under the icon
+    text_w = 280
+    text_h = int(text_solid_raw.height * (text_w / text_solid_raw.width))
+    text_stack_trans = text_trans_raw.resize((text_w, text_h), Image.Resampling.LANCZOS)
+    text_stack_solid = text_solid_raw.resize((text_w, text_h), Image.Resampling.LANCZOS)
 
-    # Solid version with deep cyber navy background
-    logo_solid = Image.new("RGB", (total_w, total_h), (1, 8, 20))
-    logo_solid.paste(icon_solid_scaled, (0, 0))
-    logo_solid.paste(text_solid_scaled, (new_icon_w + gap, text_y))
+    gap_y = 10
+    total_stack_w = max(icon_w, text_w) + 20
+    total_stack_h = icon_h + gap_y + text_h + 10
+
+    logo_trans = Image.new("RGBA", (total_stack_w, total_stack_h), (0, 0, 0, 0))
+    icon_x = (total_stack_w - icon_w) // 2
+    logo_trans.paste(icon_stack_trans, (icon_x, 5), icon_stack_trans)
+    text_x = (total_stack_w - text_w) // 2
+    text_y = 5 + icon_h + gap_y
+    logo_trans.paste(text_stack_trans, (text_x, text_y), text_stack_trans)
+
+    logo_solid = Image.new("RGB", (total_stack_w, total_stack_h), (1, 8, 20))
+    logo_solid.paste(icon_stack_solid, (icon_x, 5))
+    logo_solid.paste(text_stack_solid, (text_x, text_y))
+
+    # Also generate Horizontal Logo variant
+    gap_x = 22
+    total_h_w = icon_w + gap_x + new_text_w
+    total_h_h = icon_h
+    logo_horiz_trans = Image.new("RGBA", (total_h_w, total_h_h), (0, 0, 0, 0))
+    logo_horiz_trans.paste(icon_trans_scaled, (0, 0), icon_trans_scaled)
+    text_h_y = (total_h_h - new_text_h) // 2
+    logo_horiz_trans.paste(text_trans_scaled, (icon_w + gap_x, text_h_y), text_trans_scaled)
 
     # Save to frontend/public
-    # Full logos
+    # Full logos (Stacked is default logo.png)
     logo_trans.save(os.path.join(PUBLIC_DIR, "logo.png"), optimize=True)
+    logo_trans.save(os.path.join(PUBLIC_DIR, "logo-vertical.png"), optimize=True)
+    logo_horiz_trans.save(os.path.join(PUBLIC_DIR, "logo-horizontal.png"), optimize=True)
     logo_solid.save(os.path.join(PUBLIC_DIR, "logo-solid.png"), optimize=True)
 
     # Square icon
@@ -119,8 +141,8 @@ def main():
     import base64
     with open(os.path.join(PUBLIC_DIR, "logo.png"), "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
-    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {total_w} {total_h}" width="100%" height="100%">
-  <image href="data:image/png;base64,{b64}" x="0" y="0" width="{total_w}" height="{total_h}" />
+    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {total_stack_w} {total_stack_h}" width="100%" height="100%">
+  <image href="data:image/png;base64,{b64}" x="0" y="0" width="{total_stack_w}" height="{total_stack_h}" />
 </svg>
 '''
     with open(os.path.join(REPO_DIR, "frontend", "src", "logo.svg"), "w", encoding="utf-8") as f:

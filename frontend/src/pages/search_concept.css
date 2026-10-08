@@ -79,9 +79,9 @@
 }
 
 .brand-logo-img {
-  height: 58px;
+  height: 64px;
   width: auto;
-  max-width: 320px;
+  max-width: 140px;
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.45));
@@ -1076,8 +1076,8 @@
     min-height: 52px;
   }
   .brand-logo-img {
-    height: 42px;
-    max-width: 230px;
+    height: 52px;
+    max-width: 110px;
   }
   .concept-footer {
     flex-direction: column;
