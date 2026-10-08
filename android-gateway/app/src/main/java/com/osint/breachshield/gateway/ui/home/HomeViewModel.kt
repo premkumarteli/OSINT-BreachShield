@@ -6,6 +6,7 @@ import com.osint.breachshield.gateway.data.api.BreachShieldApi
 import com.osint.breachshield.gateway.data.api.OverviewData
 import com.osint.breachshield.gateway.data.api.OverviewMetrics
 import com.osint.breachshield.gateway.data.prefs.PreferenceManager
+import com.osint.breachshield.gateway.util.NetworkErrorParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,8 @@ class HomeViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
 
+    fun getAdminEmail(): String = preferenceManager.getAdminEmail() ?: "Admin"
+
     init {
         fetchOverview()
         startPeriodicRefresh()
@@ -44,7 +47,7 @@ class HomeViewModel @Inject constructor(
                     _overview.value = res.data
                 }
             } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+                _errorMessage.value = NetworkErrorParser.parse(e)
             } finally {
                 _isRefreshing.value = false
             }

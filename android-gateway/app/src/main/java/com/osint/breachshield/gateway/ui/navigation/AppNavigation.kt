@@ -14,6 +14,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.osint.breachshield.gateway.ui.auth.AdminLoginScreen
 import com.osint.breachshield.gateway.ui.components.FloatingBottomBar
+import com.osint.breachshield.gateway.ui.dashboard.DashboardScreen
 import com.osint.breachshield.gateway.ui.gateways.GatewayDetailScreen
 import com.osint.breachshield.gateway.ui.gateways.GatewaysScreen
 import com.osint.breachshield.gateway.ui.home.HomeScreen
@@ -68,6 +69,9 @@ fun AppNavigation(
                 GatewaysScreen(
                     onSelectGateway = { deviceId ->
                         navController.navigate(NavRoutes.gatewayDetail(deviceId))
+                    },
+                    onNavigateToConsole = {
+                        navController.navigate(NavRoutes.GATEWAY_CONSOLE)
                     }
                 )
             }
@@ -83,12 +87,25 @@ fun AppNavigation(
                 )
             }
 
+            composable(NavRoutes.GATEWAY_CONSOLE) {
+                DashboardScreen(
+                    onBack = { navController.popBackStack() },
+                    onLogout = {
+                        onLogout()
+                        navController.navigate(NavRoutes.AUTH) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             composable(NavRoutes.MORE) {
                 MoreScreen(
                     onNavigateToAlerts = { navController.navigate(NavRoutes.ALERTS) },
                     onNavigateToActivity = { navController.navigate(NavRoutes.ACTIVITY) },
                     onNavigateToBreaches = { navController.navigate(NavRoutes.BREACHES) },
                     onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) },
+                    onNavigateToGatewayConsole = { navController.navigate(NavRoutes.GATEWAY_CONSOLE) },
                     onLogout = {
                         onLogout()
                         navController.navigate(NavRoutes.AUTH) {

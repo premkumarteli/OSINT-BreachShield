@@ -74,7 +74,13 @@ class PreferenceManager @Inject constructor(
     fun getServerUrl(): String = sharedPreferences.getString(KEY_SERVER_URL, "http://10.18.86.96:5000") ?: "http://10.18.86.96:5000"
 
     fun setServerUrl(url: String) {
-        sharedPreferences.edit().putString(KEY_SERVER_URL, url).apply()
+        val trimmed = url.trim().trimEnd('/')
+        val normalized = if (trimmed.isNotBlank() && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+            "http://$trimmed"
+        } else {
+            trimmed
+        }
+        sharedPreferences.edit().putString(KEY_SERVER_URL, normalized).apply()
     }
 
     fun getGatewayToken(): String? = sharedPreferences.getString(KEY_GATEWAY_TOKEN, null)

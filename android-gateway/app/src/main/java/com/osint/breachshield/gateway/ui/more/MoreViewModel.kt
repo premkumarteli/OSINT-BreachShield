@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.osint.breachshield.gateway.data.api.*
 import com.osint.breachshield.gateway.data.prefs.PreferenceManager
+import com.osint.breachshield.gateway.util.NetworkErrorParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -89,11 +90,17 @@ class MoreViewModel @Inject constructor(
                 )
                 val res = api.updateSettings("Bearer $token", req)
                 if (res.success) {
-                    _settings.value = res.settings
+                    if (res.settings != null) {
+                        _settings.value = res.settings
+                    } else {
+                        loadAll()
+                    }
                     _statusMessage.value = "Settings updated successfully!"
+                } else {
+                    _statusMessage.value = res.message ?: "Failed to update settings."
                 }
             } catch (e: Exception) {
-                _statusMessage.value = "Failed: ${e.localizedMessage}"
+                _statusMessage.value = "Failed: ${NetworkErrorParser.parse(e)}"
             } finally {
                 _isLoading.value = false
             }
@@ -113,7 +120,7 @@ class MoreViewModel @Inject constructor(
                     _pingResult.value = "Server returned error."
                 }
             } catch (e: Exception) {
-                _pingResult.value = "Failed to connect: ${e.localizedMessage}"
+                _pingResult.value = "Failed to connect: ${NetworkErrorParser.parse(e)}"
             }
         }
     }
@@ -141,7 +148,7 @@ class MoreViewModel @Inject constructor(
                     loadAll()
                 }
             } catch (e: Exception) {
-                _statusMessage.value = "Sync failed: ${e.localizedMessage}"
+                _statusMessage.value = "Sync failed: ${NetworkErrorParser.parse(e)}"
             }
         }
     }

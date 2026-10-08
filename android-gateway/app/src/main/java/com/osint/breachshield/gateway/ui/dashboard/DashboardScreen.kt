@@ -5,13 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -20,13 +18,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.osint.breachshield.gateway.data.db.SmsLog
 import com.osint.breachshield.gateway.data.ws.ConnectionStatus
+import com.osint.breachshield.gateway.ui.components.GlassCard
+import com.osint.breachshield.gateway.ui.components.StatusBadge
+import com.osint.breachshield.gateway.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    onLogout: () -> Unit,
+    onBack: (() -> Unit)? = null,
+    onLogout: (() -> Unit)? = null,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val connectionStatus by viewModel.connectionStatus.collectAsState()
@@ -34,44 +36,44 @@ fun DashboardScreen(
     val sentToday by viewModel.sentCountToday.collectAsState()
     val failedToday by viewModel.failedCountToday.collectAsState()
 
-    var showLogoutDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
 
-    if (showLogoutDialog) {
+    if (showResetDialog) {
         AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
+            onDismissRequest = { showResetDialog = false },
             title = {
                 Text(
-                    "DISCONNECT GATEWAY",
+                    "RESET HARDWARE NODE",
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFF003C)
+                    color = CriticalRed
                 )
             },
             text = {
                 Text(
-                    "Are you sure you want to reset this hardware node registration and disconnect from the backend?",
-                    color = Color(0xFFE2E8F0)
+                    "Are you sure you want to reset this hardware node registration and re-establish link to the backend?",
+                    color = SlateTextPrimary
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        showLogoutDialog = false
+                        showResetDialog = false
                         viewModel.logout()
-                        onLogout()
+                        onLogout?.invoke()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF003C))
+                    colors = ButtonDefaults.buttonColors(containerColor = CriticalRed)
                 ) {
-                    Text("Confirm Disconnect", fontWeight = FontWeight.Bold)
+                    Text("Confirm Reset", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel", color = Color(0xFF94A3B8))
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Cancel", color = SlateTextSecondary)
                 }
             },
-            containerColor = Color(0xFF0F172A),
-            shape = RoundedCornerShape(14.dp)
+            containerColor = ObsidianSurface,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 
@@ -81,32 +83,39 @@ fun DashboardScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "BREACHSHIELD",
+                            "HARDWARE",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Black,
                             fontSize = 17.sp,
-                            color = Color(0xFF00F3FF),
+                            color = AccentCyan,
                             letterSpacing = 1.sp
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            "GATEWAY",
+                            "RELAY CONSOLE",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Light,
                             fontSize = 17.sp,
-                            color = Color(0xFF94A3B8),
+                            color = SlateTextSecondary,
                             letterSpacing = 1.sp
                         )
                     }
                 },
+                navigationIcon = {
+                    if (onBack != null) {
+                        TextButton(onClick = onBack) {
+                            Text("← Back", color = AccentCyan)
+                        }
+                    }
+                },
                 actions = {
                     Button(
-                        onClick = { showLogoutDialog = true },
+                        onClick = { showResetDialog = true },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFF003C).copy(alpha = 0.12f),
-                            contentColor = Color(0xFFFF003C)
+                            containerColor = CriticalRed.copy(alpha = 0.12f),
+                            contentColor = CriticalRed
                         ),
-                        border = BorderStroke(1.dp, Color(0xFFFF003C).copy(alpha = 0.4f)),
+                        border = BorderStroke(1.dp, CriticalRed.copy(alpha = 0.4f)),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
@@ -119,24 +128,29 @@ fun DashboardScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF070A13)
+                    containerColor = ObsidianBg
                 )
             )
         },
-        containerColor = Color(0xFF070A13)
+        containerColor = ObsidianBg
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
                 StatusCard(connectionStatus, viewModel.deviceId, viewModel.serverUrl)
-                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            item {
                 StatsGrid(sentToday, failedToday)
-                Spacer(modifier = Modifier.height(20.dp))
-                
+            }
+
+            item {
                 // Section Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -144,11 +158,11 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "> INBOUND TELEMETRY STREAM",
+                        text = "INBOUND TELEMETRY STREAM",
                         fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.titleSmall,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF00F3FF),
+                        color = AccentCyan,
                         letterSpacing = 1.sp
                     )
                     Surface(
@@ -160,41 +174,35 @@ fun DashboardScreen(
                             fontFamily = FontFamily.Monospace,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF94A3B8),
+                            color = SlateTextSecondary,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
             }
 
             if (recentLogs.isEmpty()) {
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-                        border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "⚡ STANDBY MODE",
+                                text = "⚡ ACTIVE RELAY STANDBY",
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF00FF66),
+                                color = MatrixGreen,
                                 fontSize = 13.sp
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "Gateway is active and listening for OTP SMS dispatch commands via WebSocket relay...",
+                                text = "Physical device is listening for OTP SMS commands dispatched from BreachShield backend via WebSocket channel...",
                                 fontFamily = FontFamily.Monospace,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF64748B),
+                                color = SlateTextMuted,
                                 lineHeight = 18.sp
                             )
                         }
@@ -203,7 +211,6 @@ fun DashboardScreen(
             } else {
                 items(recentLogs) { log ->
                     SmsLogItem(log)
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
@@ -212,70 +219,44 @@ fun DashboardScreen(
 
 @Composable
 fun StatusCard(status: ConnectionStatus, deviceId: String, serverUrl: String) {
-    val statusColor = when (status) {
-        ConnectionStatus.CONNECTED -> Color(0xFF00FF66)
-        ConnectionStatus.CONNECTING -> Color(0xFFFFB800)
-        ConnectionStatus.DISCONNECTED -> Color(0xFFFF003C)
-    }
-
     val statusText = when (status) {
-        ConnectionStatus.CONNECTED -> "🟢 SYSTEM ONLINE"
-        ConnectionStatus.CONNECTING -> "🟡 ESTABLISHING LINK"
-        ConnectionStatus.DISCONNECTED -> "🔴 DISCONNECTED"
+        ConnectionStatus.CONNECTED -> "ONLINE"
+        ConnectionStatus.CONNECTING -> "STANDBY"
+        ConnectionStatus.DISCONNECTED -> "OFFLINE"
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-        border = BorderStroke(1.dp, Color(0xFF00F3FF).copy(alpha = 0.25f)),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = statusColor.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))
-                ) {
-                    Text(
-                        text = statusText,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Black,
-                        color = statusColor,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        letterSpacing = 0.5.sp
-                    )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFF1E293B)
-                ) {
-                    Text(
-                        text = "WS: ACTIVE",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF94A3B8),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "HARDWARE NODE STATUS",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SlateTextSecondary
+                )
+                Text(
+                    text = if (status == ConnectionStatus.CONNECTED) "WebSocket Channel Active" else "Re-establishing Relay Link",
+                    color = SlateTextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
-
-            Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = Color(0xFF1E293B), thickness = 1.dp)
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Telemetry Fields
-            TelemetryRow("NODE ID", deviceId)
-            Spacer(modifier = Modifier.height(6.dp))
-            TelemetryRow("SERVER", serverUrl)
+            StatusBadge(status = statusText)
         }
+
+        Spacer(modifier = Modifier.height(14.dp))
+        HorizontalDivider(color = GlassBorderColor)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Telemetry Fields
+        TelemetryRow("NODE ID", deviceId)
+        Spacer(modifier = Modifier.height(6.dp))
+        TelemetryRow("SERVER", serverUrl)
     }
 }
 
@@ -291,13 +272,13 @@ fun TelemetryRow(label: String, value: String) {
             fontFamily = FontFamily.Monospace,
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF64748B)
+            color = SlateTextMuted
         )
         Text(
             text = value,
             fontFamily = FontFamily.Monospace,
             fontSize = 11.sp,
-            color = Color(0xFFE2E8F0),
+            color = SlateTextPrimary,
             fontWeight = FontWeight.Medium
         )
     }
@@ -315,19 +296,19 @@ fun StatsGrid(sent: Int, failed: Int) {
         StatBox(
             label = "DISPATCHED",
             value = "$sent",
-            accentColor = Color(0xFF00FF66),
+            accentColor = MatrixGreen,
             modifier = Modifier.weight(1f)
         )
         StatBox(
             label = "FAILED",
             value = "$failed",
-            accentColor = if (failed > 0) Color(0xFFFF003C) else Color(0xFF64748B),
+            accentColor = if (failed > 0) CriticalRed else SlateTextMuted,
             modifier = Modifier.weight(1f)
         )
         StatBox(
-            label = "HEALTH RATE",
+            label = "SUCCESS",
             value = "$successRate%",
-            accentColor = Color(0xFF00F3FF),
+            accentColor = AccentCyan,
             modifier = Modifier.weight(1f)
         )
     }
@@ -335,14 +316,9 @@ fun StatsGrid(sent: Int, failed: Int) {
 
 @Composable
 fun StatBox(label: String, value: String, accentColor: Color, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-        border = BorderStroke(1.dp, Color(0xFF1E293B)),
-        shape = RoundedCornerShape(12.dp)
-    ) {
+    GlassCard(modifier = modifier) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -350,7 +326,7 @@ fun StatBox(label: String, value: String, accentColor: Color, modifier: Modifier
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF64748B),
+                color = SlateTextSecondary,
                 letterSpacing = 0.5.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -370,61 +346,37 @@ fun SmsLogItem(log: SmsLog) {
     val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     val time = sdf.format(Date(log.timestamp))
 
-    val isSuccess = log.status == "DELIVERED" || log.status == "SENT"
-    val badgeColor = if (isSuccess) Color(0xFF00FF66) else Color(0xFFFF003C)
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-        border = BorderStroke(1.dp, Color(0xFF1E293B)),
-        shape = RoundedCornerShape(10.dp)
-    ) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                 Text(
                     text = "TARGET: ${log.phoneNumber}",
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
-                    color = Color(0xFF00F3FF)
+                    color = AccentCyan
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = log.message,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
-                    color = Color(0xFF94A3B8),
+                    color = SlateTextSecondary,
                     maxLines = 2
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.End) {
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = badgeColor.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.4f))
-                ) {
-                    Text(
-                        text = "[ ${log.status} ]",
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 10.sp,
-                        color = badgeColor,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
+                StatusBadge(status = log.status)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = time,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 10.sp,
-                    color = Color(0xFF64748B)
+                    color = SlateTextMuted
                 )
             }
         }

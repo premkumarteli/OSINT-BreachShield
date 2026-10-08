@@ -9,6 +9,7 @@ import com.osint.breachshield.gateway.data.api.*
 import com.osint.breachshield.gateway.data.prefs.PreferenceManager
 import com.osint.breachshield.gateway.service.GatewayForegroundService
 import com.osint.breachshield.gateway.util.DeviceUtils
+import com.osint.breachshield.gateway.util.NetworkErrorParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,7 +83,7 @@ class GatewayViewModel @Inject constructor(
                     _actionMessage.value = res.message ?: "Failed to register gateway."
                 }
             } catch (e: Exception) {
-                _actionMessage.value = "Registration error: ${e.localizedMessage}"
+                _actionMessage.value = "Registration error: ${NetworkErrorParser.parse(e)}"
             } finally {
                 _isRegisteringDevice.value = false
             }
@@ -107,7 +108,7 @@ class GatewayViewModel @Inject constructor(
                     _actionMessage.value = res.error ?: "Failed to dispatch test SMS."
                 }
             } catch (e: Exception) {
-                _actionMessage.value = "Error: ${e.localizedMessage}"
+                _actionMessage.value = "Error: ${NetworkErrorParser.parse(e)}"
             } finally {
                 _isSendingTestSms.value = false
             }

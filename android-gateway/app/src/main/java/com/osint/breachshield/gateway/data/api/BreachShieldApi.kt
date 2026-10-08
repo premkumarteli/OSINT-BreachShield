@@ -297,22 +297,22 @@ data class DatasetItem(
 )
 
 data class SettingsResponse(
-    val success: Boolean,
-    val settings: AppSettingsDto,
+    val success: Boolean = false,
+    val settings: AppSettingsDto? = null,
     val message: String? = null
 )
 
 data class AppSettingsDto(
-    val serverUrl: String,
-    val environment: String,
-    val heartbeatIntervalSec: Int,
-    val sessionTimeoutMin: Int,
+    val serverUrl: String = "http://localhost:5000",
+    val environment: String = "development",
+    val heartbeatIntervalSec: Int = 30,
+    val sessionTimeoutMin: Int = 15,
     val otpExpiryMinutes: Int = 5,
     val enableTelegramScraper: Boolean = true,
     val fallbackToEmail: Boolean = true,
     val maintenanceMode: Boolean = false,
     val smsOtpTemplate: String = "Your BreachShield OTP is {OTP}. Valid for 5 minutes.",
-    val appVersion: String
+    val appVersion: String = "2.1.0"
 )
 
 data class UpdateSettingsRequest(

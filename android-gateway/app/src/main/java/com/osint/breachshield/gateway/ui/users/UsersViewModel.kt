@@ -7,9 +7,9 @@ import com.osint.breachshield.gateway.data.api.BlacklistRequest
 import com.osint.breachshield.gateway.data.api.BreachShieldApi
 import com.osint.breachshield.gateway.data.api.UserHistoryItem
 import com.osint.breachshield.gateway.data.prefs.PreferenceManager
+import com.osint.breachshield.gateway.util.NetworkErrorParser
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -38,6 +38,26 @@ class UsersViewModel @Inject constructor(
 
     private val _actionFeedback = MutableStateFlow<String?>(null)
     val actionFeedback = _actionFeedback.asStateFlow()
+
+    val filteredActiveUsers = combine(_activeUsers, _searchQuery) { users, query ->
+        if (query.isBlank()) users
+        else users.filter {
+            it.userTarget.contains(query, ignoreCase = true) ||
+            it.maskedIp.contains(query, ignoreCase = true) ||
+            it.browser.contains(query, ignoreCase = true) ||
+            it.device.contains(query, ignoreCase = true)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val filteredUserHistory = combine(_userHistory, _searchQuery) { history, query ->
+        if (query.isBlank()) history
+        else history.filter {
+            it.userTarget.contains(query, ignoreCase = true) ||
+            it.maskedIp.contains(query, ignoreCase = true) ||
+            it.browser.contains(query, ignoreCase = true) ||
+            it.device.contains(query, ignoreCase = true)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         fetchUsers()
@@ -80,9 +100,11 @@ class UsersViewModel @Inject constructor(
                 if (res.success) {
                     _actionFeedback.value = "User session $sessionId terminated."
                     fetchUsers()
+                } else {
+                    _actionFeedback.value = res.error ?: res.message ?: "Failed to terminate session."
                 }
             } catch (e: Exception) {
-                _actionFeedback.value = "Failed to terminate: ${e.localizedMessage}"
+                _actionFeedback.value = "Failed to terminate: ${NetworkErrorParser.parse(e)}"
             }
         }
     }
@@ -95,9 +117,11 @@ class UsersViewModel @Inject constructor(
                 if (res.success) {
                     _actionFeedback.value = "Target $target blacklisted."
                     fetchUsers()
+                } else {
+                    _actionFeedback.value = res.error ?: res.message ?: "Failed to blacklist target."
                 }
             } catch (e: Exception) {
-                _actionFeedback.value = "Failed to blacklist: ${e.localizedMessage}"
+                _actionFeedback.value = "Failed to blacklist: ${NetworkErrorParser.parse(e)}"
             }
         }
     }

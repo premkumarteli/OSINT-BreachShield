@@ -11,6 +11,7 @@ object NavRoutes {
     const val ACTIVITY = "admin_activity"
     const val BREACHES = "admin_breaches"
     const val SETTINGS = "admin_settings"
+    const val GATEWAY_CONSOLE = "admin_gateway_console"
 
     fun gatewayDetail(deviceId: String) = "admin_gateway_detail/$deviceId"
 }

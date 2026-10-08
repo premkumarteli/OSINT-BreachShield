@@ -12,6 +12,7 @@ import com.osint.breachshield.gateway.data.api.RegistrationRequest
 import com.osint.breachshield.gateway.data.prefs.PreferenceManager
 import com.osint.breachshield.gateway.service.GatewayForegroundService
 import com.osint.breachshield.gateway.util.DeviceUtils
+import com.osint.breachshield.gateway.util.NetworkErrorParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
@@ -54,6 +55,32 @@ class AdminAuthViewModel @Inject constructor(
     private val _serverUrl = MutableStateFlow(preferenceManager.getServerUrl())
     val serverUrl = _serverUrl.asStateFlow()
 
+    private val _pingStatus = MutableStateFlow<String?>(null)
+    val pingStatus = _pingStatus.asStateFlow()
+
+    fun setPresetEmail(preset: String) {
+        _email.value = preset
+        _errorMessage.value = null
+    }
+
+    fun testServerConnection() {
+        viewModelScope.launch {
+            _pingStatus.value = "Testing latency..."
+            val start = System.currentTimeMillis()
+            try {
+                val res = api.ping()
+                val latency = System.currentTimeMillis() - start
+                if (res.success) {
+                    _pingStatus.value = "● Connected! Latency: ${latency}ms (Uptime: ${res.uptime}s)"
+                } else {
+                    _pingStatus.value = "Server returned error."
+                }
+            } catch (e: Exception) {
+                _pingStatus.value = NetworkErrorParser.parse(e)
+            }
+        }
+    }
+
     fun onServerUrlChange(newUrl: String) {
         _serverUrl.value = newUrl
         preferenceManager.setServerUrl(newUrl.trim())
@@ -89,7 +116,7 @@ class AdminAuthViewModel @Inject constructor(
                     _errorMessage.value = res.error ?: "Failed to dispatch admin OTP."
                 }
             } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage ?: "Failed to connect to backend server."
+                _errorMessage.value = NetworkErrorParser.parse(e)
             } finally {
                 _isLoading.value = false
             }
@@ -142,7 +169,7 @@ class AdminAuthViewModel @Inject constructor(
                     _errorMessage.value = res.error ?: "Invalid or expired admin verification code."
                 }
             } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage ?: "Verification failed. Check network connection."
+                _errorMessage.value = NetworkErrorParser.parse(e)
             } finally {
                 _isLoading.value = false
             }

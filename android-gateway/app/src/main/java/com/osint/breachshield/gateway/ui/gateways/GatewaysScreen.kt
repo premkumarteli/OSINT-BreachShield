@@ -24,6 +24,7 @@ import com.osint.breachshield.gateway.ui.theme.*
 @Composable
 fun GatewaysScreen(
     onSelectGateway: (String) -> Unit,
+    onNavigateToConsole: () -> Unit = {},
     viewModel: GatewayViewModel = hiltViewModel()
 ) {
     val gateways by viewModel.gateways.collectAsState()
@@ -189,6 +190,26 @@ fun GatewaysScreen(
                     ) {
                         Text("✉ Send Test SMS", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = onNavigateToConsole,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentCyan.copy(alpha = 0.12f),
+                        contentColor = AccentCyan
+                    ),
+                    border = BorderStroke(1.dp, AccentCyan.copy(alpha = 0.35f)),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "⚡ Inspect Hardware Relay Console ›",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
                 }
 
                 if (actionMessage != null) {

@@ -32,6 +32,7 @@ fun AdminLoginScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val cooldownSeconds by viewModel.cooldownSeconds.collectAsState()
+    val pingStatus by viewModel.pingStatus.collectAsState()
     var showServerConfig by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState) {
@@ -101,30 +102,92 @@ fun AdminLoginScreen(
                     }
 
                     if (showServerConfig) {
-                        OutlinedTextField(
-                            value = serverUrl,
-                            onValueChange = viewModel::onServerUrlChange,
-                            label = { Text("Backend Server URL") },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = AccentCyan,
-                                unfocusedBorderColor = GlassBorderColor,
-                                focusedTextColor = AccentCyan,
-                                unfocusedTextColor = SlateTextPrimary
-                            ),
-                            shape = RoundedCornerShape(14.dp),
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 12.dp)
-                        )
+                                .padding(bottom = 14.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = serverUrl,
+                                onValueChange = viewModel::onServerUrlChange,
+                                label = { Text("Backend Server URL") },
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = AccentCyan,
+                                    unfocusedBorderColor = GlassBorderColor,
+                                    focusedTextColor = AccentCyan,
+                                    unfocusedTextColor = SlateTextPrimary
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Button(
+                                onClick = viewModel::testServerConnection,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF1E293B),
+                                    contentColor = AccentCyan
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Ping Server Latency", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            if (pingStatus != null) {
+                                Text(
+                                    text = pingStatus ?: "",
+                                    color = if (pingStatus?.startsWith("●") == true) MatrixGreen else CriticalRed,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
                     }
 
                     Text(
                         text = "Enter your configured administrator email to receive a 6-digit authentication token.",
                         color = SlateTextSecondary,
                         fontSize = 13.sp,
-                        modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
+                        modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
                     )
+
+                    // Quick Demo Email Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("admin@breachshield.io", "premkumarteli@gmail.com").forEach { preset ->
+                            val isSelected = email == preset
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSelected) AccentCyan.copy(alpha = 0.2f) else Color(0xFF1E293B),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isSelected) AccentCyan else GlassBorderColor
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                TextButton(
+                                    onClick = { viewModel.setPresetEmail(preset) },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = preset.substringBefore("@"),
+                                        color = if (isSelected) AccentCyan else SlateTextSecondary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
+                        }
+                    }
 
                     OutlinedTextField(
                         value = email,

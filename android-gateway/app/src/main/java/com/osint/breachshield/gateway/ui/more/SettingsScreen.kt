@@ -221,10 +221,7 @@ fun SettingsScreen(
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = serverUrlInput,
-                        onValueChange = {
-                            serverUrlInput = it
-                            viewModel.saveServerUrl(it)
-                        },
+                        onValueChange = { serverUrlInput = it },
                         label = { Text("Backend Server URL") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -237,15 +234,29 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    Button(
-                        onClick = viewModel::testConnection,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B), contentColor = AccentCyan),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("Test Backend Connection (Ping)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Button(
+                            onClick = { viewModel.saveServerUrl(serverUrlInput) },
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentCyan, contentColor = ObsidianBg),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Save URL", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+
+                        Button(
+                            onClick = viewModel::testConnection,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B), contentColor = AccentCyan),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Ping Latency", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
                     }
 
                     if (pingResult != null) {

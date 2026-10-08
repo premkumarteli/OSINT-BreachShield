@@ -22,6 +22,7 @@ fun MoreScreen(
     onNavigateToActivity: () -> Unit,
     onNavigateToBreaches: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToGatewayConsole: () -> Unit = {},
     onLogout: () -> Unit,
     viewModel: MoreViewModel = hiltViewModel()
 ) {
@@ -93,6 +94,8 @@ fun MoreScreen(
             SectionTitle("SYSTEM")
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 MenuItem("Settings", "Backend connection & intervals", onNavigateToSettings)
+                HorizontalDivider(color = GlassBorderColor, modifier = Modifier.padding(vertical = 8.dp))
+                MenuItem("Hardware SIM Relay Console", "Live WebSocket link & local SIM dispatch stream", onNavigateToGatewayConsole)
             }
         }
 

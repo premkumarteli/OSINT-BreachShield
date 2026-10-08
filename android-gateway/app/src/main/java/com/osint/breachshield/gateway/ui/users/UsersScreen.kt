@@ -30,8 +30,9 @@ fun UsersScreen(
     viewModel: UsersViewModel = hiltViewModel()
 ) {
     val currentTab by viewModel.currentTab.collectAsState()
-    val activeUsers by viewModel.activeUsers.collectAsState()
-    val userHistory by viewModel.userHistory.collectAsState()
+    val activeUsers by viewModel.filteredActiveUsers.collectAsState()
+    val userHistory by viewModel.filteredUserHistory.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val actionFeedback by viewModel.actionFeedback.collectAsState()
 
     var selectedActiveUser by remember { mutableStateOf<ActiveUserItem?>(null) }
@@ -201,6 +202,31 @@ fun UsersScreen(
                     )
                 }
             }
+        }
+
+        // Search Filter Input
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = viewModel::onSearchQueryChange,
+                placeholder = { Text("Filter by email, phone, IP, or browser...", color = SlateTextMuted, fontSize = 12.sp) },
+                singleLine = true,
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                            Text("✕", color = SlateTextSecondary, fontSize = 12.sp)
+                        }
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentCyan,
+                    unfocusedBorderColor = GlassBorderColor,
+                    focusedTextColor = SlateTextPrimary,
+                    unfocusedTextColor = SlateTextPrimary
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         // Active Users List
