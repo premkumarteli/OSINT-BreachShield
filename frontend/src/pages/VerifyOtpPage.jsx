@@ -133,15 +133,8 @@ export default function VerifyOtpPage() {
 
       {/* Top Navbar */}
       <header className="concept-navbar">
-        <a href="/" className="concept-brand">
-          <svg className="brand-icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            <path d="M9 12l2 2 4-4" />
-          </svg>
-          <div className="brand-text-wrap">
-            <span className="brand-name">BREACHSHIELD</span>
-            <span className="brand-subtext">KNOW. STAY AHEAD.</span>
-          </div>
+        <a href="/" className="concept-brand" aria-label="BreachShield Home">
+          <img src="/logo.png" alt="BreachShield - Exposure Intelligence" className="brand-logo-img" />
         </a>
 
         <nav className="concept-nav-links" aria-label="Main Navigation">
@@ -332,6 +325,7 @@ export default function VerifyOtpPage() {
       {/* Footer (Matches Header Size & Theme) */}
       <footer className="concept-footer">
         <div className="footer-left">
+          <img src="/logo-icon.png" alt="" className="footer-brand-icon" aria-hidden="true" />
           <span className="footer-brand-title">BREACHSHIELD</span>
           <span className="footer-divider">•</span>
           <span className="footer-copyright">© 2026 BreachShield. All rights reserved.</span>

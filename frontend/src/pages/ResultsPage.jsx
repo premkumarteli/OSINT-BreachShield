@@ -143,6 +143,7 @@ export default function ResultsPage() {
   const exposure = data?.analytics?.exposure || { score: 0, riskLevel: 'LOW', riskColor: '#00ff66', breakdown: [], entities: {} };
   const timelineEvents = data?.analytics?.timeline || [];
   const packets = data?.packets || [];
+  // eslint-disable-next-line no-unused-vars
   const auditData = data?.blockchainAudit || null;
 
   // Synthesize structured breach records from timeline or packets if records is empty
@@ -233,14 +234,8 @@ export default function ResultsPage() {
 
       {/* Frosted Glass Navbar */}
       <header className="concept-navbar">
-        <a href="/" className="concept-brand" onClick={(e) => { e.preventDefault(); handleNewSearch(); }}>
-          <svg className="brand-icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-          <div className="brand-text-wrap">
-            <span className="brand-name">BREACHSHIELD</span>
-            <span className="brand-subtext">KNOW. STAY AHEAD.</span>
-          </div>
+        <a href="/" className="concept-brand" onClick={(e) => { e.preventDefault(); handleNewSearch(); }} aria-label="BreachShield Home">
+          <img src="/logo.png" alt="BreachShield - Exposure Intelligence" className="brand-logo-img" />
         </a>
 
         <nav className="concept-nav-links" aria-label="Main Navigation">
@@ -664,6 +659,7 @@ export default function ResultsPage() {
       {/* Footer (Matches Header Size & Theme) */}
       <footer className="concept-footer">
         <div className="footer-left">
+          <img src="/logo-icon.png" alt="" className="footer-brand-icon" aria-hidden="true" />
           <span className="footer-brand-title">BREACHSHIELD</span>
           <span className="footer-divider">•</span>
           <span className="footer-copyright">© 2026 BreachShield. All rights reserved.</span>

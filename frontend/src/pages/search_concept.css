@@ -70,6 +70,35 @@
   align-items: center;
   gap: 12px;
   text-decoration: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.concept-brand:hover {
+  transform: translateY(-1px);
+  opacity: 0.96;
+}
+
+.brand-logo-img {
+  height: 40px;
+  width: auto;
+  max-width: 240px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.35));
+  transition: filter 0.25s ease, transform 0.25s ease;
+}
+
+.concept-brand:hover .brand-logo-img {
+  filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.6));
+  transform: scale(1.02);
+}
+
+.brand-logo-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.45));
 }
 
 .brand-icon-shield {
@@ -697,6 +726,13 @@
   gap: 10px;
 }
 
+.footer-brand-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.45));
+}
+
 .footer-brand-title {
   font-family: 'Orbitron', monospace;
   font-size: 0.82rem;
@@ -1038,6 +1074,10 @@
   .concept-navbar {
     padding: 10px 20px;
     min-height: 52px;
+  }
+  .brand-logo-img {
+    height: 32px;
+    max-width: 190px;
   }
   .concept-footer {
     flex-direction: column;

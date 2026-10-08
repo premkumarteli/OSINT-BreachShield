@@ -1,6 +1,6 @@
 {
-  "short_name": "OSINT SEARCH",
-  "name": "OSINT SEARCH",
+  "short_name": "BreachShield",
+  "name": "BreachShield - Exposure Intelligence",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#030712",
+  "background_color": "#030712"
 }
