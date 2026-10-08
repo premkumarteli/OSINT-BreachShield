@@ -68,14 +68,14 @@
 .concept-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   text-decoration: none;
   transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
 .concept-brand:hover {
   transform: translateY(-1px);
-  opacity: 0.96;
+  opacity: 0.98;
 }
 
 .brand-logo-img {
@@ -98,7 +98,13 @@
   height: 44px;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5));
+  filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.55));
+  transition: filter 0.25s ease, transform 0.25s ease;
+}
+
+.concept-brand:hover .brand-logo-icon {
+  filter: drop-shadow(0 0 22px rgba(0, 240, 255, 0.8));
+  transform: scale(1.04);
 }
 
 .brand-icon-shield {
@@ -111,23 +117,27 @@
 .brand-text-wrap {
   display: flex;
   flex-direction: column;
+  justify-content: center;
 }
 
 .brand-name {
   font-family: 'Orbitron', monospace;
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: #ffffff;
-  line-height: 1.1;
+  line-height: 1.15;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.3));
 }
 
 .brand-subtext {
   font-family: 'Orbitron', monospace;
-  font-size: 0.5rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
   color: #00f0ff;
+  line-height: 1.2;
+  margin-top: 2px;
 }
 
 .concept-nav-links {

@@ -235,7 +235,11 @@ export default function ResultsPage() {
       {/* Frosted Glass Navbar */}
       <header className="concept-navbar">
         <a href="/" className="concept-brand" onClick={(e) => { e.preventDefault(); handleNewSearch(); }} aria-label="BreachShield Home">
-          <img src="/logo.png" alt="BreachShield - Exposure Intelligence" className="brand-logo-img" />
+          <img src="/logo-icon.png" alt="BreachShield Logo" className="brand-logo-icon" />
+          <div className="brand-text-wrap">
+            <span className="brand-name">BREACHSHIELD</span>
+            <span className="brand-subtext">EXPOSURE INTELLIGENCE</span>
+          </div>
         </a>
 
         <nav className="concept-nav-links" aria-label="Main Navigation">

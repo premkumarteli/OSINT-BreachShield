@@ -134,7 +134,11 @@ export default function VerifyOtpPage() {
       {/* Top Navbar */}
       <header className="concept-navbar">
         <a href="/" className="concept-brand" aria-label="BreachShield Home">
-          <img src="/logo.png" alt="BreachShield - Exposure Intelligence" className="brand-logo-img" />
+          <img src="/logo-icon.png" alt="BreachShield Logo" className="brand-logo-icon" />
+          <div className="brand-text-wrap">
+            <span className="brand-name">BREACHSHIELD</span>
+            <span className="brand-subtext">EXPOSURE INTELLIGENCE</span>
+          </div>
         </a>
 
         <nav className="concept-nav-links" aria-label="Main Navigation">
