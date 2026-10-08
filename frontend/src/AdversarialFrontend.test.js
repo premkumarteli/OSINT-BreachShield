@@ -87,7 +87,7 @@ describe('Adversarial Verification: Route Guards and Fallbacks', () => {
   test('AppRouter catches arbitrary legacy and invalid routes and renders SearchPage at /', () => {
     // Test AppRouter directly
     render(<AppRouter />);
-    expect(screen.getByText('OSINT SEARCH')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /breachshield/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /generate-otp-button/i })).toBeInTheDocument();
   });
 });

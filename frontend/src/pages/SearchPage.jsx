@@ -131,7 +131,7 @@ export default function SearchPage() {
       {/* Top Navbar */}
       <header className="concept-navbar">
         <a href="/" className="concept-brand" aria-label="BreachShield Home">
-          <img src="/logo.png" alt="BreachShield - Exposure Intelligence" className="brand-logo-img" />
+          <img src="/logo.png" alt="BreachShield" className="brand-logo-img" />
         </a>
 
         <nav className="concept-nav-links" aria-label="Main Navigation">
@@ -151,9 +151,9 @@ export default function SearchPage() {
       <main className="concept-main">
         {/* Hero Section */}
         <section className="concept-hero">
-          <h1 className="concept-hero-title">OSINT SEARCH</h1>
+          <h1 className="concept-hero-title">BREACHSHIELD</h1>
           <p className="concept-hero-subtitle">
-            Search public breach intelligence sources securely using privacy-preserving lookup techniques.
+            Exposure Intelligence Platform
           </p>
           <div className="concept-hero-tags">
             PRIVACY &nbsp;•&nbsp; INTELLIGENCE &nbsp;•&nbsp; A SAFER TOMORROW
