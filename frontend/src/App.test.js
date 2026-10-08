@@ -18,7 +18,7 @@ beforeEach(() => {
 describe('AppRouter Integration', () => {
   test('renders SearchPage on initial load at root route', () => {
     render(<AppRouter />);
-    expect(screen.getByRole('heading', { level: 1, name: /breachshield/i })).toBeInTheDocument();
+    expect(screen.getByText('OSINT SEARCH')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/enter email/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /generate-otp-button/i })).toBeInTheDocument();
   });
