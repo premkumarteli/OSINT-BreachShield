@@ -37,75 +37,39 @@ def main():
     src = Image.open(SRC_PATH).convert("RGB")
     print(f"Loaded source image: {src.size}")
 
-    # 1. Square Emblem Icon (the Fingerprint + B + dispersing cubes)
-    # x: 68..332 (264), y: 42..306 (264)
-    crop_box_icon = (68, 42, 332, 306)
-    icon_solid_raw = src.crop(crop_box_icon)
-    icon_trans_raw = make_transparent(icon_solid_raw, low_cut=7.0, high_cut=85.0)
+    # 1. Extract raw icon and text blocks
+    # Icon crop: x 70..330 (260x260), y 45..305
+    icon_raw = src.crop((70, 45, 330, 305))
+    # Text crop: x 340..942 (602x92), y 136..228
+    text_raw = src.crop((340, 136, 942, 228))
+
+    # 2. Scale icon +30% and decrease text -25% (per user requirement)
+    icon_w, icon_h = int(260 * 1.30), int(260 * 1.30)   # 338x338
+    text_w, text_h = int(602 * 0.75), int(92 * 0.75)    # 451x69
+    icon_scaled = icon_raw.resize((icon_w, icon_h), Image.Resampling.LANCZOS)
+    text_scaled = text_raw.resize((text_w, text_h), Image.Resampling.LANCZOS)
+
+    # 3. Composite rebalanced horizontal logo
+    gap = 22
+    canvas_w = icon_w + gap + text_w
+    canvas_h = icon_h
+    logo_solid = Image.new("RGB", (canvas_w, canvas_h), (1, 8, 20))
+    logo_solid.paste(icon_scaled, (0, 0))
+    text_y = (canvas_h - text_h) // 2
+    logo_solid.paste(text_scaled, (icon_w + gap, text_y))
+
+    logo_trans = make_transparent(logo_solid)
+
+    # 4. Square Emblem Icon (the Fingerprint + B + dispersing cubes)
+    icon_trans_raw = make_transparent(icon_raw)
 
     # High-res 512x512
     icon_512 = icon_trans_raw.resize((512, 512), Image.Resampling.LANCZOS)
-    icon_solid_512 = icon_solid_raw.resize((512, 512), Image.Resampling.LANCZOS)
-
-    # 2. Text Region: BREACHSHIELD + EXPOSURE INTELLIGENCE
-    # x: 334..945 (611), y: 130..232 (102)
-    crop_box_text = (334, 130, 945, 232)
-    text_solid_raw = src.crop(crop_box_text)
-    text_trans_raw = make_transparent(text_solid_raw, low_cut=10.0, high_cut=95.0)
-
-    # Scale text down by 25% (0.75x) as requested
-    new_text_w = int(text_solid_raw.width * 0.75)
-    new_text_h = int(text_solid_raw.height * 0.75)
-    text_trans_scaled = text_trans_raw.resize((new_text_w, new_text_h), Image.Resampling.LANCZOS)
-    text_solid_scaled = text_solid_raw.resize((new_text_w, new_text_h), Image.Resampling.LANCZOS)
-
-    # Scale icon up by 35% (1.35x) so icon is significantly more visible than text
-    new_icon_w = int(icon_solid_raw.width * 1.35)
-    new_icon_h = int(icon_solid_raw.height * 1.35)
-    icon_trans_scaled = icon_trans_raw.resize((new_icon_w, new_icon_h), Image.Resampling.LANCZOS)
-    icon_solid_scaled = icon_solid_raw.resize((new_icon_w, new_icon_h), Image.Resampling.LANCZOS)
-
-    # 1. Vertical Stacked Logo (Icon on top, BreachShield text at bottom)
-    # Icon: 320x320
-    icon_w, icon_h = 320, 320
-    icon_stack_trans = icon_trans_raw.resize((icon_w, icon_h), Image.Resampling.LANCZOS)
-    icon_stack_solid = icon_solid_raw.resize((icon_w, icon_h), Image.Resampling.LANCZOS)
-
-    # Text scaled proportionally under the icon
-    text_w = 280
-    text_h = int(text_solid_raw.height * (text_w / text_solid_raw.width))
-    text_stack_trans = text_trans_raw.resize((text_w, text_h), Image.Resampling.LANCZOS)
-    text_stack_solid = text_solid_raw.resize((text_w, text_h), Image.Resampling.LANCZOS)
-
-    gap_y = 10
-    total_stack_w = max(icon_w, text_w) + 20
-    total_stack_h = icon_h + gap_y + text_h + 10
-
-    logo_trans = Image.new("RGBA", (total_stack_w, total_stack_h), (0, 0, 0, 0))
-    icon_x = (total_stack_w - icon_w) // 2
-    logo_trans.paste(icon_stack_trans, (icon_x, 5), icon_stack_trans)
-    text_x = (total_stack_w - text_w) // 2
-    text_y = 5 + icon_h + gap_y
-    logo_trans.paste(text_stack_trans, (text_x, text_y), text_stack_trans)
-
-    logo_solid = Image.new("RGB", (total_stack_w, total_stack_h), (1, 8, 20))
-    logo_solid.paste(icon_stack_solid, (icon_x, 5))
-    logo_solid.paste(text_stack_solid, (text_x, text_y))
-
-    # Also generate Horizontal Logo variant
-    gap_x = 22
-    total_h_w = icon_w + gap_x + new_text_w
-    total_h_h = icon_h
-    logo_horiz_trans = Image.new("RGBA", (total_h_w, total_h_h), (0, 0, 0, 0))
-    logo_horiz_trans.paste(icon_trans_scaled, (0, 0), icon_trans_scaled)
-    text_h_y = (total_h_h - new_text_h) // 2
-    logo_horiz_trans.paste(text_trans_scaled, (icon_w + gap_x, text_h_y), text_trans_scaled)
+    icon_solid_512 = icon_raw.resize((512, 512), Image.Resampling.LANCZOS)
 
     # Save to frontend/public
-    # Full logos (Stacked is default logo.png)
+    # Full logos
     logo_trans.save(os.path.join(PUBLIC_DIR, "logo.png"), optimize=True)
-    logo_trans.save(os.path.join(PUBLIC_DIR, "logo-vertical.png"), optimize=True)
-    logo_horiz_trans.save(os.path.join(PUBLIC_DIR, "logo-horizontal.png"), optimize=True)
     logo_solid.save(os.path.join(PUBLIC_DIR, "logo-solid.png"), optimize=True)
 
     # Square icon
@@ -141,8 +105,8 @@ def main():
     import base64
     with open(os.path.join(PUBLIC_DIR, "logo.png"), "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
-    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {total_stack_w} {total_stack_h}" width="100%" height="100%">
-  <image href="data:image/png;base64,{b64}" x="0" y="0" width="{total_stack_w}" height="{total_stack_h}" />
+    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {canvas_w} {canvas_h}" width="100%" height="100%">
+  <image href="data:image/png;base64,{b64}" x="0" y="0" width="{canvas_w}" height="{canvas_h}" />
 </svg>
 '''
     with open(os.path.join(REPO_DIR, "frontend", "src", "logo.svg"), "w", encoding="utf-8") as f:
