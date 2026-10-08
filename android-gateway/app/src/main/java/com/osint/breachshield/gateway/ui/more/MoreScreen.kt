@@ -76,7 +76,7 @@ fun MoreScreen(
             SectionTitle("SECURITY")
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 MenuItem("Alerts", "System warnings & incidents", onNavigateToAlerts)
-                Divider(color = GlassBorderColor, modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(color = GlassBorderColor, modifier = Modifier.padding(vertical = 8.dp))
                 MenuItem("Activity", "Administrative & system audit trail", onNavigateToActivity)
             }
         }
