@@ -40,7 +40,9 @@ fun GatewaysScreen(
     var testPhoneInput by remember { mutableStateOf("+918722611983") }
     var testMessageInput by remember { mutableStateOf("BreachShield Test SMS verification via physical SIM.") }
 
-    val onlineCount = gateways.count { it.status == "ONLINE" }
+    val localOnline = if (isRegistered) 1 else 0
+    val totalOnline = gateways.count { it.status == "ONLINE" } + localOnline
+    val totalGateways = (gateways.size + localOnline).coerceAtLeast(1)
 
     // Test SMS Modal Dialog
     if (showTestSmsDialog) {
@@ -132,8 +134,8 @@ fun GatewaysScreen(
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    text = "$onlineCount Online / ${gateways.size} Total",
-                    color = if (onlineCount > 0) MatrixGreen else CriticalRed,
+                    text = "$totalOnline Online / $totalGateways Total",
+                    color = if (totalOnline > 0) MatrixGreen else CriticalRed,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace

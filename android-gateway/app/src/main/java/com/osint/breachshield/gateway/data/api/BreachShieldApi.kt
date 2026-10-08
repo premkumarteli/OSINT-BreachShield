@@ -12,6 +12,10 @@ interface BreachShieldApi {
     @GET("/api/admin/ping")
     suspend fun ping(): PingResponse
 
+    // Public Citizen Search
+    @POST("/api/auth/send-otp")
+    suspend fun sendCitizenOtp(@Body request: CitizenSendOtpRequest): CitizenOtpResponse
+
     // Admin Authentication
     @POST("/api/admin/auth/send-otp")
     suspend fun sendAdminOtp(@Body request: AdminSendOtpRequest): AdminApiResponse<Unit>
@@ -323,4 +327,16 @@ data class UpdateSettingsRequest(
     val sessionTimeoutMin: Int? = null,
     val heartbeatIntervalSec: Int? = null,
     val smsOtpTemplate: String? = null
+)
+
+data class CitizenSendOtpRequest(
+    val email: String? = null,
+    val phone: String? = null,
+    val target: String? = null
+)
+
+data class CitizenOtpResponse(
+    val success: Boolean = false,
+    val message: String? = null,
+    val error: String? = null
 )

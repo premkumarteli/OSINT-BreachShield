@@ -1,6 +1,7 @@
 package com.osint.breachshield.gateway.ui.navigation
 
 object NavRoutes {
+    const val LANDING = "public_landing"
     const val AUTH = "admin_auth"
     const val HOME = "admin_home"
     const val USERS = "admin_users"

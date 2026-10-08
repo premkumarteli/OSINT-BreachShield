@@ -25,7 +25,7 @@ interface GatewayDao {
     @Query("SELECT * FROM sms_logs ORDER BY timestamp DESC LIMIT 20")
     fun getRecentSmsLogs(): Flow<List<SmsLog>>
 
-    @Query("SELECT COUNT(*) FROM sms_logs WHERE status = 'SENT' AND timestamp >= :todayStart")
+    @Query("SELECT COUNT(*) FROM sms_logs WHERE status IN ('SENT', 'DELIVERED') AND timestamp >= :todayStart")
     fun getSentCountToday(todayStart: Long): Flow<Int>
 
     @Query("SELECT COUNT(*) FROM sms_logs WHERE status = 'FAILED' AND timestamp >= :todayStart")
@@ -38,7 +38,7 @@ interface GatewayDao {
     fun getLastConnectionStatus(): Flow<ConnectionLog?>
 }
 
-@Database(entities = [GatewayConfig::class, SmsLog::class, ConnectionLog::class], version = 1)
+@Database(entities = [GatewayConfig::class, SmsLog::class, ConnectionLog::class], version = 1, exportSchema = false)
 abstract class GatewayDatabase : RoomDatabase() {
     abstract fun gatewayDao(): GatewayDao
 }

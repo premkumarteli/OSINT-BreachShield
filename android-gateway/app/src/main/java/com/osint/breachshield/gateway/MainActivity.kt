@@ -17,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.osint.breachshield.gateway.data.prefs.PreferenceManager
 import com.osint.breachshield.gateway.service.GatewayForegroundService
 import com.osint.breachshield.gateway.ui.navigation.AppNavigation
+import com.osint.breachshield.gateway.ui.theme.CyberTypography
 import com.osint.breachshield.gateway.ui.theme.LiquidGlassColorScheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -36,7 +37,10 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme(colorScheme = LiquidGlassColorScheme) {
+            MaterialTheme(
+                colorScheme = LiquidGlassColorScheme,
+                typography = CyberTypography
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

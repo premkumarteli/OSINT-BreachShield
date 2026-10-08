@@ -18,6 +18,7 @@ import com.osint.breachshield.gateway.ui.dashboard.DashboardScreen
 import com.osint.breachshield.gateway.ui.gateways.GatewayDetailScreen
 import com.osint.breachshield.gateway.ui.gateways.GatewaysScreen
 import com.osint.breachshield.gateway.ui.home.HomeScreen
+import com.osint.breachshield.gateway.ui.landing.LandingScreen
 import com.osint.breachshield.gateway.ui.more.*
 import com.osint.breachshield.gateway.ui.users.UsersScreen
 
@@ -40,19 +41,33 @@ fun AppNavigation(
     Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = if (isLoggedIn) NavRoutes.HOME else NavRoutes.AUTH,
+            startDestination = if (isLoggedIn) NavRoutes.HOME else NavRoutes.LANDING,
             modifier = Modifier.fillMaxSize()
         ) {
-            composable(NavRoutes.AUTH) {
-                AdminLoginScreen(
-                    onAuthSuccess = {
-                        navController.navigate(NavRoutes.HOME) {
-                            popUpTo(NavRoutes.AUTH) { inclusive = true }
-                        }
+            // Page 1: Public Citizen Landing Portal
+            composable(NavRoutes.LANDING) {
+                LandingScreen(
+                    onNavigateToAdminAuth = {
+                        navController.navigate(NavRoutes.AUTH)
                     }
                 )
             }
 
+            // Page 2: Administrator Gateway Login
+            composable(NavRoutes.AUTH) {
+                AdminLoginScreen(
+                    onAuthSuccess = {
+                        navController.navigate(NavRoutes.HOME) {
+                            popUpTo(NavRoutes.LANDING) { inclusive = true }
+                        }
+                    },
+                    onBackToLanding = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Page 3: SOC Overview / Command Center (Figma Design)
             composable(NavRoutes.HOME) {
                 HomeScreen(
                     onNavigateToUsers = { navController.navigate(NavRoutes.USERS) },
@@ -61,10 +76,12 @@ fun AppNavigation(
                 )
             }
 
+            // Page 4: Citizen Forensics & Active Sessions (Figma Design)
             composable(NavRoutes.USERS) {
                 UsersScreen()
             }
 
+            // Page 5: Gateways & Physical SIM Relay (Figma Design)
             composable(NavRoutes.GATEWAYS) {
                 GatewaysScreen(
                     onSelectGateway = { deviceId ->
@@ -87,18 +104,20 @@ fun AppNavigation(
                 )
             }
 
+            // Hardware SIM Relay Console
             composable(NavRoutes.GATEWAY_CONSOLE) {
                 DashboardScreen(
                     onBack = { navController.popBackStack() },
                     onLogout = {
                         onLogout()
-                        navController.navigate(NavRoutes.AUTH) {
+                        navController.navigate(NavRoutes.LANDING) {
                             popUpTo(0) { inclusive = true }
                         }
                     }
                 )
             }
 
+            // Navigation Hub (Security, System, Settings)
             composable(NavRoutes.MORE) {
                 MoreScreen(
                     onNavigateToAlerts = { navController.navigate(NavRoutes.ALERTS) },
@@ -108,7 +127,7 @@ fun AppNavigation(
                     onNavigateToGatewayConsole = { navController.navigate(NavRoutes.GATEWAY_CONSOLE) },
                     onLogout = {
                         onLogout()
-                        navController.navigate(NavRoutes.AUTH) {
+                        navController.navigate(NavRoutes.LANDING) {
                             popUpTo(0) { inclusive = true }
                         }
                     }
@@ -132,7 +151,7 @@ fun AppNavigation(
             }
         }
 
-        // Floating Bottom Nav Bar visible only on primary 4 destinations
+        // Floating Bottom Nav Bar visible on primary 4 SOC destinations
         if (isMainTab) {
             FloatingBottomBar(
                 currentRoute = currentRoute,
