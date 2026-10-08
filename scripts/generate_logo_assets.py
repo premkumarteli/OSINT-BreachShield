@@ -37,20 +37,49 @@ def main():
     src = Image.open(SRC_PATH).convert("RGB")
     print(f"Loaded source image: {src.size}")
 
-    # 1. Full horizontal logo (cropped to content bounds)
-    crop_box_logo = (70, 50, 958, 292) # (888, 242)
-    logo_solid = src.crop(crop_box_logo)
-    logo_trans = make_transparent(logo_solid)
-
-    # 2. Square Emblem Icon (the Fingerprint + B + dispersing cubes)
-    # x: 70..330 (260), y: 45..305 (260) -> 1:1 perfect square
-    crop_box_icon = (70, 45, 330, 305)
+    # 1. Square Emblem Icon (the Fingerprint + B + dispersing cubes)
+    # x: 68..332 (264), y: 42..306 (264)
+    crop_box_icon = (68, 42, 332, 306)
     icon_solid_raw = src.crop(crop_box_icon)
-    icon_trans_raw = make_transparent(icon_solid_raw)
+    icon_trans_raw = make_transparent(icon_solid_raw, low_cut=7.0, high_cut=85.0)
 
     # High-res 512x512
     icon_512 = icon_trans_raw.resize((512, 512), Image.Resampling.LANCZOS)
     icon_solid_512 = icon_solid_raw.resize((512, 512), Image.Resampling.LANCZOS)
+
+    # 2. Text Region: BREACHSHIELD + EXPOSURE INTELLIGENCE
+    # x: 334..945 (611), y: 130..232 (102)
+    crop_box_text = (334, 130, 945, 232)
+    text_solid_raw = src.crop(crop_box_text)
+    text_trans_raw = make_transparent(text_solid_raw, low_cut=10.0, high_cut=95.0)
+
+    # Scale text down by 25% (0.75x) as requested
+    new_text_w = int(text_solid_raw.width * 0.75)
+    new_text_h = int(text_solid_raw.height * 0.75)
+    text_trans_scaled = text_trans_raw.resize((new_text_w, new_text_h), Image.Resampling.LANCZOS)
+    text_solid_scaled = text_solid_raw.resize((new_text_w, new_text_h), Image.Resampling.LANCZOS)
+
+    # Scale icon up by 35% (1.35x) so icon is significantly more visible than text
+    new_icon_w = int(icon_solid_raw.width * 1.35)
+    new_icon_h = int(icon_solid_raw.height * 1.35)
+    icon_trans_scaled = icon_trans_raw.resize((new_icon_w, new_icon_h), Image.Resampling.LANCZOS)
+    icon_solid_scaled = icon_solid_raw.resize((new_icon_w, new_icon_h), Image.Resampling.LANCZOS)
+
+    # Assemble Rebalanced Full Logo
+    gap = 22
+    total_w = new_icon_w + gap + new_text_w
+    total_h = new_icon_h
+
+    # Transparent version
+    logo_trans = Image.new("RGBA", (total_w, total_h), (0, 0, 0, 0))
+    logo_trans.paste(icon_trans_scaled, (0, 0), icon_trans_scaled)
+    text_y = (total_h - new_text_h) // 2
+    logo_trans.paste(text_trans_scaled, (new_icon_w + gap, text_y), text_trans_scaled)
+
+    # Solid version with deep cyber navy background
+    logo_solid = Image.new("RGB", (total_w, total_h), (1, 8, 20))
+    logo_solid.paste(icon_solid_scaled, (0, 0))
+    logo_solid.paste(text_solid_scaled, (new_icon_w + gap, text_y))
 
     # Save to frontend/public
     # Full logos
@@ -90,8 +119,8 @@ def main():
     import base64
     with open(os.path.join(PUBLIC_DIR, "logo.png"), "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
-    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 888 242" width="100%" height="100%">
-  <image href="data:image/png;base64,{b64}" x="0" y="0" width="888" height="242" />
+    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {total_w} {total_h}" width="100%" height="100%">
+  <image href="data:image/png;base64,{b64}" x="0" y="0" width="{total_w}" height="{total_h}" />
 </svg>
 '''
     with open(os.path.join(REPO_DIR, "frontend", "src", "logo.svg"), "w", encoding="utf-8") as f:
