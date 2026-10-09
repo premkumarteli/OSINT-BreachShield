@@ -21,7 +21,7 @@ describe('AppRouter Integration & LandingPage', () => {
   test('(c) "/" renders the landing stub with headline and CTA linking to /search', () => {
     sessionStorage.setItem('breachshield_intro_seen', 'true');
     render(<AppRouter />);
-    expect(screen.getByText(/Next-Generation Breach & Threat Exposure Intelligence/i)).toBeInTheDocument();
+    expect(screen.getByText(/Check whether your email or phone appears in known breaches/i)).toBeInTheDocument();
     const ctaLink = screen.getByRole('link', { name: /Check my exposure/i });
     expect(ctaLink).toBeInTheDocument();
     expect(ctaLink).toHaveAttribute('href', '/search');
@@ -46,7 +46,7 @@ describe('AppRouter Integration & LandingPage', () => {
       </MemoryRouter>
     );
     expect(screen.queryByLabelText(/BreachShield Logo Intro/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/Next-Generation Breach & Threat Exposure Intelligence/i)).toBeInTheDocument();
+    expect(screen.getByText(/Check whether your email or phone appears in known breaches/i)).toBeInTheDocument();
   });
 
   test('(b) Skip button sets the sessionStorage flag and removes the overlay', () => {
@@ -68,7 +68,77 @@ describe('AppRouter Integration & LandingPage', () => {
     // Flag is set and overlay is removed
     expect(sessionStorage.getItem('breachshield_intro_seen')).toBe('true');
     expect(screen.queryByLabelText(/BreachShield Logo Intro/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/Next-Generation Breach & Threat Exposure Intelligence/i)).toBeInTheDocument();
+    expect(screen.getByText(/Check whether your email or phone appears in known breaches/i)).toBeInTheDocument();
+  });
+
+  test('Phase 3 (a): all section ids render in LandingPage', () => {
+    sessionStorage.setItem('breachshield_intro_seen', 'true');
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    expect(container.querySelector('#how-it-works')).toBeInTheDocument();
+    expect(container.querySelector('#sample-result')).toBeInTheDocument();
+    expect(container.querySelector('#about')).toBeInTheDocument();
+    expect(container.querySelector('#team')).toBeInTheDocument();
+    expect(container.querySelector('#contact')).toBeInTheDocument();
+  });
+
+  test('Phase 3 (b): Team array renders 1 entry as spotlight and 2 entries as grid, hiding empty links', () => {
+    sessionStorage.setItem('breachshield_intro_seen', 'true');
+    
+    // 1 member -> spotlight
+    const singleTeam = [
+      { name: 'Premkumar Teli', role: 'Security Architect', bio: 'Bio test', links: { github: 'https://github.com/premkumarteli', linkedin: '' } }
+    ];
+    const { rerender } = render(
+      <MemoryRouter>
+        <LandingPage team={singleTeam} />
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('team-spotlight')).toBeInTheDocument();
+    expect(screen.getByText('Premkumar Teli')).toBeInTheDocument();
+    // GitHub link present, LinkedIn link hidden because URL is empty
+    expect(screen.getByRole('link', { name: /GitHub/i })).toHaveAttribute('href', 'https://github.com/premkumarteli');
+    expect(screen.queryByRole('link', { name: /LinkedIn/i })).not.toBeInTheDocument();
+
+    // 2 members -> grid
+    const multiTeam = [
+      { name: 'Premkumar Teli', role: 'Security Architect', bio: 'Bio 1', links: { github: '', linkedin: '' } },
+      { name: 'Second Member', role: 'Security Engineer', bio: 'Bio 2', links: { github: 'https://github.com/member2', linkedin: '' } }
+    ];
+    rerender(
+      <MemoryRouter>
+        <LandingPage team={multiTeam} />
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('team-grid')).toBeInTheDocument();
+    expect(screen.getByText('Premkumar Teli')).toBeInTheDocument();
+    expect(screen.getByText('Second Member')).toBeInTheDocument();
+  });
+
+  test('Phase 3 (c): sample card contains the text "Sample"', () => {
+    sessionStorage.setItem('breachshield_intro_seen', 'true');
+    render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+    expect(screen.getAllByText(/Sample/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Sample data/i)).toBeInTheDocument();
+  });
+
+  test('Phase 3 (d): Navbar links point to the right anchors (#about, #team, #contact)', () => {
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('link', { name: /About/i })).toHaveAttribute('href', '#about');
+    expect(screen.getByRole('link', { name: /Team/i })).toHaveAttribute('href', '#team');
+    expect(screen.getByRole('link', { name: /Contact/i })).toHaveAttribute('href', '#contact');
   });
 
   test('renders SearchPage when directly visiting /search', () => {

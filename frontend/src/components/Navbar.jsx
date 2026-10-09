@@ -1,8 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 export default function Navbar({ isIntroActive = false }) {
+  const shouldReduceMotion = useReducedMotion();
+
+  const handleAnchorClick = (e, targetId) => {
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+      e.preventDefault();
+      targetElement.scrollIntoView({
+        behavior: shouldReduceMotion ? 'auto' : 'smooth'
+      });
+      try {
+        window.history.pushState(null, '', `#${targetId}`);
+      } catch (_) {}
+    }
+  };
+
   return (
     <header className="concept-navbar" role="banner">
       <Link to="/" className="concept-brand" aria-label="BreachShield Home">
@@ -40,9 +55,27 @@ export default function Navbar({ isIntroActive = false }) {
         transition={{ duration: 0.4, delay: isIntroActive ? 2.8 : 0 }}
       >
         <Link to="/" className="nav-link-item active">Home</Link>
-        <a href="#about" className="nav-link-item">About</a>
-        <a href="#features" className="nav-link-item">Features</a>
-        <a href="#contact" className="nav-link-item">Contact</a>
+        <a
+          href="#about"
+          className="nav-link-item"
+          onClick={(e) => handleAnchorClick(e, 'about')}
+        >
+          About
+        </a>
+        <a
+          href="#team"
+          className="nav-link-item"
+          onClick={(e) => handleAnchorClick(e, 'team')}
+        >
+          Team
+        </a>
+        <a
+          href="#contact"
+          className="nav-link-item"
+          onClick={(e) => handleAnchorClick(e, 'contact')}
+        >
+          Contact
+        </a>
       </motion.nav>
     </header>
   );

@@ -19,3 +19,17 @@ if (typeof globalThis.TextEncoder === 'undefined') {
   globalThis.TextDecoder = NodeTextDecoder;
 }
 
+// Mock IntersectionObserver for Framer Motion whileInView in jsdom
+if (typeof window !== 'undefined' && typeof window.IntersectionObserver === 'undefined') {
+  class MockIntersectionObserver {
+    constructor(callback) {
+      this.callback = callback;
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  window.IntersectionObserver = MockIntersectionObserver;
+  globalThis.IntersectionObserver = MockIntersectionObserver;
+}
+

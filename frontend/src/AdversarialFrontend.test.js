@@ -87,7 +87,7 @@ describe('Adversarial Verification: Route Guards and Fallbacks', () => {
   test('AppRouter mounts LandingPage at root route "/" with CTA to /search', () => {
     sessionStorage.setItem('breachshield_intro_seen', 'true');
     render(<AppRouter />);
-    expect(screen.getByText(/Next-Generation Breach & Threat Exposure Intelligence/i)).toBeInTheDocument();
+    expect(screen.getByText(/Check whether your email or phone appears in known breaches/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Check my exposure/i })).toHaveAttribute('href', '/search');
   });
 });
