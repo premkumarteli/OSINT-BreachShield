@@ -84,12 +84,11 @@ describe('Adversarial Verification: Route Guards and Fallbacks', () => {
     }
   });
 
-  test('AppRouter catches root route "/" and redirects to "/search", rendering SearchPage', () => {
-    // Test AppRouter directly
+  test('AppRouter mounts LandingPage at root route "/" with CTA to /search', () => {
+    sessionStorage.setItem('breachshield_intro_seen', 'true');
     render(<AppRouter />);
-    expect(screen.getByText('OSINT SEARCH')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /generate-otp-button/i })).toBeInTheDocument();
-    expect(screen.getByText(/we'll send a one-time code to verify it's you/i)).toBeInTheDocument();
+    expect(screen.getByText(/Next-Generation Breach & Threat Exposure Intelligence/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Check my exposure/i })).toHaveAttribute('href', '/search');
   });
 });
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
 import SearchPage from './pages/SearchPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
 import ResultsPage from './pages/ResultsPage';
@@ -8,7 +9,7 @@ export default function AppRouter() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
-        <Route path="/" element={<Navigate to="/search" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/verify-otp" element={<VerifyOtpPage />} />
         <Route path="/results" element={<ResultsPage />} />

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import Navbar from '../components/Navbar';
 import './search_concept.css';
 
 const bgVideo1 = '/bg1.mp4';
@@ -129,24 +130,7 @@ export default function SearchPage() {
       <div className="concept-background" aria-hidden="true" />
 
       {/* Top Navbar */}
-      <header className="concept-navbar">
-        <a href="/" className="concept-brand" aria-label="BreachShield Home">
-          <img src="/logo-icon.png" alt="BreachShield Logo" className="brand-logo-icon" />
-          <div className="brand-text-wrap">
-            <span className="brand-name">
-              <span className="brand-text-white">BREACH</span>
-              <span className="brand-text-blue">SHIELD</span>
-            </span>
-          </div>
-        </a>
-
-        <nav className="concept-nav-links" aria-label="Main Navigation">
-          <a href="/" className="nav-link-item active">Home</a>
-          <a href="#about" className="nav-link-item">About</a>
-          <a href="#features" className="nav-link-item">Features</a>
-          <a href="#contact" className="nav-link-item">Contact</a>
-        </nav>
-      </header>
+      <Navbar />
 
       {/* Main Body - Centered Title + Minimal Card */}
       <main className="concept-main">

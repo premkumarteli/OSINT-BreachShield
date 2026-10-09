@@ -2,9 +2,11 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import AppRouter from './AppRouter';
+import LandingPage from './pages/LandingPage';
 import SearchPage from './pages/SearchPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
 import ResultsPage from './pages/ResultsPage';
+import Navbar from './components/Navbar';
 import api from './lib/api';
 
 jest.mock('./lib/api');
@@ -15,13 +17,58 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('AppRouter Integration', () => {
-  test('redirects from root route "/" to "/search" and renders minimal SearchPage', () => {
+describe('AppRouter Integration & LandingPage', () => {
+  test('(c) "/" renders the landing stub with headline and CTA linking to /search', () => {
+    sessionStorage.setItem('breachshield_intro_seen', 'true');
     render(<AppRouter />);
-    expect(screen.getByText('OSINT SEARCH')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/enter email/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /generate-otp-button/i })).toBeInTheDocument();
-    expect(screen.getByText(/we'll send a one-time code to verify it's you/i)).toBeInTheDocument();
+    expect(screen.getByText(/Next-Generation Breach & Threat Exposure Intelligence/i)).toBeInTheDocument();
+    const ctaLink = screen.getByRole('link', { name: /Check my exposure/i });
+    expect(ctaLink).toBeInTheDocument();
+    expect(ctaLink).toHaveAttribute('href', '/search');
+  });
+
+  test('(d) Navbar brand is a Link pointing to "/"', () => {
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>
+    );
+    const brandLink = screen.getByRole('link', { name: /BreachShield Home/i });
+    expect(brandLink).toBeInTheDocument();
+    expect(brandLink).toHaveAttribute('href', '/');
+  });
+
+  test('(a) IntroLogoAnimation does not render when sessionStorage flag is set', () => {
+    sessionStorage.setItem('breachshield_intro_seen', 'true');
+    render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+    expect(screen.queryByLabelText(/BreachShield Logo Intro/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Next-Generation Breach & Threat Exposure Intelligence/i)).toBeInTheDocument();
+  });
+
+  test('(b) Skip button sets the sessionStorage flag and removes the overlay', () => {
+    sessionStorage.clear();
+    render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    // Overlay is present initially
+    expect(screen.getByLabelText(/BreachShield Logo Intro/i)).toBeInTheDocument();
+    const skipBtn = screen.getByRole('button', { name: /Skip Intro Animation/i });
+    expect(skipBtn).toBeInTheDocument();
+
+    // Click Skip
+    fireEvent.click(skipBtn);
+
+    // Flag is set and overlay is removed
+    expect(sessionStorage.getItem('breachshield_intro_seen')).toBe('true');
+    expect(screen.queryByLabelText(/BreachShield Logo Intro/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Next-Generation Breach & Threat Exposure Intelligence/i)).toBeInTheDocument();
   });
 
   test('renders SearchPage when directly visiting /search', () => {

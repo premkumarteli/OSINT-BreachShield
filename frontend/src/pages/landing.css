@@ -1,0 +1,87 @@
+/* ==========================================================================
+   BreachShield - Landing Page Styles
+   ========================================================================== */
+
+.landing-page-wrapper {
+  position: relative;
+  min-height: 100vh !important;
+  height: auto !important;
+  max-height: none !important;
+  width: 100%;
+  background: transparent;
+  color: #f8fafc;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.landing-hero-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  padding: 80px 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  z-index: 5;
+}
+
+.landing-headline {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2.2rem, 4.5vw, 3.6rem);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #ffffff 55%,
+    #e2e8f0 80%,
+    #cbd5e1 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 36px 0;
+  line-height: 1.15;
+  filter: 
+    drop-shadow(0 0 1px #ffffff)
+    drop-shadow(0 0 10px rgba(0, 240, 255, 0.3));
+}
+
+.landing-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: auto;
+  min-width: 260px;
+  min-height: 50px;
+  height: 50px;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #00f0ff 0%, #0080ff 100%);
+  border: 1px solid rgba(0, 240, 255, 0.6);
+  color: #04121F;
+  text-decoration: none;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0, 240, 255, 0.4);
+  transition: all 0.25s ease;
+}
+
+.landing-cta-btn:hover {
+  background: linear-gradient(135deg, #2bf4ff 0%, #1a8eff 100%);
+  color: #04121F;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 240, 255, 0.55);
+}
+
+.landing-cta-btn:active {
+  transform: translateY(0);
+}

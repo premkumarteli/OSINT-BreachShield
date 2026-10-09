@@ -1,0 +1,112 @@
+/* ==========================================================================
+   BreachShield - Intro Logo Animation Overlay Styles
+   ========================================================================== */
+
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: #04121F;
+  background-image: 
+    linear-gradient(rgba(34, 211, 238, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.intro-skip-btn {
+  position: absolute;
+  bottom: 24px;
+  right: 28px;
+  z-index: 10001;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  color: #22D3EE;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+
+.intro-skip-btn:hover {
+  background: rgba(34, 211, 238, 0.15);
+  border-color: #22D3EE;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.4);
+}
+
+.intro-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  user-select: none;
+}
+
+.intro-logo-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intro-logo-box {
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intro-logo-img {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.65));
+  display: block;
+}
+
+.intro-scan-line {
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  height: 2px;
+  background: #22D3EE;
+  box-shadow: 
+    0 0 10px 2px #22D3EE, 
+    0 0 24px 4px rgba(34, 211, 238, 0.6);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.intro-wordmark-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intro-brand-name {
+  font-size: 2rem !important;
+  letter-spacing: 0.18em !important;
+  filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.45));
+}
+
+.intro-letter-group {
+  display: inline-flex;
+}
+
+.intro-letter {
+  display: inline-block;
+}
