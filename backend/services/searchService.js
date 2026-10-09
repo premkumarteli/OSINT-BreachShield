@@ -58,7 +58,7 @@ async function executeSearch(query, verifiedTarget, options = {}) {
   try {
     const fetchFn = globalThis.fetch || require('node-fetch');
     const controller = new AbortController();
-    const aiTimeout = setTimeout(() => controller.abort(), 6000);
+    const aiTimeout = setTimeout(() => controller.abort(), 15000);
     const aiResp = await fetchFn(`${pythonServiceUrl.replace('/query', '')}/api/ai/analyze-threat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

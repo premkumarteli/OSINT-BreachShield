@@ -269,6 +269,14 @@ async def startup_event():
         except Exception as exc:
             print(f"[Telethon Startup Warning] Telegram connection error: {exc}")
 
+    # Pre-warm AI model pipelines so first user search doesn't experience cold-start latency
+    if AI_MODULE_ACTIVE:
+        try:
+            ai_analyzer.analyze_threat_payload("warmup query", "0000000000")
+            print("[AI Module] Model pipelines warmed up and ready.")
+        except Exception as warm_err:
+            print(f"[AI Module Warmup Notice] {warm_err}")
+
 
     # background keepalive to keep Telethon session fresh
     async def _keep_alive():
