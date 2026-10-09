@@ -40,12 +40,12 @@ def main():
     # 1. Extract raw icon and text blocks
     # Icon crop: x 70..330 (260x260), y 45..305
     icon_raw = src.crop((70, 45, 330, 305))
-    # Text crop: x 340..942 (602x92), y 136..228
-    text_raw = src.crop((340, 136, 942, 228))
+    # Text crop without tagline: x 340..942, y 136..196 (only BREACHSHIELD)
+    text_raw = src.crop((340, 136, 942, 196))
 
-    # 2. Scale icon +30% and decrease text -25% (per user requirement)
+    # 2. Scale icon and text proportionally
     icon_w, icon_h = int(260 * 1.30), int(260 * 1.30)   # 338x338
-    text_w, text_h = int(602 * 0.75), int(92 * 0.75)    # 451x69
+    text_w, text_h = int(602 * 0.75), int(60 * 0.75)    # 451x45
     icon_scaled = icon_raw.resize((icon_w, icon_h), Image.Resampling.LANCZOS)
     text_scaled = text_raw.resize((text_w, text_h), Image.Resampling.LANCZOS)
 

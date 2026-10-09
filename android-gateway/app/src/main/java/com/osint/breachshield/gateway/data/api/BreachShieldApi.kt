@@ -16,6 +16,15 @@ interface BreachShieldApi {
     @POST("/api/auth/send-otp")
     suspend fun sendCitizenOtp(@Body request: CitizenSendOtpRequest): CitizenOtpResponse
 
+    @POST("/api/auth/verify-otp")
+    suspend fun verifyCitizenOtp(@Body request: CitizenVerifyOtpRequest): CitizenVerifyOtpResponse
+
+    @POST("/api/search")
+    suspend fun searchBreaches(
+        @Header("Authorization") authHeader: String? = null,
+        @Body request: CitizenSearchRequest
+    ): CitizenSearchResponse
+
     // Admin Authentication
     @POST("/api/admin/auth/send-otp")
     suspend fun sendAdminOtp(@Body request: AdminSendOtpRequest): AdminApiResponse<Unit>
@@ -338,5 +347,79 @@ data class CitizenSendOtpRequest(
 data class CitizenOtpResponse(
     val success: Boolean = false,
     val message: String? = null,
+    val error: String? = null,
+    val expiresInMinutes: Int? = null
+)
+
+data class CitizenVerifyOtpRequest(
+    val target: String? = null,
+    val email: String? = null,
+    val phone: String? = null,
+    val otp: String
+)
+
+data class CitizenVerifyOtpResponse(
+    val success: Boolean = false,
+    val token: String? = null,
+    val target: String? = null,
+    val email: String? = null,
+    val message: String? = null,
     val error: String? = null
+)
+
+data class CitizenSearchRequest(
+    val query: String,
+    val token: String? = null
+)
+
+data class CitizenSearchResponse(
+    val success: Boolean = false,
+    val data: CitizenSearchResultData? = null,
+    val error: String? = null
+)
+
+data class CitizenSearchResultData(
+    val query: String? = null,
+    val totalBreaches: Int? = null,
+    val riskScore: Int? = null,
+    val summary: String? = null,
+    val records: List<CitizenRecordItem>? = emptyList(),
+    val packets: List<CitizenPacket>? = emptyList(),
+    val breaches: List<CitizenBreachItem>? = emptyList(),
+    val analytics: CitizenAnalyticsData? = null
+)
+
+data class CitizenRecordItem(
+    val id: Any? = null,
+    val source: String? = null,
+    val title: String? = null,
+    val year: String? = null,
+    val category: String? = null,
+    val sourceType: String? = null,
+    val isSimulated: Boolean? = null,
+    val dataClasses: List<String>? = emptyList(),
+    val details: String? = null
+)
+
+data class CitizenPacket(
+    val query: String? = null,
+    val info: String? = null
+)
+
+data class CitizenAnalyticsData(
+    val exposure: CitizenExposureData? = null
+)
+
+data class CitizenExposureData(
+    val score: Int? = null,
+    val level: String? = null,
+    val factors: List<String>? = emptyList()
+)
+
+data class CitizenBreachItem(
+    val title: String = "",
+    val breachDate: String? = null,
+    val leakedData: List<String> = emptyList(),
+    val pwnCount: Long = 0,
+    val description: String? = null
 )

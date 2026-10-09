@@ -136,8 +136,10 @@ export default function VerifyOtpPage() {
         <a href="/" className="concept-brand" aria-label="BreachShield Home">
           <img src="/logo-icon.png" alt="BreachShield Logo" className="brand-logo-icon" />
           <div className="brand-text-wrap">
-            <span className="brand-name">BREACHSHIELD</span>
-            <span className="brand-subtext">EXPOSURE INTELLIGENCE</span>
+            <span className="brand-name">
+              <span className="brand-text-white">BREACH</span>
+              <span className="brand-text-blue">SHIELD</span>
+            </span>
           </div>
         </a>
 

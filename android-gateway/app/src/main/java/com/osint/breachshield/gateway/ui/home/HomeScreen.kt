@@ -26,6 +26,7 @@ fun HomeScreen(
     onNavigateToUsers: () -> Unit,
     onNavigateToGateways: () -> Unit,
     onNavigateToAlerts: () -> Unit,
+    onNavigateToLanding: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val overview by viewModel.overview.collectAsState()
@@ -86,18 +87,36 @@ fun HomeScreen(
                         )
                     }
 
-                    IconButton(
-                        onClick = viewModel::fetchOverview,
-                        enabled = !isRefreshing
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = AccentCyan,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text("⟳", color = AccentCyan, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = onNavigateToLanding,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF0F172A),
+                                contentColor = AccentCyan
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AccentCyan.copy(alpha = 0.4f)),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text("🌐 Citizen Portal", fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                        }
+
+                        IconButton(
+                            onClick = viewModel::fetchOverview,
+                            enabled = !isRefreshing
+                        ) {
+                            if (isRefreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = AccentCyan,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("⟳", color = AccentCyan, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -215,7 +234,12 @@ fun HomeScreen(
                                 fontFamily = FontFamily.Monospace
                             )
                             Text("Gateways online", color = SlateTextSecondary, fontSize = 11.sp)
-                            Text("100% availability", color = MatrixGreen, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                            Text(
+                                text = "${metrics?.smsSuccessRate ?: "100%"} relay SLA",
+                                color = MatrixGreen,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
                         }
                     }
 
@@ -244,7 +268,7 @@ fun HomeScreen(
                                 fontFamily = FontFamily.Monospace
                             )
                             Text("Breach records", color = SlateTextSecondary, fontSize = 11.sp)
-                            Text("+32 added today", color = AccentCyan, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                            Text("Verified feeds", color = AccentCyan, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                         }
 
                         // Metric 4: Active Alerts (Amber)
@@ -284,6 +308,9 @@ fun HomeScreen(
 
             // Figma Platform Activity Chart
             item {
+                val sparkline = overview?.activitySparkline ?: emptyList()
+                val smsSentLabel = "${metrics?.smsSentToday ?: 0} SMS today"
+
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -295,7 +322,7 @@ fun HomeScreen(
                             Text("Platform Activity", color = SlateTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                         }
                         Text(
-                            text = "2,486 requests",
+                            text = smsSentLabel,
                             color = AccentCyan,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -305,8 +332,9 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // 12 Vertical Throughput Bars
-                    val bars = listOf(24, 38, 31, 56, 44, 68, 59, 84, 72, 91, 80, 96)
+                    // Vertical Throughput Bars from real sparkline or fallback
+                    val bars = if (sparkline.isNotEmpty()) sparkline else listOf(25, 40, 30, 55, 68, 45, 80, 95, 70, 88)
+                    val maxBar = (bars.maxOrNull() ?: 100).coerceAtLeast(1)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -317,10 +345,10 @@ fun HomeScreen(
                         bars.forEach { h ->
                             Box(
                                 modifier = Modifier
-                                    .width(18.dp)
-                                    .fillMaxHeight(h / 100f)
+                                    .width((280 / bars.size.coerceAtLeast(1)).coerceIn(8, 22).dp)
+                                    .fillMaxHeight(h.toFloat() / maxBar.toFloat())
                                     .background(
-                                        color = if (h > 80) AccentCyan else AccentCyan.copy(alpha = 0.5f),
+                                        color = if (h.toFloat() / maxBar > 0.8f) AccentCyan else AccentCyan.copy(alpha = 0.5f),
                                         shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                                     )
                             )

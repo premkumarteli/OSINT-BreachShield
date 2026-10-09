@@ -41,14 +41,21 @@ fun AppNavigation(
     Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = if (isLoggedIn) NavRoutes.HOME else NavRoutes.LANDING,
+            startDestination = NavRoutes.LANDING,
             modifier = Modifier.fillMaxSize()
         ) {
             // Page 1: Public Citizen Landing Portal
             composable(NavRoutes.LANDING) {
                 LandingScreen(
                     onNavigateToAdminAuth = {
-                        navController.navigate(NavRoutes.AUTH)
+                        if (isLoggedIn) {
+                            navController.navigate(NavRoutes.HOME) {
+                                popUpTo(NavRoutes.LANDING) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        } else {
+                            navController.navigate(NavRoutes.AUTH)
+                        }
                     }
                 )
             }
@@ -58,7 +65,7 @@ fun AppNavigation(
                 AdminLoginScreen(
                     onAuthSuccess = {
                         navController.navigate(NavRoutes.HOME) {
-                            popUpTo(NavRoutes.LANDING) { inclusive = true }
+                            popUpTo(NavRoutes.LANDING) { inclusive = false }
                         }
                     },
                     onBackToLanding = {
@@ -72,7 +79,13 @@ fun AppNavigation(
                 HomeScreen(
                     onNavigateToUsers = { navController.navigate(NavRoutes.USERS) },
                     onNavigateToGateways = { navController.navigate(NavRoutes.GATEWAYS) },
-                    onNavigateToAlerts = { navController.navigate(NavRoutes.ALERTS) }
+                    onNavigateToAlerts = { navController.navigate(NavRoutes.ALERTS) },
+                    onNavigateToLanding = {
+                        navController.navigate(NavRoutes.LANDING) {
+                            popUpTo(NavRoutes.HOME) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
