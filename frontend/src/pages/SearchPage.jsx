@@ -354,7 +354,10 @@ export default function SearchPage() {
       <footer className="concept-footer">
         <div className="footer-left">
           <img src="/logo-icon.png" alt="" className="footer-brand-icon" aria-hidden="true" />
-          <span className="footer-brand-title">BREACHSHIELD</span>
+          <span className="footer-brand-title">
+            <span className="brand-text-white">BREACH</span>
+            <span className="brand-text-blue">SHIELD</span>
+          </span>
           <span className="footer-divider">•</span>
           <span className="footer-copyright">© 2026 BreachShield. All rights reserved.</span>
         </div>

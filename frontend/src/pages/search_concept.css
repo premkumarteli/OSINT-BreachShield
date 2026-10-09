@@ -94,50 +94,59 @@
 }
 
 .brand-logo-icon {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.55));
+  filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.65));
   transition: filter 0.25s ease, transform 0.25s ease;
 }
 
 .concept-brand:hover .brand-logo-icon {
-  filter: drop-shadow(0 0 22px rgba(0, 240, 255, 0.8));
+  filter: drop-shadow(0 0 24px rgba(0, 240, 255, 0.85));
   transform: scale(1.04);
 }
 
 .brand-icon-shield {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   color: #00f0ff;
   filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.4));
 }
 
 .brand-text-wrap {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  flex-direction: row;
+  align-items: center;
 }
 
 .brand-name {
   font-family: 'Orbitron', monospace;
-  font-size: 1.15rem;
+  font-size: 1.03rem;
   font-weight: 900;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.35));
+}
+
+.brand-text-white {
   color: #ffffff;
-  line-height: 1.15;
-  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.3));
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+}
+
+.brand-text-blue {
+  background: linear-gradient(135deg, #00f0ff 0%, #0080ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: #00f0ff;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.55));
 }
 
 .brand-subtext {
-  font-family: 'Orbitron', monospace;
-  font-size: 0.52rem;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  color: #00f0ff;
-  line-height: 1.2;
-  margin-top: 2px;
+  display: none !important;
 }
 
 .concept-nav-links {
