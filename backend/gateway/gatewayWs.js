@@ -117,6 +117,9 @@ function setupGatewayWebSocket(server) {
             );
             if (pendingRows && pendingRows.length > 0) {
               for (const job of pendingRows) {
+                try {
+                  await db.query(`UPDATE sms_jobs SET status = 'DISPATCHED', updated_at = NOW() WHERE request_id = ?;`, [job.request_id]);
+                } catch (_) {}
                 sendSmsToGateway(currentDeviceId, job.request_id, job.phone_number, job.message);
               }
             }
@@ -125,6 +128,8 @@ function setupGatewayWebSocket(server) {
             if (memoryJobs) {
               for (const [rId, job] of memoryJobs.entries()) {
                 if (job.status === 'PENDING') {
+                  job.status = 'DISPATCHED'; // Immediately mark DISPATCHED to prevent duplicate sends on reconnect
+                  job.dispatchedAt = new Date();
                   sendSmsToGateway(currentDeviceId, job.requestId, job.phoneNumber, job.message);
                 }
               }
@@ -155,14 +160,33 @@ function setupGatewayWebSocket(server) {
 
       // 3. SMS Delivery Status Update from Android
       if (data.requestId && data.status) {
-        console.log(`[Gateway WS] SMS Status Callback from ${currentDeviceId}: requestId=${data.requestId}, status=${data.status}`);
+        const statusUpper = String(data.status).toUpperCase();
+        console.log(`[Gateway WS] SMS Status Callback from ${currentDeviceId}: requestId=${data.requestId}, status=${statusUpper}`);
         try {
-          const statusUpper = String(data.status).toUpperCase();
           let updateSql = `UPDATE sms_jobs SET status = ?, updated_at = NOW()`;
           if (statusUpper === 'SENT') updateSql += `, sent_at = NOW()`;
           if (statusUpper === 'DELIVERED') updateSql += `, delivered_at = NOW()`;
           updateSql += ` WHERE request_id = ?;`;
           await db.query(updateSql, [statusUpper, data.requestId]);
+        } catch (_) {}
+
+        // Crucial: ALWAYS keep in-memory store in sync so memoryJobs does not remain PENDING
+        try {
+          const { memoryJobs, memoryLogs } = require('./controllers/gatewayController');
+          if (memoryJobs && memoryJobs.has(data.requestId)) {
+            const job = memoryJobs.get(data.requestId);
+            job.status = statusUpper;
+            if (statusUpper === 'SENT') job.sentAt = new Date();
+            if (statusUpper === 'DELIVERED') job.deliveredAt = new Date();
+          }
+          if (memoryLogs) {
+            memoryLogs.push({
+              requestId: data.requestId,
+              deviceId: currentDeviceId || 'UNKNOWN',
+              status: statusUpper,
+              timestamp: Date.now()
+            });
+          }
         } catch (_) {}
       }
     });
@@ -193,6 +217,23 @@ function sendSmsToGateway(deviceId, requestId, phoneNumber, message) {
   if (!ws || ws.readyState !== 1 /* OPEN */) {
     return false;
   }
+
+  // Update in-memory job status immediately to prevent re-dispatch on reconnect
+  try {
+    const { memoryJobs } = require('./controllers/gatewayController');
+    if (memoryJobs && memoryJobs.has(requestId)) {
+      const job = memoryJobs.get(requestId);
+      if (job.status === 'PENDING') {
+        job.status = 'DISPATCHED';
+        job.dispatchedAt = new Date();
+      }
+    }
+  } catch (_) {}
+
+  // Also update DB if online
+  try {
+    db.query(`UPDATE sms_jobs SET status = 'DISPATCHED', updated_at = NOW() WHERE request_id = ? AND status = 'PENDING'`, [requestId]).catch(() => {});
+  } catch (_) {}
 
   // Send both action and type for universal compatibility
   const payload = JSON.stringify({

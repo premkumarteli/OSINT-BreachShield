@@ -32,6 +32,7 @@ class GatewayForegroundService : Service() {
     @Inject lateinit var gatewayDao: GatewayDao
 
     private val scope = CoroutineScope(Dispatchers.IO + Job())
+    private val handledRequestIds = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     override fun onCreate() {
         android.util.Log.d("GatewayService", "Service onCreate starting...")
@@ -63,17 +64,24 @@ class GatewayForegroundService : Service() {
             val requestId = command.requestId
             val message = command.message
             if (requestId != null && message != null) {
-                android.util.Log.d("GatewayService", "Received SMS Command: $command")
-                scope.launch {
-                    gatewayDao.insertSmsLog(
-                        SmsLog(
-                            requestId = requestId,
-                            phoneNumber = command.getTargetPhone(),
-                            message = message,
-                            status = "PENDING"
+                if (!handledRequestIds.add(requestId)) {
+                    android.util.Log.w("GatewayService", "Duplicate SMS Command ignored: $requestId")
+                    scope.launch {
+                        webSocketManager.sendSmsStatus(requestId, "DELIVERED")
+                    }
+                } else {
+                    android.util.Log.d("GatewayService", "Received SMS Command: $command")
+                    scope.launch {
+                        gatewayDao.insertSmsLog(
+                            SmsLog(
+                                requestId = requestId,
+                                phoneNumber = command.getTargetPhone(),
+                                message = message,
+                                status = "PENDING"
+                            )
                         )
-                    )
-                    smsManagerWrapper.sendSms(requestId, command.getTargetPhone(), message)
+                        smsManagerWrapper.sendSms(requestId, command.getTargetPhone(), message)
+                    }
                 }
             } else {
                 android.util.Log.e("GatewayService", "Invalid SMS Command: $command")

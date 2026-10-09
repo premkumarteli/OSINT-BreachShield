@@ -34,6 +34,7 @@ class WebSocketManager @Inject constructor(
     private var heartbeatJob: Job? = null
     private var pollingJob: Job? = null
     private var reconnectAttempts = 0
+    private val processedRequestIds = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     var onSmsCommandReceived: ((SmsCommand) -> Unit)? = null
 
@@ -60,8 +61,9 @@ class WebSocketManager @Inject constructor(
 
         val clientWithTimeouts = client.newBuilder()
             .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(0, TimeUnit.MILLISECONDS) // Persistent WebSocket stream: do not drop on read inactivity
             .writeTimeout(15, TimeUnit.SECONDS)
+            .pingInterval(20, TimeUnit.SECONDS)   // Active keepalive frames
             .build()
 
         _connectionStatus.value = ConnectionStatus.CONNECTING
@@ -108,10 +110,17 @@ class WebSocketManager @Inject constructor(
                     val command = gson.fromJson(trimmedText, SmsCommand::class.java)
                     if (command != null && (command.action == "send_sms" || command.type == "SEND_SMS")) {
                         // Validate required fields
-                        if (command.requestId != null && command.message != null) {
-                             onSmsCommandReceived?.invoke(command)
+                        val reqId = command.requestId
+                        if (reqId != null && command.message != null) {
+                            if (processedRequestIds.add(reqId)) {
+                                Log.i(TAG, "Dispatching new unique SMS command: requestId=$reqId")
+                                onSmsCommandReceived?.invoke(command)
+                            } else {
+                                Log.w(TAG, "DEDUPLICATION: Already dispatched requestId=$reqId. Acknowledging server.")
+                                sendSmsStatus(reqId, "DELIVERED")
+                            }
                         } else {
-                             Log.w(TAG, "SmsCommand missing required fields: $trimmedText")
+                            Log.w(TAG, "SmsCommand missing required fields: $trimmedText")
                         }
                     }
                 } catch (e: Exception) {
@@ -203,16 +212,21 @@ class WebSocketManager @Inject constructor(
                         val requestId = job.requestId
                         val message = job.message
                         if (requestId != null && message != null) {
-                            Log.d(TAG, "Found pending job: $requestId -> ${job.phone}")
-                            onSmsCommandReceived?.invoke(
-                                SmsCommand(
-                                    action = "send_sms",
-                                    type = "SEND_SMS",
-                                    requestId = requestId,
-                                    phone = job.phone,
-                                    message = message
+                            if (processedRequestIds.add(requestId)) {
+                                Log.d(TAG, "Found new pending job: $requestId -> ${job.phone}")
+                                onSmsCommandReceived?.invoke(
+                                    SmsCommand(
+                                        action = "send_sms",
+                                        type = "SEND_SMS",
+                                        requestId = requestId,
+                                        phone = job.phone,
+                                        message = message
+                                    )
                                 )
-                            )
+                            } else {
+                                Log.d(TAG, "DEDUPLICATION: Skipping already processed pending job: $requestId")
+                                sendSmsStatus(requestId, "DELIVERED")
+                            }
                         }
                     }
                 }
