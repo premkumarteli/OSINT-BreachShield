@@ -18,8 +18,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.osint.breachshield.gateway.R
@@ -59,25 +62,21 @@ fun FigmaBrandBar(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Brand Typography
-        Column {
-            Text(
-                text = "BREACHSHIELD",
-                color = SlateTextPrimary,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.2.sp
-            )
-            Text(
-                text = "KNOW. STAY AHEAD.",
-                color = AccentCyan,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp
-            )
-        }
+        // Brand Typography: White & Blue Combo, No Tagline
+        Text(
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(color = Color.White)) {
+                    append("BREACH")
+                }
+                withStyle(SpanStyle(color = AccentCyan)) {
+                    append("SHIELD")
+                }
+            },
+            fontFamily = FontFamily.Monospace,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.4.sp
+        )
 
         Spacer(modifier = Modifier.weight(1f))
 

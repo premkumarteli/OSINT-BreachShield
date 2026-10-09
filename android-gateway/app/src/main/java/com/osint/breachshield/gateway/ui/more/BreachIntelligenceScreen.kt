@@ -68,7 +68,7 @@ fun BreachIntelligenceScreen(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("⚡ Trigger Intelligence Re-Index", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("⚡ Trigger Intelligence Re-Index", color = ObsidianBg, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
                     if (statusMessage != null) {

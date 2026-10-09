@@ -210,7 +210,7 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.align(Alignment.End)
                     ) {
-                        Text("Save Template", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Save Template", color = ObsidianBg, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -246,7 +246,7 @@ fun SettingsScreen(
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Save URL", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("Save URL", color = ObsidianBg, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
 
                         Button(

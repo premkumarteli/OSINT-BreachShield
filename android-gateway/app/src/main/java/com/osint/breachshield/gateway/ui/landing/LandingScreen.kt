@@ -18,11 +18,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,24 +87,21 @@ fun LandingScreen(
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
-                        Column {
-                            Text(
-                                text = "BREACHSHIELD",
-                                color = SlateTextPrimary,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = "KNOW. STAY AHEAD.",
-                                color = AccentCyan,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 7.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.5.sp
-                            )
-                        }
+                        // Brand Typography: White & Blue Combo, No Tagline
+                        Text(
+                            text = buildAnnotatedString {
+                                withStyle(SpanStyle(color = Color.White)) {
+                                    append("BREACH")
+                                }
+                                withStyle(SpanStyle(color = AccentCyan)) {
+                                    append("SHIELD")
+                                }
+                            },
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.2.sp
+                        )
                     }
 
                     // Admin SOC Portal Launcher Button

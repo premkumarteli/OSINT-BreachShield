@@ -135,7 +135,7 @@ fun GatewayDetailScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = AccentCyan, contentColor = ObsidianBg),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Send Ping Test Command", fontWeight = FontWeight.Bold)
+                        Text("Send Ping Test Command", color = ObsidianBg, fontWeight = FontWeight.Bold)
                     }
 
                     if (actionMessage != null) {

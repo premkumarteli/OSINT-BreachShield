@@ -18,10 +18,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -120,8 +123,14 @@ fun AdminLoginScreen(
                     }
 
                     Text(
-                        text = "BREACHSHIELD",
-                        color = AccentCyan,
+                        text = buildAnnotatedString {
+                            withStyle(SpanStyle(color = Color.White)) {
+                                append("BREACH")
+                            }
+                            withStyle(SpanStyle(color = AccentCyan)) {
+                                append("SHIELD")
+                            }
+                        },
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = FontFamily.Monospace,
@@ -302,12 +311,20 @@ fun AdminLoginScreen(
                             if (isLoading) {
                                 CircularProgressIndicator(color = ObsidianBg, modifier = Modifier.size(20.dp))
                             } else {
-                                Text(
-                                    text = "Continue",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    fontFamily = FontFamily.Monospace
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text("⚡", fontSize = 14.sp)
+                                    Text(
+                                        text = "CONTINUE",
+                                        color = ObsidianBg,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 14.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        letterSpacing = 1.sp
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -374,12 +391,20 @@ fun AdminLoginScreen(
                             if (isLoading) {
                                 CircularProgressIndicator(color = ObsidianBg, modifier = Modifier.size(20.dp))
                             } else {
-                                Text(
-                                    text = "Verify & Access SOC",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    fontFamily = FontFamily.Monospace
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text("🔒", fontSize = 14.sp)
+                                    Text(
+                                        text = "VERIFY & ACCESS SOC",
+                                        color = ObsidianBg,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 14.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        letterSpacing = 1.sp
+                                    )
+                                }
                             }
                         }
 

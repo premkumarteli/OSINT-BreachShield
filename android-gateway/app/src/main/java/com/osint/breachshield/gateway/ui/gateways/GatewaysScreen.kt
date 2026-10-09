@@ -98,7 +98,7 @@ fun GatewaysScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = AccentCyan, contentColor = ObsidianBg),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Dispatch SMS Now", fontWeight = FontWeight.Bold)
+                    Text("Dispatch SMS Now", color = ObsidianBg, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -181,7 +181,7 @@ fun GatewaysScreen(
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Activate Device", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text("Activate Device", color = ObsidianBg, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         }
                     }
 

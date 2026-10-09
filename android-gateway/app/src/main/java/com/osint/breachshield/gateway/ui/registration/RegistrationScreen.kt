@@ -177,6 +177,7 @@ fun RegistrationScreen(
                     ) {
                         Text(
                             "⚡ INITIALIZE GATEWAY",
+                            color = Color(0xFF070A13),
                             fontWeight = FontWeight.Black,
                             fontFamily = FontFamily.Monospace,
                             letterSpacing = 1.sp
