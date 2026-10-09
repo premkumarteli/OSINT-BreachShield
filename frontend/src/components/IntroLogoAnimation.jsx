@@ -1,32 +1,55 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence, useReducedMotion, useAnimate, stagger } from 'framer-motion';
 import './intro_animation.css';
 
-const BREACH_LETTERS = ['B', 'R', 'E', 'A', 'C', 'H'];
-const SHIELD_LETTERS = ['S', 'H', 'I', 'E', 'L', 'D'];
+const BRAND_LETTERS = [
+  { char: 'B', group: 'breach' },
+  { char: 'R', group: 'breach' },
+  { char: 'E', group: 'breach' },
+  { char: 'A', group: 'breach' },
+  { char: 'C', group: 'breach' },
+  { char: 'H', group: 'breach' },
+  { char: 'S', group: 'shield' },
+  { char: 'H', group: 'shield' },
+  { char: 'I', group: 'shield' },
+  { char: 'E', group: 'shield' },
+  { char: 'L', group: 'shield' },
+  { char: 'D', group: 'shield' },
+];
 
 export default function IntroLogoAnimation({ onComplete, onDockStart }) {
   const shouldReduceMotion = useReducedMotion();
   const [step, setStep] = useState('initial'); // 'initial' | 'scan' | 'wordmark' | 'docking' | 'fadeout' | 'done'
+  const [isImageReady, setIsImageReady] = useState(false);
   const isSkippedRef = useRef(false);
+  const [scope, animate] = useAnimate();
 
-  const handleSkip = () => {
+  const restoreScroll = useCallback(() => {
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+  }, []);
+
+  const handleSkip = useCallback(() => {
     if (isSkippedRef.current) return;
     isSkippedRef.current = true;
     try {
       sessionStorage.setItem('breachshield_intro_seen', 'true');
     } catch (_) {}
+    restoreScroll();
     setStep('done');
     onComplete();
-  };
+  }, [onComplete, restoreScroll]);
 
+  // Scroll lock while overlay is mounted; restore on skip, finish, and unmount
   useEffect(() => {
-    // If reduced motion is preferred or already seen, skip immediately
+    if (typeof document === 'undefined') return;
+
     if (shouldReduceMotion) {
       handleSkip();
       return;
     }
-
     try {
       if (sessionStorage.getItem('breachshield_intro_seen')) {
         handleSkip();
@@ -34,51 +57,132 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
       }
     } catch (_) {}
 
-    // Timeline Sequence (~3.2s total)
-    // 0.0 - 0.4s: Initial scan line at center
-    const t0 = setTimeout(() => {
-      if (!isSkippedRef.current) setStep('scan');
-    }, 400);
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
 
-    // 0.4 - 1.4s: Scan sweep top-to-bottom reveals logo (1000ms duration)
-    // 1.4 - 2.0s: Wordmark appears
-    const t1 = setTimeout(() => {
-      if (!isSkippedRef.current) setStep('wordmark');
-    }, 1400);
+    return () => {
+      restoreScroll();
+    };
+  }, [shouldReduceMotion, handleSkip, restoreScroll]);
 
-    // 2.0 - 2.8s: Docking handoff to Navbar
-    const t2 = setTimeout(() => {
-      if (!isSkippedRef.current) {
+  // Start Clean: preload + decode logo image
+  useEffect(() => {
+    let isMounted = true;
+    if (typeof window === 'undefined') {
+      setIsImageReady(true);
+      return;
+    }
+
+    const img = new Image();
+    img.src = '/logo-icon.png';
+
+    const markReady = () => {
+      if (isMounted) setIsImageReady(true);
+    };
+
+    if (typeof img.decode === 'function') {
+      img.decode().then(markReady).catch(markReady);
+    } else if (img.complete) {
+      markReady();
+    } else {
+      img.onload = markReady;
+      img.onerror = markReady;
+      const fallback = setTimeout(markReady, 60);
+      return () => {
+        isMounted = false;
+        clearTimeout(fallback);
+      };
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Single Timeline Sequence driven by Framer Motion useAnimate
+  useEffect(() => {
+    if (!isImageReady || shouldReduceMotion) return;
+
+    try {
+      if (sessionStorage.getItem('breachshield_intro_seen')) return;
+    } catch (_) {}
+
+    let isCancelled = false;
+
+    const runTimeline = async () => {
+      try {
+        // 0.0 - 0.4s: Initial scan line at top fades in
+        if (isSkippedRef.current || isCancelled) return;
+        setStep('initial');
+        if (scope.current) {
+          await animate('.intro-scan-line', { opacity: [0, 0.8], top: '0%' }, { duration: 0.4 });
+        }
+
+        // 0.4 - 1.4s: Scan sweep top-to-bottom reveals logo (1.0s duration)
+        // Scan-line sweeps to 100% while clip-path opens with negative insets
+        if (isSkippedRef.current || isCancelled) return;
+        setStep('scan');
+        if (scope.current) {
+          await Promise.all([
+            animate(
+              '.intro-scan-line',
+              { top: ['0%', '100%'], opacity: [0.8, 1, 1, 0] },
+              { duration: 1.0, ease: 'easeInOut' }
+            ),
+            animate(
+              '.intro-logo-clip',
+              { clipPath: ['inset(-30% -30% 100% -30%)', 'inset(-30% -30% -30% -30%)'] },
+              { duration: 1.0, ease: 'easeInOut' }
+            )
+          ]);
+        }
+
+        // 1.4 - 2.0s: Scan sweep finished. Wordmark letters animate in reading order
+        // Continuous stagger index (0.04s per letter) across all 12 letters B-R-E-A-C-H-S-H-I-E-L-D
+        if (isSkippedRef.current || isCancelled) return;
+        setStep('wordmark');
+        if (scope.current) {
+          await animate(
+            '.intro-letter',
+            { opacity: [0, 1], y: [6, 0] },
+            { delay: stagger(0.04), duration: 0.18, ease: 'easeOut' }
+          );
+        }
+
+        // 2.0 - 2.8s: Docking handoff to Navbar
+        if (isSkippedRef.current || isCancelled) return;
         setStep('docking');
         if (onDockStart) onDockStart();
-      }
-    }, 2000);
+        await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // 2.8 - 3.2s: Fade out overlay background
-    const t3 = setTimeout(() => {
-      if (!isSkippedRef.current) setStep('fadeout');
-    }, 2800);
+        // 2.8 - 3.2s: Fade out overlay background
+        if (isSkippedRef.current || isCancelled) return;
+        setStep('fadeout');
+        if (scope.current) {
+          await animate(scope.current, { opacity: 0 }, { duration: 0.4 });
+        }
 
-    // 3.2s: Finish and unmount
-    const t4 = setTimeout(() => {
-      if (!isSkippedRef.current) {
+        // 3.2s: Done
+        if (isSkippedRef.current || isCancelled) return;
         try {
           sessionStorage.setItem('breachshield_intro_seen', 'true');
         } catch (_) {}
+        restoreScroll();
         setStep('done');
         onComplete();
+      } catch (err) {
+        if (!isCancelled && !isSkippedRef.current) {
+          handleSkip();
+        }
       }
-    }, 3200);
+    };
+
+    runTimeline();
 
     return () => {
-      clearTimeout(t0);
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
+      isCancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldReduceMotion]);
+  }, [isImageReady, shouldReduceMotion, animate, handleSkip, onComplete, onDockStart, restoreScroll, scope]);
 
   if (step === 'done') return null;
 
@@ -86,6 +190,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     <AnimatePresence>
       {step !== 'fadeout' && step !== 'done' && (
         <motion.div
+          ref={scope}
           className="intro-overlay"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -114,36 +219,33 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                   className="intro-logo-box"
                   transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <motion.img
-                    src="/logo-icon.png"
-                    alt="BreachShield Shield"
-                    className="intro-logo-img"
-                    initial={{ clipPath: 'inset(0% 0% 100% 0%)' }}
-                    animate={
-                      step === 'scan' || step === 'wordmark'
-                        ? { clipPath: 'inset(0% 0% 0% 0%)' }
-                        : { clipPath: 'inset(0% 0% 100% 0%)' }
-                    }
-                    transition={{ duration: 1.0, ease: 'easeInOut' }}
-                  />
+                  {/* Unclipped glow wrapper */}
+                  <div className="intro-logo-glow-wrapper">
+                    {/* Clipped image wrapper with negative insets */}
+                    <div
+                      className="intro-logo-clip"
+                      style={{
+                        clipPath: 'inset(-30% -30% 100% -30%)',
+                        WebkitClipPath: 'inset(-30% -30% 100% -30%)'
+                      }}
+                    >
+                      <img
+                        src="/logo-icon.png"
+                        alt="BreachShield Shield"
+                        className="intro-logo-img"
+                      />
+                    </div>
+                  </div>
                 </motion.div>
 
                 {/* Sweeping Cyan Scan-Line */}
-                {(step === 'initial' || step === 'scan') && (
-                  <motion.div
-                    className="intro-scan-line"
-                    initial={{ top: '0%', opacity: 0.8 }}
-                    animate={
-                      step === 'scan'
-                        ? { top: ['0%', '100%'], opacity: [0.8, 1, 1, 0] }
-                        : { top: '0%', opacity: 0.8 }
-                    }
-                    transition={{ duration: 1.0, ease: 'easeInOut' }}
-                  />
-                )}
+                <div
+                  className="intro-scan-line"
+                  style={{ top: '0%', opacity: 0 }}
+                />
               </div>
 
-              {/* Wordmark Stagger (Letter by Letter) */}
+              {/* Wordmark Stagger (Letter by Letter in reading order) */}
               <motion.div
                 layoutId="brand-logo-text"
                 layout="position"
@@ -152,37 +254,25 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               >
                 <span className="brand-name intro-brand-name">
                   <span className="brand-text-white intro-letter-group">
-                    {BREACH_LETTERS.map((letter, i) => (
-                      <motion.span
-                        key={`b-${i}`}
+                    {BRAND_LETTERS.filter((l) => l.group === 'breach').map((letter, idx) => (
+                      <span
+                        key={`b-${idx}`}
                         className="intro-letter"
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={
-                          step === 'wordmark'
-                            ? { opacity: 1, y: 0 }
-                            : { opacity: 0, y: 6 }
-                        }
-                        transition={{ delay: i * 0.04, duration: 0.18 }}
+                        style={{ opacity: 0, transform: 'translateY(6px)', display: 'inline-block' }}
                       >
-                        {letter}
-                      </motion.span>
+                        {letter.char}
+                      </span>
                     ))}
                   </span>
                   <span className="brand-text-blue intro-letter-group">
-                    {SHIELD_LETTERS.map((letter, i) => (
-                      <motion.span
-                        key={`s-${i}`}
+                    {BRAND_LETTERS.filter((l) => l.group === 'shield').map((letter, idx) => (
+                      <span
+                        key={`s-${idx}`}
                         className="intro-letter"
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={
-                          step === 'wordmark'
-                            ? { opacity: 1, y: 0 }
-                            : { opacity: 0, y: 6 }
-                        }
-                        transition={{ delay: 0.24 + i * 0.04, duration: 0.18 }}
+                        style={{ opacity: 0, transform: 'translateY(6px)', display: 'inline-block' }}
                       >
-                        {letter}
-                      </motion.span>
+                        {letter.char}
+                      </span>
                     ))}
                   </span>
                 </span>

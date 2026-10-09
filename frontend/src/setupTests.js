@@ -33,3 +33,7 @@ if (typeof window !== 'undefined' && typeof window.IntersectionObserver === 'und
   globalThis.IntersectionObserver = MockIntersectionObserver;
 }
 
+if (typeof window !== 'undefined' && typeof globalThis.NodeList === 'undefined') {
+  globalThis.NodeList = window.NodeList;
+}
+

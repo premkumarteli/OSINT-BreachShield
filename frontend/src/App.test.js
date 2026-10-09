@@ -141,6 +141,51 @@ describe('AppRouter Integration & LandingPage', () => {
     expect(screen.getByRole('link', { name: /Contact/i })).toHaveAttribute('href', '#contact');
   });
 
+  test('Phase 2.1/3.1 (a): Navbar and overlay use the same logo src', () => {
+    sessionStorage.clear();
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <LandingPage />
+      </MemoryRouter>
+    );
+    const logos = screen.getAllByRole('img', { name: /BreachShield/i });
+    expect(logos.length).toBeGreaterThanOrEqual(2);
+    const overlayLogoSrc = logos[0].getAttribute('src');
+    const navbarLogoSrc = logos[1].getAttribute('src');
+    expect(overlayLogoSrc).toBe(navbarLogoSrc);
+    expect(overlayLogoSrc).toBe('/logo-icon.png');
+  });
+
+  test('Phase 2.1/3.1 (b): body scroll is locked while overlay is mounted and restored after Skip', () => {
+    sessionStorage.clear();
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <LandingPage />
+      </MemoryRouter>
+    );
+    expect(document.body.style.overflow).toBe('hidden');
+
+    const skipBtn = screen.getByRole('button', { name: /Skip Intro/i });
+    fireEvent.click(skipBtn);
+
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  test('Phase 2.1/3.1 (c): About text contains no occurrence of "storing", "compliance", "privacy-first", "encrypt"', () => {
+    sessionStorage.setItem('breachshield_intro_seen', 'true');
+    const { container } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <LandingPage />
+      </MemoryRouter>
+    );
+    const aboutSection = container.querySelector('#about');
+    expect(aboutSection).toBeInTheDocument();
+    const text = aboutSection.textContent.toLowerCase();
+    ['storing', 'compliance', 'privacy-first', 'encrypt'].forEach((term) => {
+      expect(text).not.toContain(term);
+    });
+  });
+
   test('renders SearchPage when directly visiting /search', () => {
     render(
       <MemoryRouter initialEntries={['/search']}>

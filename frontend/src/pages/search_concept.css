@@ -48,9 +48,8 @@
 
 /* 3. Top Navbar (Compact 52px Header with Apple-Style Glass) */
 .concept-navbar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  position: relative;
+  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;

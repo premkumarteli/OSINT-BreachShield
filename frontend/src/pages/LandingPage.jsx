@@ -7,7 +7,6 @@ import './search_concept.css';
 import './landing.css';
 
 const bgVideo1 = '/bg1.mp4';
-const bgPoster = '/logo-icon.png';
 
 export const DEFAULT_TEAM = [
   {
@@ -22,8 +21,12 @@ export const DEFAULT_TEAM = [
 ];
 
 export const DEFAULT_CONTACT = {
-  heading: "Get in Touch",
-  note: "[TODO: Inquiries, feedback, and security vulnerability contact information.]",
+  heading: "Contact",
+  note: "[TODO: Contact information and inquiries, to be written by the project author]",
+  items: [
+    { label: "Security Contact", value: "[TODO: Security contact to be provided]" },
+    { label: "General Inquiries", value: "[TODO: General inquiries contact to be provided]" }
+  ],
   links: {
     email: "",
     github: "",
@@ -112,11 +115,10 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
       )}
 
       <div className="landing-page-wrapper">
-        {/* Background Video with metadata preload, poster, and visibility listener */}
+        {/* Background Video with metadata preload and visibility listener */}
         <video
           ref={videoRef}
           src={bgVideo1}
-          poster={bgPoster}
           preload="metadata"
           className="concept-bg-video"
           autoPlay={canAutoplayVideo}
@@ -275,9 +277,9 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
           </div>
 
           <div className="glass-vignette-card about-card-box">
-            <p className="todo-text-line">[TODO: Project background and mission overview.]</p>
-            <p className="todo-text-line">[TODO: Architectural objectives and target audience.]</p>
-            <p className="todo-text-line">[TODO: Scope of threat tracking and open-source roadmap.]</p>
+            <p className="todo-text-line">[TODO: About paragraph 1, to be written by the project author]</p>
+            <p className="todo-text-line">[TODO: About paragraph 2, to be written by the project author]</p>
+            <p className="todo-text-line">[TODO: About paragraph 3, to be written by the project author]</p>
           </div>
         </motion.section>
 
@@ -365,18 +367,34 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
 
           <div className="glass-vignette-card contact-card-box">
             <p className="todo-text-line">{contact.note}</p>
+            {contact.items && contact.items.length > 0 && (
+              <div className="contact-items-list">
+                {contact.items.map((item, idx) => (
+                  <div key={`contact-item-${idx}`} className="contact-item-row">
+                    <span className="contact-item-label">{item.label}:</span>
+                    {item.value.includes('TODO') ? (
+                      <span className="contact-item-plain">{item.value}</span>
+                    ) : item.value.includes('@') ? (
+                      <a href={`mailto:${item.value}`} className="team-link-item">{item.value}</a>
+                    ) : (
+                      <a href={item.value} target="_blank" rel="noopener noreferrer" className="team-link-item">{item.value}</a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="contact-links-row">
-              {contact.links?.email ? (
+              {contact.links?.email && !contact.links.email.includes('TODO') ? (
                 <a href={`mailto:${contact.links.email}`} className="team-link-item">
                   Email
                 </a>
               ) : null}
-              {contact.links?.github ? (
+              {contact.links?.github && !contact.links.github.includes('TODO') ? (
                 <a href={contact.links.github} target="_blank" rel="noopener noreferrer" className="team-link-item">
                   GitHub
                 </a>
               ) : null}
-              {contact.links?.twitter ? (
+              {contact.links?.twitter && !contact.links.twitter.includes('TODO') ? (
                 <a href={contact.links.twitter} target="_blank" rel="noopener noreferrer" className="team-link-item">
                   Twitter
                 </a>

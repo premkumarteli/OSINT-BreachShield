@@ -70,11 +70,28 @@
   justify-content: center;
 }
 
+.intro-logo-glow-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.65));
+}
+
+.intro-logo-clip {
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .intro-logo-img {
   width: 140px;
   height: 140px;
   object-fit: contain;
-  filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.65));
   display: block;
 }
 

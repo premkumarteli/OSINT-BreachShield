@@ -3,19 +3,34 @@
    Apple-Style Frosted Glassmorphism + VisionOS Cyber Theme
    ========================================================================== */
 
+html {
+  scrollbar-gutter: stable;
+}
+
 .landing-page-wrapper {
   position: relative;
   min-height: 100vh !important;
   height: auto !important;
   max-height: none !important;
   width: 100%;
-  background: transparent;
+  background: #04121F;
   color: #f8fafc;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   display: flex;
   flex-direction: column;
+}
+
+/* Scoped sticky header for landing page only */
+.landing-page-wrapper .concept-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.concept-bg-video {
+  background-color: #04121F;
 }
 
 /* Hero Section */
@@ -410,6 +425,31 @@
   margin: 0 auto;
   padding: 32px;
   text-align: center;
+}
+
+.contact-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  align-items: center;
+}
+
+.contact-item-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.contact-item-label {
+  color: #22D3EE;
+  font-weight: 600;
+}
+
+.contact-item-plain {
+  color: #B8C7DB;
+  font-family: inherit;
 }
 
 .contact-links-row {
