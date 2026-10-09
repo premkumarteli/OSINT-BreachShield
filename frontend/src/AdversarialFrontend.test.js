@@ -64,8 +64,8 @@ describe('Adversarial Verification: Route Guards and Fallbacks', () => {
     expect(screen.queryByLabelText('otp-input')).not.toBeInTheDocument();
   });
 
-  test('Requirement 3: Legacy routes (/login, /signup, /register, /dashboard, /search) redirect to / via AppRouter', () => {
-    const legacyPaths = ['/login', '/signup', '/register', '/dashboard', '/search', '/user/profile', '/unknown-404'];
+  test('Requirement 3: Legacy routes (/login, /signup, /register, /dashboard, etc.) redirect via AppRouter', () => {
+    const legacyPaths = ['/login', '/signup', '/register', '/dashboard', '/user/profile', '/unknown-404'];
 
     for (const path of legacyPaths) {
       const { unmount } = render(
@@ -84,11 +84,12 @@ describe('Adversarial Verification: Route Guards and Fallbacks', () => {
     }
   });
 
-  test('AppRouter catches arbitrary legacy and invalid routes and renders SearchPage at /', () => {
+  test('AppRouter catches root route "/" and redirects to "/search", rendering SearchPage', () => {
     // Test AppRouter directly
     render(<AppRouter />);
     expect(screen.getByText('OSINT SEARCH')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /generate-otp-button/i })).toBeInTheDocument();
+    expect(screen.getByText(/we'll send a one-time code to verify it's you/i)).toBeInTheDocument();
   });
 });
 

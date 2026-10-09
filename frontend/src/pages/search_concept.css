@@ -230,15 +230,15 @@
 
 .concept-hero {
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 32px;
 }
 
-/* Prominent Wide-Tracked Title with Sharp Shiny White Specular Radiance */
+/* Reduced glow, letter-spacing max 0.06em, so the form card is the focal point */
 .concept-hero-title {
   font-family: 'Orbitron', monospace;
-  font-size: clamp(2.3rem, 4vw, 3.3rem);
+  font-size: clamp(2.1rem, 3.8vw, 3.1rem);
   font-weight: 900;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.05em;
   color: #ffffff;
   background: linear-gradient(
     180deg,
@@ -249,12 +249,11 @@
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0 0 4px 0;
-  line-height: 1.12;
+  margin: 0;
+  line-height: 1.15;
   filter: 
     drop-shadow(0 0 1px #ffffff)
-    drop-shadow(0 0 6px rgba(255, 255, 255, 0.7))
-    drop-shadow(0 0 14px rgba(0, 240, 255, 0.35));
+    drop-shadow(0 0 8px rgba(0, 240, 255, 0.25));
 }
 
 .concept-hero-subtitle {
@@ -397,11 +396,11 @@
 
 .form-label {
   display: block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #e2e8f0;
-  margin-bottom: 3px;
-  letter-spacing: 0.02em;
+  font-size: 14px;
+  font-weight: 500;
+  color: #B8C7DB;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
 }
 
 .input-with-icon {
@@ -423,8 +422,8 @@
 /* Glass Inputs */
 .concept-input {
   width: 100%;
-  min-height: 38px;
-  height: 38px;
+  min-height: 40px;
+  height: 40px;
   background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -432,7 +431,7 @@
   border-radius: 8px;
   padding: 8px 12px 8px 36px;
   color: #ffffff;
-  font-size: 0.82rem;
+  font-size: 14px;
   font-family: inherit;
   outline: none;
   transition: all 0.2s ease;
@@ -440,7 +439,7 @@
 
 .concept-input::placeholder {
   color: #94a3b8;
-  font-size: 0.80rem;
+  font-size: 14px;
 }
 
 .concept-input:focus {
@@ -460,8 +459,8 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 38px;
-  height: 38px;
+  min-height: 40px;
+  height: 40px;
   padding: 8px 14px 8px 12px;
   background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(20px);
@@ -469,7 +468,7 @@
   border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 8px;
   color: #ffffff;
-  font-size: 0.82rem;
+  font-size: 14px;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -569,37 +568,34 @@
   color: #00f0ff;
 }
 
-/* 6. True Apple-Style Glass CTA Button */
+/* 6. Minimal Primary CTA Button */
 .concept-cta-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  min-height: 38px;
-  height: 38px;
-  padding: 7px 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #00f0ff;
+  min-height: 44px;
+  height: 44px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #00f0ff 0%, #0080ff 100%);
+  border: 1px solid rgba(0, 240, 255, 0.6);
+  color: #04121F;
   font-family: inherit;
-  font-size: 0.86rem;
+  font-size: 15px;
   font-weight: 700;
   border-radius: 8px;
   cursor: pointer;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 18px rgba(0, 240, 255, 0.35);
   transition: all 0.25s ease;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 
 .concept-cta-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(0, 240, 255, 0.5);
-  color: #ffffff;
+  background: linear-gradient(135deg, #2bf4ff 0%, #1a8eff 100%);
+  color: #04121F;
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.25);
+  box-shadow: 0 6px 24px rgba(0, 240, 255, 0.5);
 }
 
 .concept-cta-btn:active:not(:disabled) {
@@ -607,26 +603,30 @@
 }
 
 .concept-cta-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
+  color: #04121F;
 }
 
 .btn-icon-shield {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
+  color: #04121F;
 }
 
 .btn-arrow {
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1;
+  color: #04121F;
 }
 
 .card-footer-reassurance {
   text-align: center;
-  font-size: 0.68rem;
-  color: #94a3b8;
-  margin-top: 6px;
+  font-size: 14px;
+  color: #B8C7DB;
+  margin-top: 14px;
+  line-height: 1.4;
 }
 
 /* 7. Bottom Feature Pillars (Cut from the EXACT same glass sheet) */
@@ -1060,22 +1060,6 @@
   color: #00f0ff;
 }
 
-/* Enhanced CTA Visual Feedback */
-.concept-cta-btn:not(:disabled) {
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.22) 0%, rgba(14, 165, 233, 0.14) 100%);
-  border: 1px solid rgba(0, 240, 255, 0.5);
-  color: #ffffff;
-  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.25);
-}
-
-.concept-cta-btn:not(:disabled):hover {
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.32) 0%, rgba(14, 165, 233, 0.22) 100%);
-  border-color: rgba(0, 240, 255, 0.75);
-  color: #ffffff;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 26px rgba(0, 240, 255, 0.4);
-}
-
 /* Responsive Queries */
 @media (max-width: 900px) {
   .concept-page-wrapper {
@@ -1083,12 +1067,9 @@
     max-height: none;
     overflow-y: auto;
   }
-  .concept-pillars-grid {
-    grid-template-columns: 1fr;
-  }
   .concept-hero-title {
     font-size: 2rem;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.05em;
   }
   .concept-navbar {
     padding: 10px 20px;
@@ -1103,6 +1084,35 @@
     gap: 8px;
     text-align: center;
     padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .concept-navbar {
+    padding: 8px 16px;
+  }
+  .concept-main {
+    padding: 16px 14px;
+  }
+  .concept-hero {
+    margin-bottom: 24px;
+  }
+  .concept-hero-title {
+    font-size: 1.85rem;
+    letter-spacing: 0.04em;
+  }
+  .concept-search-card {
+    padding: 18px 14px;
+    border-radius: 14px;
+  }
+  .concept-cta-btn {
+    font-size: 14px;
+    min-height: 42px;
+    height: 42px;
+  }
+  .concept-footer {
+    padding: 10px;
+    font-size: 0.72rem;
   }
 }
 

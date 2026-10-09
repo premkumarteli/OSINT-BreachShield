@@ -146,46 +146,20 @@ export default function SearchPage() {
           <a href="#features" className="nav-link-item">Features</a>
           <a href="#contact" className="nav-link-item">Contact</a>
         </nav>
-
-        <div className="system-status-pill">
-          <span className="status-dot"></span>
-          <span>System Online</span>
-        </div>
       </header>
 
-      {/* Main Body */}
+      {/* Main Body - Centered Title + Minimal Card */}
       <main className="concept-main">
-        {/* Hero Section */}
         <section className="concept-hero">
           <h1 className="concept-hero-title">OSINT SEARCH</h1>
-          <p className="concept-hero-subtitle">
-            Search public breach intelligence sources securely using privacy-preserving lookup techniques.
-          </p>
-          <div className="concept-hero-tags">
-            PRIVACY &nbsp;•&nbsp; INTELLIGENCE &nbsp;•&nbsp; A SAFER TOMORROW
-          </div>
         </section>
 
-        {/* Central Search Card */}
         <div className="concept-search-card" role="search">
-          <div className="card-header-row">
-            <div className="search-icon-circle" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-            </div>
-            <div className="card-header-text">
-              <h2>Search Breach Intelligence</h2>
-              <p>Check whether your email or phone number appears in known public breach datasets without exposing the full identifier.</p>
-            </div>
-          </div>
-
           <form onSubmit={handleGenerateOtp} noValidate>
             {/* Field 1: Identifier Type */}
             <div className="form-field-group">
               <label htmlFor="identifier-type-select" className="form-label">
-                Identifier Type
+                Search by
               </label>
               <div className="custom-dropdown-wrap" ref={dropdownRef}>
                 <button
@@ -243,7 +217,7 @@ export default function SearchPage() {
             {/* Field 2: Target Identifier */}
             <div className="form-field-group">
               <label htmlFor="target-identifier-input" className="form-label">
-                Target Identifier
+                {identifierType === 'phone' ? 'Your phone number' : 'Your email address'}
               </label>
               <div className="input-with-icon">
                 {identifierType === 'phone' ? (
@@ -299,58 +273,12 @@ export default function SearchPage() {
           )}
 
           <div className="card-footer-reassurance">
-            You will receive a one-time password (OTP) to verify your identity.
+            We'll send a one-time code to verify it's you.
           </div>
         </div>
-
-        {/* Feature Pillars (3 Bottom Cards) */}
-        <section className="concept-pillars-grid" aria-label="Core Technology Pillars">
-          {/* Pillar 1: Privacy First */}
-          <div className="pillar-card cyan">
-            <div className="pillar-icon-box" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-            </div>
-            <div className="pillar-text">
-              <h3>Privacy First</h3>
-              <p>k-Anonymity based lookup keeps your data private.</p>
-            </div>
-          </div>
-
-          {/* Pillar 2: AI Risk Analysis */}
-          <div className="pillar-card purple">
-            <div className="pillar-icon-box" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10"></line>
-                <line x1="12" y1="20" x2="12" y2="4"></line>
-                <line x1="6" y1="20" x2="6" y2="14"></line>
-              </svg>
-            </div>
-            <div className="pillar-text">
-              <h3>AI Risk Analysis</h3>
-              <p>Machine learning powered exposure scoring.</p>
-            </div>
-          </div>
-
-          {/* Pillar 3: Audit Integrity */}
-          <div className="pillar-card green">
-            <div className="pillar-icon-box" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-              </svg>
-            </div>
-            <div className="pillar-text">
-              <h3>Audit Integrity</h3>
-              <p>Blockchain-backed immutable audit logs.</p>
-            </div>
-          </div>
-        </section>
       </main>
 
-      {/* Footer (Matches Header Size & Theme) */}
+      {/* Footer */}
       <footer className="concept-footer">
         <div className="footer-left">
           <img src="/logo-icon.png" alt="" className="footer-brand-icon" aria-hidden="true" />
@@ -368,12 +296,6 @@ export default function SearchPage() {
           <a href="#terms" className="footer-link">Terms of Use</a>
           <span className="footer-link-divider">|</span>
           <a href="#disclaimer" className="footer-link">Disclaimer</a>
-        </div>
-
-        <div className="footer-right">
-          <span className="footer-pillars-tagline">
-            Privacy First &nbsp;•&nbsp; AI Risk Analysis &nbsp;•&nbsp; Audit Integrity
-          </span>
         </div>
       </footer>
     </div>

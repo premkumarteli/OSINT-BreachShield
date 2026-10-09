@@ -8,7 +8,7 @@ export default function AppRouter() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
-        <Route path="/" element={<SearchPage />} />
+        <Route path="/" element={<Navigate to="/search" replace />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/verify-otp" element={<VerifyOtpPage />} />
         <Route path="/results" element={<ResultsPage />} />

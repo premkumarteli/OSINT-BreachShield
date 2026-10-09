@@ -16,15 +16,30 @@ beforeEach(() => {
 });
 
 describe('AppRouter Integration', () => {
-  test('renders SearchPage on initial load at root route', () => {
+  test('redirects from root route "/" to "/search" and renders minimal SearchPage', () => {
     render(<AppRouter />);
     expect(screen.getByText('OSINT SEARCH')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/enter email/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /generate-otp-button/i })).toBeInTheDocument();
+    expect(screen.getByText(/we'll send a one-time code to verify it's you/i)).toBeInTheDocument();
+  });
+
+  test('renders SearchPage when directly visiting /search', () => {
+    render(
+      <MemoryRouter initialEntries={['/search']}>
+        <Routes>
+          <Route path="/search" element={<SearchPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText('OSINT SEARCH')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/enter email/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /generate-otp-button/i })).toBeInTheDocument();
+    expect(screen.getByText(/we'll send a one-time code to verify it's you/i)).toBeInTheDocument();
   });
 });
 
-describe('SearchPage (/ route)', () => {
+describe('SearchPage (/search route)', () => {
   test('validates email format in real-time and enables button when valid', () => {
     render(
       <MemoryRouter>
