@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { buildSendOtpPayload } from '../lib/otpPayload';
 import Navbar from '../components/Navbar';
 import './search_concept.css';
 
@@ -87,16 +88,14 @@ export default function SearchPage() {
     setApiError('');
 
     try {
-      const payload = isPhoneType
-        ? { target: cleanTarget.replace(/[\s-]/g, ''), phone: cleanTarget.replace(/[\s-]/g, ''), email: cleanTarget.replace(/[\s-]/g, '') }
-        : { email: cleanTarget.toLowerCase() };
+      const payload = buildSendOtpPayload(cleanTarget, identifierType);
 
       const res = await api.post('/api/auth/send-otp', payload);
       if (res.data && res.data.success === true) {
         const storedTarget = isPhoneType ? cleanTarget.replace(/[\s-]/g, '') : cleanTarget.toLowerCase();
         sessionStorage.setItem('osint_target_email', storedTarget);
         sessionStorage.setItem('osint_target_type', identifierType);
-        navigate('/verify-otp', { state: { email: storedTarget, identifierType } });
+        navigate('/verify', { state: { email: storedTarget, identifierType } });
       } else {
         setApiError(res.data?.error || 'Failed to dispatch verification code.');
       }

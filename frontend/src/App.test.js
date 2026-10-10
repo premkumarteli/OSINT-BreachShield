@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import AppRouter from './AppRouter';
+import AppRouter, { VerifyOtpRedirect } from './AppRouter';
 import LandingPage from './pages/LandingPage';
 import SearchPage from './pages/SearchPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
@@ -290,48 +290,173 @@ describe('SearchPage (/search route)', () => {
   });
 });
 
-describe('VerifyOtpPage (/verify-otp route)', () => {
-  test('redirects to / when no email is in state or sessionStorage', () => {
+describe('VerifyOtpPage (/verify and /verify-otp routes)', () => {
+  test('Phase 4: guard redirects to /search when osint_target_email is missing', () => {
+    sessionStorage.clear();
     render(
-      <MemoryRouter initialEntries={['/verify-otp']}>
+      <MemoryRouter initialEntries={['/verify']}>
         <Routes>
-          <Route path="/" element={<div>Root Search Page</div>} />
-          <Route path="/verify-otp" element={<VerifyOtpPage />} />
+          <Route path="/search" element={<div>Search Page</div>} />
+          <Route path="/verify" element={<VerifyOtpPage />} />
         </Routes>
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Root Search Page')).toBeInTheDocument();
+    expect(screen.getByText('Search Page')).toBeInTheDocument();
   });
 
-  test('renders email, 6-digit input, timer, and handles OTP verification', async () => {
+  test('Phase 4: /verify-otp redirects to /verify preserving location.state', () => {
+    sessionStorage.setItem('osint_target_email', 'alice@domain.com');
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/verify-otp', state: { email: 'alice@domain.com' } }]}>
+        <Routes>
+          <Route path="/verify-otp" element={<VerifyOtpRedirect />} />
+          <Route path="/verify" element={<VerifyOtpPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Enter your code/i)).toBeInTheDocument();
+  });
+
+  test('Phase 4: masked output for email and phone and full identifier absent from document text', () => {
+    // 1. Email masking
+    sessionStorage.setItem('osint_target_email', 'alice.smith@example.org');
+    sessionStorage.setItem('osint_target_type', 'email');
+
+    const { rerender, container } = render(
+      <MemoryRouter initialEntries={['/verify']}>
+        <VerifyOtpPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('a...@example.org')).toBeInTheDocument();
+    expect(container.textContent).not.toContain('alice.smith@example.org');
+
+    // 2. Phone masking
+    sessionStorage.setItem('osint_target_email', '+14155552671');
+    sessionStorage.setItem('osint_target_type', 'phone');
+
+    rerender(
+      <MemoryRouter initialEntries={['/verify']}>
+        <VerifyOtpPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/2671/)).toBeInTheDocument();
+    expect(container.textContent).not.toContain('+14155552671');
+    expect(container.textContent).not.toContain('4155552671');
+  });
+
+  test('Phase 4: resend is disabled during 30s cooldown', () => {
+    sessionStorage.setItem('osint_target_email', 'user@domain.com');
+
+    render(
+      <MemoryRouter initialEntries={['/verify']}>
+        <VerifyOtpPage />
+      </MemoryRouter>
+    );
+
+    const resendBtn = screen.getByRole('button', { name: /resend-otp-button/i });
+    expect(resendBtn).toBeDisabled();
+    expect(resendBtn.textContent).toMatch(/Resend in \d+s/);
+  });
+
+  test('Phase 4: pasting "123456" fills all boxes and non-digits are ignored', () => {
+    sessionStorage.setItem('osint_target_email', 'user@domain.com');
+
+    render(
+      <MemoryRouter initialEntries={['/verify']}>
+        <VerifyOtpPage />
+      </MemoryRouter>
+    );
+
+    const otpInput = screen.getByLabelText('otp-input');
+    const verifyBtn = screen.getByRole('button', { name: /verify-otp-button/i });
+
+    // Non-digits ignored
+    fireEvent.change(otpInput, { target: { value: 'abc-!@#' } });
+    expect(otpInput.value).toBe('');
+    expect(verifyBtn).toBeDisabled();
+
+    // Paste "123456"
+    fireEvent.change(otpInput, { target: { value: '123456' } });
+    expect(otpInput.value).toBe('123456');
+    expect(verifyBtn).toBeEnabled();
+  });
+
+  test('Phase 4: wrong code shows inline error with attemptsRemaining and clears boxes', async () => {
+    sessionStorage.setItem('osint_target_email', 'user@domain.com');
+    api.post.mockRejectedValueOnce({
+      response: {
+        status: 400,
+        data: { error: 'Invalid verification code', attemptsRemaining: 3 }
+      }
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/verify']}>
+        <VerifyOtpPage />
+      </MemoryRouter>
+    );
+
+    const otpInput = screen.getByLabelText('otp-input');
+    const verifyBtn = screen.getByRole('button', { name: /verify-otp-button/i });
+
+    fireEvent.change(otpInput, { target: { value: '111111' } });
+    fireEvent.click(verifyBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.getByText(/Invalid verification code \(3 attempts remaining\)/i)).toBeInTheDocument();
+      // Boxes cleared
+      expect(otpInput.value).toBe('');
+    });
+  });
+
+  test('Phase 4: expired state enables resend button', () => {
+    sessionStorage.setItem('osint_target_email', 'user@domain.com');
+    jest.useFakeTimers();
+
+    render(
+      <MemoryRouter initialEntries={['/verify']}>
+        <VerifyOtpPage />
+      </MemoryRouter>
+    );
+
+    const resendBtn = screen.getByRole('button', { name: /resend-otp-button/i });
+    expect(resendBtn).toBeDisabled();
+
+    // Fast-forward past 300s expiry inside act
+    act(() => {
+      jest.advanceTimersByTime(301000);
+    });
+
+    expect(screen.getByText(/Code expired/i)).toBeInTheDocument();
+    expect(resendBtn).toBeEnabled();
+
+    jest.useRealTimers();
+  });
+
+  test('Phase 4: successful verify navigates to /results and stores token & verified email', async () => {
     sessionStorage.setItem('osint_target_email', 'target@domain.com');
     api.post.mockResolvedValueOnce({
       data: { success: true, token: 'mock-jwt-token', email: 'target@domain.com' }
     });
 
     render(
-      <MemoryRouter initialEntries={['/verify-otp']}>
+      <MemoryRouter initialEntries={['/verify']}>
         <Routes>
-          <Route path="/verify-otp" element={<VerifyOtpPage />} />
+          <Route path="/verify" element={<VerifyOtpPage />} />
           <Route path="/results" element={<div>Verified Results Page</div>} />
         </Routes>
       </MemoryRouter>
     );
 
-    expect(screen.getByText('target@domain.com')).toBeInTheDocument();
-    expect(screen.getByLabelText('Countdown Timer')).toBeInTheDocument();
-
     const otpInput = screen.getByLabelText('otp-input');
     const verifyBtn = screen.getByRole('button', { name: /verify-otp-button/i });
 
-    // Initially disabled until 6 digits entered
-    expect(verifyBtn).toBeDisabled();
-
-    // Type 6 digits
     fireEvent.change(otpInput, { target: { value: '123456' } });
-    expect(verifyBtn).toBeEnabled();
-
     fireEvent.click(verifyBtn);
 
     await waitFor(() => {
@@ -343,6 +468,27 @@ describe('VerifyOtpPage (/verify-otp route)', () => {
       expect(sessionStorage.getItem('osint_token')).toBe('mock-jwt-token');
       expect(screen.getByText('Verified Results Page')).toBeInTheDocument();
     });
+  });
+
+  test('Phase 4: change email/number clears pending keys and navigates to /search', () => {
+    sessionStorage.setItem('osint_target_email', 'target@domain.com');
+    sessionStorage.setItem('osint_target_type', 'email');
+
+    render(
+      <MemoryRouter initialEntries={['/verify']}>
+        <Routes>
+          <Route path="/verify" element={<VerifyOtpPage />} />
+          <Route path="/search" element={<div>Search Screen</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const changeBtn = screen.getByRole('button', { name: /Change email or phone number/i });
+    fireEvent.click(changeBtn);
+
+    expect(sessionStorage.getItem('osint_target_email')).toBeNull();
+    expect(sessionStorage.getItem('osint_target_type')).toBeNull();
+    expect(screen.getByText('Search Screen')).toBeInTheDocument();
   });
 });
 

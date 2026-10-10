@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import api from '../lib/api';
+import Navbar from '../components/Navbar';
+import { buildSendOtpPayload } from '../lib/otpPayload';
+import { maskIdentifier } from '../lib/maskIdentifier';
 import './search_concept.css';
 
 const bgVideo1 = '/bg1.mp4';
 
 export default function VerifyOtpPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const hiddenInputRef = useRef(null);
 
-  const targetEmail = location.state?.email || sessionStorage.getItem('osint_target_email') || '';
+  const targetEmail = sessionStorage.getItem('osint_target_email') || '';
+  const targetType = sessionStorage.getItem('osint_target_type') || (targetEmail.includes('@') ? 'email' : 'phone');
 
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,7 +29,7 @@ export default function VerifyOtpPage() {
       setCooldown((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [cooldown]);
+  }, [cooldown > 0]);
 
   // 5-minute expiry timer
   useEffect(() => {
@@ -35,11 +38,14 @@ export default function VerifyOtpPage() {
       setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [timeLeft > 0]);
 
+  // Route Guard: redirect to /search if pending identifier is missing
   if (!targetEmail) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/search" replace />;
   }
+
+  const maskedTarget = maskIdentifier(targetEmail, targetType);
 
   const handleOtpChange = (e) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 6);
@@ -49,7 +55,7 @@ export default function VerifyOtpPage() {
 
   const handleVerify = async (e) => {
     if (e) e.preventDefault();
-    if (otp.length !== 6) return;
+    if (otp.length !== 6 || loading) return;
 
     setLoading(true);
     setApiError('');
@@ -67,38 +73,45 @@ export default function VerifyOtpPage() {
         sessionStorage.setItem('osint_verified_email', targetEmail);
         navigate('/results', { state: { email: targetEmail, verified: true } });
       } else {
-        setApiError(res.data?.error || 'Invalid verification code.');
+        const errorMsg = res.data?.error || 'Invalid verification code.';
+        setApiError(errorMsg);
+        setOtp('');
+        hiddenInputRef.current?.focus();
       }
     } catch (err) {
       const errData = err.response?.data;
       const baseErr = errData?.error || err.message || 'Verification failed. Please try again.';
-      if (errData?.attemptsRemaining !== undefined && errData.attemptsRemaining > 0) {
-        setApiError(`Invalid or expired OTP (${errData.attemptsRemaining} attempts remaining)`);
+      if (errData?.attemptsRemaining !== undefined) {
+        setApiError(`${baseErr} (${errData.attemptsRemaining} attempts remaining)`);
       } else {
         setApiError(baseErr);
       }
+      setOtp('');
+      hiddenInputRef.current?.focus();
     } finally {
       setLoading(false);
     }
   };
 
   const handleResend = async () => {
-    if (cooldown > 0 || resending) return;
+    if ((cooldown > 0 && timeLeft > 0) || resending || loading) return;
 
     setResending(true);
     setApiError('');
 
     try {
-      const res = await api.post('/api/auth/send-otp', { email: targetEmail });
+      const payload = buildSendOtpPayload(targetEmail, targetType);
+      const res = await api.post('/api/auth/send-otp', payload);
       if (res.data && res.data.success !== false) {
         setCooldown(30);
         setTimeLeft(300);
         setOtp('');
+        hiddenInputRef.current?.focus();
       } else {
-        setApiError(res.data?.error || 'Failed to resend OTP.');
+        setApiError(res.data?.error || 'Failed to resend verification code.');
       }
     } catch (err) {
-      const errMsg = err.response?.data?.error || err.message || 'Failed to resend OTP.';
+      const errMsg = err.response?.data?.error || err.message || 'Failed to resend verification code.';
       setApiError(errMsg);
     } finally {
       setResending(false);
@@ -113,6 +126,7 @@ export default function VerifyOtpPage() {
 
   return (
     <div className="concept-page-wrapper">
+      {/* Background Video */}
       <video
         src={bgVideo1}
         className="concept-bg-video"
@@ -132,84 +146,43 @@ export default function VerifyOtpPage() {
       <div className="concept-background" aria-hidden="true" />
 
       {/* Top Navbar */}
-      <header className="concept-navbar">
-        <a href="/" className="concept-brand" aria-label="BreachShield Home">
-          <img src="/logo-icon.png" alt="BreachShield Logo" className="brand-logo-icon" />
-          <div className="brand-text-wrap">
-            <span className="brand-name">
-              <span className="brand-text-white">BREACH</span>
-              <span className="brand-text-blue">SHIELD</span>
-            </span>
-          </div>
-        </a>
-
-        <nav className="concept-nav-links" aria-label="Main Navigation">
-          <a href="/" className="nav-link-item">Home</a>
-          <a href="#about" className="nav-link-item">About</a>
-          <a href="#features" className="nav-link-item">Features</a>
-          <a href="#contact" className="nav-link-item">Contact</a>
-        </nav>
-
-        <div className="system-status-pill">
-          <span className="status-dot"></span>
-          <span>System Online</span>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="concept-main">
         {/* Hero Section */}
-        <section className="concept-hero otp-hero-section">
-          <div className="otp-security-status-badge">
-            <span className="security-status-dot" aria-hidden="true" />
-            <span>Secure Verification Channel Active</span>
-          </div>
-          <h1 className="concept-hero-title otp-hero-title">AUTHENTICATION REQUIRED</h1>
-          <p className="concept-hero-subtitle">
-            Identity verification for <strong className="otp-email-highlight">{targetEmail}</strong>
-          </p>
-          <div className="concept-hero-tags">
-            MULTI-FACTOR &nbsp;•&nbsp; TIME-BASED TOKEN &nbsp;•&nbsp; ZERO-KNOWLEDGE
-          </div>
+        <section className="concept-hero">
+          <h1 className="concept-hero-title">Enter your code</h1>
         </section>
 
-        {/* Central Apple-Style Glass Verification Card */}
-        <div className="concept-search-card otp-card-refinement" role="region" aria-label="otp-verification-card">
-          <div className="card-header-row">
-            <div className="search-icon-circle" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-            </div>
-            <div className="card-header-text">
-              <h2>Authorize OSINT Search</h2>
-              <p>Enter the 6-digit one-time passkey transmitted to your email to verify authorization before executing the intelligence query.</p>
-            </div>
-          </div>
+        {/* Verification Card */}
+        <div className="concept-search-card" role="region" aria-label="otp-verification-card">
+          <p className="verify-destination-text" style={{ fontSize: '14px', color: '#B8C7DB', textAlign: 'center', margin: '0 0 16px 0' }}>
+            We sent a verification code to <strong className="verify-destination-highlight" style={{ color: '#22D3EE' }}>{maskedTarget}</strong>
+          </p>
 
           <form onSubmit={handleVerify} noValidate>
             <div className="form-field-group">
-              <label htmlFor="otp-digit-input" className="form-label otp-input-label">
-                Security Token (6 Digits)
+              <label htmlFor="otp-digit-input" className="form-label" style={{ fontSize: '14px', color: '#B8C7DB', textAlign: 'center', display: 'block' }}>
+                6-digit code
               </label>
-              
-              {/* Modern 6-Segmented Glass OTP Boxes */}
-              <div 
-                className="otp-boxes-wrapper" 
+
+              {/* 6 Visual OTP Boxes */}
+              <div
+                className="otp-boxes-wrapper"
                 onClick={() => hiddenInputRef.current?.focus()}
                 role="group"
                 aria-label="6-digit verification code"
               >
                 {[0, 1, 2, 3, 4, 5].map((index) => {
                   const char = otp[index] || '';
-                  const isActive = (otp.length === index) || (index === 5 && otp.length === 6);
+                  const isActive = otp.length === index || (index === 5 && otp.length === 6);
                   return (
                     <div
                       key={index}
                       className={`otp-box-cell ${char ? 'filled' : ''} ${isActive ? 'focused' : ''}`}
                     >
-                      {char ? char : ''}
+                      {char}
                       {!char && isActive && <span className="otp-blinking-cursor" />}
                     </div>
                   );
@@ -232,103 +205,69 @@ export default function VerifyOtpPage() {
               </div>
             </div>
 
-            {/* CTA Button */}
+            {/* Inline Error Alert */}
+            {apiError && (
+              <div className="concept-alert error" role="alert" style={{ margin: '12px 0', fontSize: '14px' }}>
+                <span>⚠ {apiError}</span>
+              </div>
+            )}
+
+            {/* Verify Button */}
             <button
               type="submit"
               className="concept-cta-btn"
               disabled={loading || otp.length !== 6}
               aria-label="verify-otp-button"
+              style={{ marginTop: '12px' }}
             >
-              <svg className="btn-icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <path d="M9 12l2 2 4-4" />
-              </svg>
-              <span>{loading ? 'Validating Token...' : 'Authorize & Launch Scan'}</span>
+              <span>{loading ? 'Verifying...' : 'Verify'}</span>
               <span className="btn-arrow" aria-hidden="true">→</span>
             </button>
           </form>
 
-          {/* Countdown & Resend Row */}
-          <div className="otp-meta-glass-row">
-            <span className="otp-timer-glass-pill" aria-label="Countdown Timer">
-              ⏳ Code expires in: <strong>{formatTime(timeLeft)}</strong>
+          {/* Resend Row with Countdown */}
+          <div className="otp-meta-glass-row" style={{ marginTop: '16px' }}>
+            <span className="otp-timer-glass-pill" aria-label="Countdown Timer" style={{ fontSize: '14px' }}>
+              {timeLeft <= 0 ? (
+                <span style={{ color: '#F87171', fontWeight: 600 }}>Code expired</span>
+              ) : (
+                <>
+                  <span>Expires in:</span>
+                  <strong style={{ marginLeft: '4px', color: '#22D3EE' }}>{formatTime(timeLeft)}</strong>
+                </>
+              )}
             </span>
             <button
               type="button"
               className="otp-resend-glass-btn"
-              disabled={cooldown > 0 || resending}
+              disabled={(cooldown > 0 && timeLeft > 0) || resending || loading}
               onClick={handleResend}
               aria-label="resend-otp-button"
+              style={{ fontSize: '14px' }}
             >
-              {resending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
+              {resending ? 'Sending...' : cooldown > 0 && timeLeft > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
             </button>
           </div>
 
-          {/* Validation & Error Alerts */}
-          {apiError && (
-            <div className="concept-alert error" role="alert">
-              ⚠ {apiError}
-            </div>
-          )}
-
-          {/* Back to Search Link */}
-          <div className="otp-change-email-wrap">
+          {/* Change Email/Number Link */}
+          <div className="otp-change-email-wrap" style={{ marginTop: '20px', textAlign: 'center' }}>
             <button
               type="button"
               className="otp-change-email-link"
               onClick={() => {
                 sessionStorage.removeItem('osint_target_email');
-                navigate('/');
+                sessionStorage.removeItem('osint_target_type');
+                navigate('/search');
               }}
+              style={{ fontSize: '14px', color: '#22D3EE', background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              ← Enter a different email
+              ← Change email or phone number
             </button>
           </div>
         </div>
-
-        {/* Feature Pillars Reassurance */}
-        <section className="concept-pillars-grid" aria-label="Core Technology Pillars">
-          <div className="pillar-card cyan">
-            <div className="pillar-icon-box" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-            </div>
-            <div className="pillar-text">
-              <h3>Zero-Knowledge</h3>
-              <p>Identifier hashes remain private during lookup.</p>
-            </div>
-          </div>
-
-          <div className="pillar-card purple">
-            <div className="pillar-icon-box" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-              </svg>
-            </div>
-            <div className="pillar-text">
-              <h3>Rate-Limited MFA</h3>
-              <p>Strict anti-brute-force request throttling.</p>
-            </div>
-          </div>
-
-          <div className="pillar-card green">
-            <div className="pillar-icon-box" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-              </svg>
-            </div>
-            <div className="pillar-text">
-              <h3>Audited Session</h3>
-              <p>Query authorization immutably logged.</p>
-            </div>
-          </div>
-        </section>
       </main>
 
-      {/* Footer (Matches Header Size & Theme) */}
+      {/* Footer */}
       <footer className="concept-footer">
         <div className="footer-left">
           <img src="/logo-icon.png" alt="" className="footer-brand-icon" aria-hidden="true" />
@@ -346,12 +285,6 @@ export default function VerifyOtpPage() {
           <a href="#terms" className="footer-link">Terms of Use</a>
           <span className="footer-link-divider">|</span>
           <a href="#disclaimer" className="footer-link">Disclaimer</a>
-        </div>
-
-        <div className="footer-right">
-          <span className="footer-pillars-tagline">
-            Privacy First &nbsp;•&nbsp; AI Risk Analysis &nbsp;•&nbsp; Audit Integrity
-          </span>
         </div>
       </footer>
     </div>

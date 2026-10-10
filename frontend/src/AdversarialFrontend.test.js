@@ -48,13 +48,14 @@ describe('Adversarial Verification: Route Guards and Fallbacks', () => {
     expect(screen.getByTestId('root-landing')).toBeInTheDocument();
   });
 
-  test('Requirement 2: Uninitiated direct visit to /verify-otp redirects immediately to /', () => {
+  test('Requirement 2: Uninitiated direct visit to /verify-otp redirects immediately to /search or /', () => {
     sessionStorage.clear();
 
     render(
       <MemoryRouter initialEntries={['/verify-otp']}>
         <Routes>
           <Route path="/" element={<div data-testid="root-landing">Search Landing Page</div>} />
+          <Route path="/search" element={<div data-testid="root-landing">Search Landing Page</div>} />
           <Route path="/verify-otp" element={<VerifyOtpPage />} />
         </Routes>
       </MemoryRouter>
@@ -155,6 +156,7 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
         <MemoryRouter initialEntries={['/']}>
           <Routes>
             <Route path="/" element={<SearchPage />} />
+            <Route path="/verify" element={<div data-testid="verify-page">Verify Screen</div>} />
             <Route path="/verify-otp" element={<div data-testid="verify-page">Verify Screen</div>} />
           </Routes>
         </MemoryRouter>
@@ -301,6 +303,7 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
         <MemoryRouter initialEntries={['/results']}>
           <Routes>
             <Route path="/results" element={<ResultsPage />} />
+            <Route path="/verify" element={<div data-testid="verify-redirect">Verify OTP Required</div>} />
             <Route path="/verify-otp" element={<div data-testid="verify-redirect">Verify OTP Required</div>} />
           </Routes>
         </MemoryRouter>

@@ -130,7 +130,7 @@ export default function ResultsPage() {
     fetchResults();
   }, [verifiedEmail, retryTrigger]);
 
-  if (redirectVerify) return <Navigate to="/verify-otp" replace />;
+  if (redirectVerify) return <Navigate to="/verify" replace />;
   if (!verifiedEmail) return <Navigate to="/" replace />;
 
   const handleNewSearch = () => {
