@@ -3,10 +3,6 @@
    Apple-Style Frosted Glassmorphism + VisionOS Cyber Theme
    ========================================================================== */
 
-html {
-  scrollbar-gutter: stable;
-}
-
 .landing-page-wrapper {
   position: relative;
   min-height: 100vh !important;
@@ -16,8 +12,9 @@ html {
   background: #04121F;
   color: #f8fafc;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
+  scrollbar-gutter: stable;
+  overflow-x: clip !important;
+  overflow-y: visible !important;
   display: flex;
   flex-direction: column;
 }

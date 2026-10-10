@@ -42,7 +42,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     onComplete();
   }, [onComplete, restoreScroll]);
 
-  // Scroll lock while overlay is mounted; restore on skip, finish, and unmount
+  // Scroll lock: applied while the timeline can run (not reduced motion, not already seen)
+  // and released on any failure path, on Skip, and on unmount
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
@@ -65,37 +66,45 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     };
   }, [shouldReduceMotion, handleSkip, restoreScroll]);
 
-  // Start Clean: preload + decode logo image
+  // Start Clean: preload + decode logo image with a 1500ms max-wait timeout
   useEffect(() => {
     let isMounted = true;
+    let maxWaitTimer = null;
+
     if (typeof window === 'undefined') {
       setIsImageReady(true);
       return;
     }
 
-    const img = new Image();
-    img.src = '/logo-icon.png';
-
     const markReady = () => {
-      if (isMounted) setIsImageReady(true);
+      if (isMounted) {
+        if (maxWaitTimer) clearTimeout(maxWaitTimer);
+        setIsImageReady(true);
+      }
     };
 
-    if (typeof img.decode === 'function') {
-      img.decode().then(markReady).catch(markReady);
-    } else if (img.complete) {
+    // 1500ms max-wait timeout ensures decode gate never hangs
+    maxWaitTimer = setTimeout(markReady, 1500);
+
+    try {
+      const img = new Image();
+      img.src = '/logo-icon.png';
+
+      if (typeof img.decode === 'function') {
+        img.decode().then(markReady).catch(markReady);
+      } else if (img.complete) {
+        markReady();
+      } else {
+        img.onload = markReady;
+        img.onerror = markReady;
+      }
+    } catch (_) {
       markReady();
-    } else {
-      img.onload = markReady;
-      img.onerror = markReady;
-      const fallback = setTimeout(markReady, 60);
-      return () => {
-        isMounted = false;
-        clearTimeout(fallback);
-      };
     }
 
     return () => {
       isMounted = false;
+      if (maxWaitTimer) clearTimeout(maxWaitTimer);
     };
   }, []);
 
@@ -111,30 +120,34 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
     const runTimeline = async () => {
       try {
-        // 0.0 - 0.4s: Initial scan line at top fades in
+        // 0.0 - 0.4s: Initial scan line at top fades in (at translateY: 0)
         if (isSkippedRef.current || isCancelled) return;
         setStep('initial');
         if (scope.current) {
-          await animate('.intro-scan-line', { opacity: [0, 0.8], top: '0%' }, { duration: 0.4 });
+          await animate('.intro-scan-line', { opacity: [0, 0.8], y: 0 }, { duration: 0.4 });
         }
 
         // 0.4 - 1.4s: Scan sweep top-to-bottom reveals logo (1.0s duration)
-        // Scan-line sweeps to 100% while clip-path opens with negative insets
+        // Scan line translates Y from 0px to 140px, exactly tracking clip-path bottom inset 100% -> 0%
         if (isSkippedRef.current || isCancelled) return;
         setStep('scan');
         if (scope.current) {
           await Promise.all([
             animate(
               '.intro-scan-line',
-              { top: ['0%', '100%'], opacity: [0.8, 1, 1, 0] },
+              { y: [0, 140], opacity: [0.8, 1, 1, 0] },
               { duration: 1.0, ease: 'easeInOut' }
             ),
             animate(
               '.intro-logo-clip',
-              { clipPath: ['inset(-30% -30% 100% -30%)', 'inset(-30% -30% -30% -30%)'] },
+              { clipPath: ['inset(-30% -30% 100% -30%)', 'inset(-30% -30% 0% -30%)'] },
               { duration: 1.0, ease: 'easeInOut' }
             )
           ]);
+          // Release bottom glow inset once scan line finishes
+          if (!isSkippedRef.current && !isCancelled) {
+            animate('.intro-logo-clip', { clipPath: 'inset(-30% -30% -30% -30%)' }, { duration: 0.05 });
+          }
         }
 
         // 1.4 - 2.0s: Scan sweep finished. Wordmark letters animate in reading order
@@ -171,6 +184,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         setStep('done');
         onComplete();
       } catch (err) {
+        restoreScroll();
         if (!isCancelled && !isSkippedRef.current) {
           handleSkip();
         }
@@ -241,7 +255,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                 {/* Sweeping Cyan Scan-Line */}
                 <div
                   className="intro-scan-line"
-                  style={{ top: '0%', opacity: 0 }}
+                  style={{ transform: 'translateY(0px)', opacity: 0 }}
                 />
               </div>
 

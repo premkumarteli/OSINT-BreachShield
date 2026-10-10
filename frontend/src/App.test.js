@@ -186,6 +186,26 @@ describe('AppRouter Integration & LandingPage', () => {
     });
   });
 
+  test('Phase 2.2: decode rejecting or unavailable still starts the intro sequence without hanging', async () => {
+    sessionStorage.clear();
+    const origDecode = window.Image.prototype.decode;
+    window.Image.prototype.decode = jest.fn().mockRejectedValue(new Error('Simulated decode failure'));
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', { name: /Skip Intro/i })).toBeInTheDocument();
+
+    if (origDecode) {
+      window.Image.prototype.decode = origDecode;
+    } else {
+      delete window.Image.prototype.decode;
+    }
+  });
+
   test('renders SearchPage when directly visiting /search', () => {
     render(
       <MemoryRouter initialEntries={['/search']}>
