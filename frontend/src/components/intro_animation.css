@@ -2,24 +2,33 @@
    BreachShield - Intro Logo Animation Overlay Styles
    ========================================================================== */
 
-.intro-overlay {
+.intro-container {
   position: fixed;
   inset: 0;
   z-index: 9999;
+  pointer-events: none;
+}
+
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.intro-overlay-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
   background-color: #04121F;
   background-image: 
     linear-gradient(rgba(34, 211, 238, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(34, 211, 238, 0.04) 1px, transparent 1px);
   background-size: 32px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
   pointer-events: auto;
 }
 
 .intro-skip-btn {
-  position: absolute;
+  position: fixed;
   bottom: 24px;
   right: 28px;
   z-index: 10001;
@@ -35,6 +44,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: all 0.2s ease;
+  pointer-events: auto;
 }
 
 .intro-skip-btn:hover {
@@ -44,25 +54,32 @@
   box-shadow: 0 0 12px rgba(34, 211, 238, 0.4);
 }
 
-.intro-stage {
+.intro-brand-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 20px;
   user-select: none;
+  pointer-events: none;
 }
 
-.intro-logo-container {
+.intro-dock-icon {
   position: relative;
   width: 140px;
   height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
-.intro-logo-box {
+.intro-logo-container {
+  position: relative;
   width: 140px;
   height: 140px;
   display: flex;
@@ -111,6 +128,14 @@
   will-change: transform;
 }
 
+.intro-dock-wordmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
 .intro-wordmark-wrap {
   display: flex;
   align-items: center;
@@ -130,3 +155,4 @@
 .intro-letter {
   display: inline-block;
 }
+

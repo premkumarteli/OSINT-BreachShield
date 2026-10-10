@@ -21,10 +21,18 @@ export default function Navbar({ isIntroActive = false }) {
   return (
     <header className="concept-navbar" role="banner">
       <Link to="/" className="concept-brand" aria-label="BreachShield Home">
-        <motion.div
-          layoutId="brand-logo-icon"
-          style={{ width: 48, height: 48, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        <div
+          id="navbar-brand-icon"
+          className="navbar-brand-icon-slot"
+          style={{
+            width: 48,
+            height: 48,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            visibility: isIntroActive ? 'hidden' : 'visible'
+          }}
         >
           <img
             src="/logo-icon.png"
@@ -32,19 +40,20 @@ export default function Navbar({ isIntroActive = false }) {
             className="brand-logo-icon"
             style={{ width: 48, height: 48 }}
           />
-        </motion.div>
+        </div>
 
-        <motion.div
-          layoutId="brand-logo-text"
-          layout="position"
+        <div
+          id="navbar-brand-text"
           className="brand-text-wrap"
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            visibility: isIntroActive ? 'hidden' : 'visible'
+          }}
         >
           <span className="brand-name">
             <span className="brand-text-white">BREACH</span>
             <span className="brand-text-blue">SHIELD</span>
           </span>
-        </motion.div>
+        </div>
       </Link>
 
       <motion.nav

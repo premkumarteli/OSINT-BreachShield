@@ -40,34 +40,42 @@ describe('AppRouter Integration & LandingPage', () => {
 
   test('(a) IntroLogoAnimation does not render when sessionStorage flag is set', () => {
     sessionStorage.setItem('breachshield_intro_seen', 'true');
-    render(
+    const { container } = render(
       <MemoryRouter>
         <LandingPage />
       </MemoryRouter>
     );
-    expect(screen.queryByLabelText(/BreachShield Logo Intro/i)).not.toBeInTheDocument();
+    expect(container.querySelector('.intro-container')).not.toBeInTheDocument();
     expect(screen.getByText(/Check whether your email or phone appears in known breaches/i)).toBeInTheDocument();
   });
 
-  test('(b) Skip button sets the sessionStorage flag and removes the overlay', () => {
+  test('(b) Skip button sets the sessionStorage flag, makes Navbar brand visible, and unmounts the overlay', () => {
     sessionStorage.clear();
-    render(
+    const { container } = render(
       <MemoryRouter>
         <LandingPage />
       </MemoryRouter>
     );
 
     // Overlay is present initially
-    expect(screen.getByLabelText(/BreachShield Logo Intro/i)).toBeInTheDocument();
+    expect(container.querySelector('.intro-container')).toBeInTheDocument();
     const skipBtn = screen.getByRole('button', { name: /Skip Intro Animation/i });
     expect(skipBtn).toBeInTheDocument();
+
+    // Navbar brand is hidden while intro is active
+    const navIcon = container.querySelector('#navbar-brand-icon');
+    const navWord = container.querySelector('#navbar-brand-text');
+    expect(navIcon).toHaveStyle({ visibility: 'hidden' });
+    expect(navWord).toHaveStyle({ visibility: 'hidden' });
 
     // Click Skip
     fireEvent.click(skipBtn);
 
-    // Flag is set and overlay is removed
+    // Flag is set, overlay unmounted, Navbar brand visible
     expect(sessionStorage.getItem('breachshield_intro_seen')).toBe('true');
-    expect(screen.queryByLabelText(/BreachShield Logo Intro/i)).not.toBeInTheDocument();
+    expect(container.querySelector('.intro-container')).not.toBeInTheDocument();
+    expect(navIcon).toHaveStyle({ visibility: 'visible' });
+    expect(navWord).toHaveStyle({ visibility: 'visible' });
     expect(screen.getByText(/Check whether your email or phone appears in known breaches/i)).toBeInTheDocument();
   });
 
@@ -143,12 +151,12 @@ describe('AppRouter Integration & LandingPage', () => {
 
   test('Phase 2.1/3.1 (a): Navbar and overlay use the same logo src', () => {
     sessionStorage.clear();
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={['/']}>
         <LandingPage />
       </MemoryRouter>
     );
-    const logos = screen.getAllByRole('img', { name: /BreachShield/i });
+    const logos = container.querySelectorAll('img[src="/logo-icon.png"]');
     expect(logos.length).toBeGreaterThanOrEqual(2);
     const overlayLogoSrc = logos[0].getAttribute('src');
     const navbarLogoSrc = logos[1].getAttribute('src');
@@ -189,13 +197,13 @@ describe('AppRouter Integration & LandingPage', () => {
   test('Phase 2.2: decode rejecting or unavailable still starts the intro sequence without hanging', async () => {
     sessionStorage.clear();
     const origDecode = window.Image.prototype.decode;
-    window.Image.prototype.decode = jest.fn().mockRejectedValue(new Error('Simulated decode failure'));
-
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <LandingPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/']}>
+          <LandingPage />
+        </MemoryRouter>
+      );
+    });
 
     expect(screen.getByRole('button', { name: /Skip Intro/i })).toBeInTheDocument();
 
@@ -204,6 +212,79 @@ describe('AppRouter Integration & LandingPage', () => {
     } else {
       delete window.Image.prototype.decode;
     }
+  });
+
+  test('Phase 2.3: no layoutId attribute exists on any element in Intro or Navbar', () => {
+    sessionStorage.clear();
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    // Check across all elements in container for layoutId / layout-id / data-framer-layout-id
+    const elementsWithLayoutId = container.querySelectorAll(
+      '[layoutid], [layoutId], [data-framer-layout-id], [data-layoutid]'
+    );
+    expect(elementsWithLayoutId.length).toBe(0);
+
+    // Also verify Navbar standalone
+    const { container: navContainer } = render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>
+    );
+    const navLayoutIds = navContainer.querySelectorAll(
+      '[layoutid], [layoutId], [data-framer-layout-id], [data-layoutid]'
+    );
+    expect(navLayoutIds.length).toBe(0);
+  });
+
+  test('Phase 2.3: window resize mid-intro triggers handleSkip and unmounts intro', () => {
+    sessionStorage.clear();
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    expect(container.querySelector('.intro-container')).toBeInTheDocument();
+
+    // Trigger window resize event
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    expect(sessionStorage.getItem('breachshield_intro_seen')).toBe('true');
+    expect(container.querySelector('.intro-container')).not.toBeInTheDocument();
+  });
+
+  test('Phase 2.3: overlay is decorative with aria-hidden="true" and skip button is keyboard-reachable', () => {
+    sessionStorage.clear();
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    const overlay = container.querySelector('.intro-overlay');
+    expect(overlay).toHaveAttribute('aria-hidden', 'true');
+    expect(overlay).not.toHaveAttribute('role', 'dialog');
+    expect(overlay).not.toHaveAttribute('aria-modal');
+
+    // Skip button is outside the aria-hidden container
+    const skipBtn = screen.getByRole('button', { name: /Skip Intro Animation/i });
+    expect(skipBtn).toBeInTheDocument();
+    expect(overlay.contains(skipBtn)).toBe(false);
+
+    // Wordmark has single aria-label="BreachShield" with individual letters aria-hidden="true"
+    const wordmark = container.querySelector('.intro-dock-wordmark');
+    expect(wordmark).toHaveAttribute('aria-label', 'BreachShield');
+    const letters = wordmark.querySelectorAll('.intro-letter');
+    expect(letters.length).toBe(12);
+    letters.forEach((letter) => {
+      expect(letter).toHaveAttribute('aria-hidden', 'true');
+    });
   });
 
   test('renders SearchPage when directly visiting /search', () => {

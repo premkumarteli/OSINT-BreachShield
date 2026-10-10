@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useReducedMotion, useAnimate, stagger } from 'framer-motion';
+import { useReducedMotion, useAnimate, stagger } from 'framer-motion';
 import './intro_animation.css';
 
 const BRAND_LETTERS = [
@@ -19,7 +19,7 @@ const BRAND_LETTERS = [
 
 export default function IntroLogoAnimation({ onComplete, onDockStart }) {
   const shouldReduceMotion = useReducedMotion();
-  const [step, setStep] = useState('initial'); // 'initial' | 'scan' | 'wordmark' | 'docking' | 'fadeout' | 'done'
+  const [step, setStep] = useState('initial'); // 'initial' | 'scan' | 'wordmark' | 'docking' | 'done'
   const [isImageReady, setIsImageReady] = useState(false);
   const isSkippedRef = useRef(false);
   const [scope, animate] = useAnimate();
@@ -65,6 +65,20 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
       restoreScroll();
     };
   }, [shouldReduceMotion, handleSkip, restoreScroll]);
+
+  // Window resize mid-intro: jump directly to final state (same as Skip)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleWindowResize = () => {
+      if (!isSkippedRef.current) {
+        handleSkip();
+      }
+    };
+    window.addEventListener('resize', handleWindowResize);
+    return () => {
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  }, [handleSkip]);
 
   // Start Clean: preload + decode logo image with a 1500ms max-wait timeout
   useEffect(() => {
@@ -162,20 +176,90 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
           );
         }
 
-        // 2.0 - 2.8s: Docking handoff to Navbar
+        // Await font loading readiness if supported
+        if (typeof document !== 'undefined' && document.fonts && typeof document.fonts.ready?.then === 'function') {
+          try {
+            await document.fonts.ready;
+          } catch (_) {}
+        }
+
+        // Measure Navbar icon and wordmark bounding rects right before docking
+        const navIconEl = document.getElementById('navbar-brand-icon') || document.querySelector('.navbar-brand-icon-slot');
+        const navWordEl = document.getElementById('navbar-brand-text') || document.querySelector('.concept-navbar .brand-text-wrap');
+        const introIconEl = scope.current?.querySelector('.intro-dock-icon');
+        const introWordEl = scope.current?.querySelector('.intro-dock-wordmark');
+
+        const navIconRect = navIconEl?.getBoundingClientRect();
+        const navWordRect = navWordEl?.getBoundingClientRect();
+        const introIconRect = introIconEl?.getBoundingClientRect();
+        const introWordRect = introWordEl?.getBoundingClientRect();
+
+        // If rects are missing/zero (e.g. unmounted, invisible, display:none), jump directly to final state
+        if (
+          !navIconRect || !navWordRect || !introIconRect || !introWordRect ||
+          navIconRect.width === 0 || navIconRect.height === 0 ||
+          navWordRect.width === 0 || navWordRect.height === 0 ||
+          introIconRect.width === 0 || introIconRect.height === 0 ||
+          introWordRect.width === 0 || introWordRect.height === 0
+        ) {
+          handleSkip();
+          return;
+        }
+
+        const deltaIconX = navIconRect.left - introIconRect.left;
+        const deltaIconY = navIconRect.top - introIconRect.top;
+        const scaleIcon = navIconRect.width / introIconRect.width;
+
+        const deltaWordX = navWordRect.left - introWordRect.left;
+        const deltaWordY = navWordRect.top - introWordRect.top;
+        const scaleWord = navWordRect.width / introWordRect.width;
+
+        // 2.0 - 2.8s: Direct transform dock over 0.8s with single easing
         if (isSkippedRef.current || isCancelled) return;
         setStep('docking');
         if (onDockStart) onDockStart();
-        await new Promise((resolve) => setTimeout(resolve, 800));
 
-        // 2.8 - 3.2s: Fade out overlay background
-        if (isSkippedRef.current || isCancelled) return;
-        setStep('fadeout');
-        if (scope.current) {
-          await animate(scope.current, { opacity: 0 }, { duration: 0.4 });
-        }
+        await Promise.all([
+          animate(
+            '.intro-dock-icon',
+            {
+              x: [0, deltaIconX],
+              y: [0, deltaIconY],
+              scale: [1, scaleIcon],
+              originX: 0,
+              originY: 0
+            },
+            { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+          ),
+          animate(
+            '.intro-logo-glow-wrapper',
+            {
+              filter: [
+                'drop-shadow(0 0 20px rgba(34, 211, 238, 0.65))',
+                'drop-shadow(0 0 16px rgba(0, 240, 255, 0.65))'
+              ]
+            },
+            { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+          ),
+          animate(
+            '.intro-dock-wordmark',
+            {
+              x: [0, deltaWordX],
+              y: [0, deltaWordY],
+              scale: [1, scaleWord],
+              originX: 0,
+              originY: 0
+            },
+            { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+          ),
+          animate(
+            '.intro-overlay-bg',
+            { opacity: [1, 0] },
+            { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+          )
+        ]);
 
-        // 3.2s: Done
+        // On arrival: in one frame, reveal the real Navbar brand and unmount overlay
         if (isSkippedRef.current || isCancelled) return;
         try {
           sessionStorage.setItem('breachshield_intro_seen', 'true');
@@ -201,100 +285,86 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
   if (step === 'done') return null;
 
   return (
-    <AnimatePresence>
-      {step !== 'fadeout' && step !== 'done' && (
-        <motion.div
-          ref={scope}
-          className="intro-overlay"
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          aria-label="BreachShield Logo Intro"
-          role="dialog"
-          aria-modal="true"
-        >
-          {/* Skip Intro Button */}
-          <button
-            type="button"
-            className="intro-skip-btn"
-            onClick={handleSkip}
-            aria-label="Skip Intro Animation"
-          >
-            Skip Intro ✕
-          </button>
+    <div ref={scope} className="intro-container" data-testid="intro-container">
+      {/* Decorative overlay root with aria-hidden="true" (no role="dialog", no aria-modal) */}
+      <div className="intro-overlay" aria-hidden="true">
+        {/* Layer 1: Background (#04121F + grid) */}
+        <div className="intro-overlay-bg" />
 
-          {/* Central Animation Stage (Active before docking) */}
-          {step !== 'docking' && (
-            <div className="intro-stage">
-              {/* Logo Mark Container (140px square) */}
-              <div className="intro-logo-container">
-                <motion.div
-                  layoutId="brand-logo-icon"
-                  className="intro-logo-box"
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  {/* Unclipped glow wrapper */}
-                  <div className="intro-logo-glow-wrapper">
-                    {/* Clipped image wrapper with negative insets */}
-                    <div
-                      className="intro-logo-clip"
-                      style={{
-                        clipPath: 'inset(-30% -30% 100% -30%)',
-                        WebkitClipPath: 'inset(-30% -30% 100% -30%)'
-                      }}
-                    >
-                      <img
-                        src="/logo-icon.png"
-                        alt="BreachShield Shield"
-                        className="intro-logo-img"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Sweeping Cyan Scan-Line */}
-                <div
-                  className="intro-scan-line"
-                  style={{ transform: 'translateY(0px)', opacity: 0 }}
+        {/* Layer 2: Fixed Brand layer holding icon and wordmark */}
+        <div className="intro-brand-layer">
+          {/* Logo Mark Container (140px square) */}
+          <div className="intro-dock-icon" style={{ transformOrigin: 'top left' }}>
+            {/* Unclipped glow wrapper */}
+            <div className="intro-logo-glow-wrapper">
+              {/* Clipped image wrapper with negative insets */}
+              <div
+                className="intro-logo-clip"
+                style={{
+                  clipPath: 'inset(-30% -30% 100% -30%)',
+                  WebkitClipPath: 'inset(-30% -30% 100% -30%)'
+                }}
+              >
+                <img
+                  src="/logo-icon.png"
+                  alt="BreachShield Shield"
+                  className="intro-logo-img"
                 />
               </div>
-
-              {/* Wordmark Stagger (Letter by Letter in reading order) */}
-              <motion.div
-                layoutId="brand-logo-text"
-                layout="position"
-                className="intro-wordmark-wrap"
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <span className="brand-name intro-brand-name">
-                  <span className="brand-text-white intro-letter-group">
-                    {BRAND_LETTERS.filter((l) => l.group === 'breach').map((letter, idx) => (
-                      <span
-                        key={`b-${idx}`}
-                        className="intro-letter"
-                        style={{ opacity: 0, transform: 'translateY(6px)', display: 'inline-block' }}
-                      >
-                        {letter.char}
-                      </span>
-                    ))}
-                  </span>
-                  <span className="brand-text-blue intro-letter-group">
-                    {BRAND_LETTERS.filter((l) => l.group === 'shield').map((letter, idx) => (
-                      <span
-                        key={`s-${idx}`}
-                        className="intro-letter"
-                        style={{ opacity: 0, transform: 'translateY(6px)', display: 'inline-block' }}
-                      >
-                        {letter.char}
-                      </span>
-                    ))}
-                  </span>
-                </span>
-              </motion.div>
             </div>
-          )}
-        </motion.div>
-      )}
-    </AnimatePresence>
+
+            {/* Sweeping Cyan Scan-Line */}
+            <div
+              className="intro-scan-line"
+              style={{ transform: 'translateY(0px)', opacity: 0 }}
+            />
+          </div>
+
+          {/* Wordmark Container (single aria-label, individual letters aria-hidden) */}
+          <div
+            className="intro-dock-wordmark"
+            aria-label="BreachShield"
+            style={{ transformOrigin: 'top left' }}
+          >
+            <span className="brand-name intro-brand-name">
+              <span className="brand-text-white intro-letter-group">
+                {BRAND_LETTERS.filter((l) => l.group === 'breach').map((letter, idx) => (
+                  <span
+                    key={`b-${idx}`}
+                    className="intro-letter"
+                    aria-hidden="true"
+                    style={{ opacity: 0, transform: 'translateY(6px)', display: 'inline-block' }}
+                  >
+                    {letter.char}
+                  </span>
+                ))}
+              </span>
+              <span className="brand-text-blue intro-letter-group">
+                {BRAND_LETTERS.filter((l) => l.group === 'shield').map((letter, idx) => (
+                  <span
+                    key={`s-${idx}`}
+                    className="intro-letter"
+                    aria-hidden="true"
+                    style={{ opacity: 0, transform: 'translateY(6px)', display: 'inline-block' }}
+                  >
+                    {letter.char}
+                  </span>
+                ))}
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Skip Intro Button: outside aria-hidden container, keyboard-reachable and focusable */}
+      <button
+        type="button"
+        className="intro-skip-btn"
+        onClick={handleSkip}
+        aria-label="Skip Intro Animation"
+      >
+        Skip Intro ✕
+      </button>
+    </div>
   );
 }

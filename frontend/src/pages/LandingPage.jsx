@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { LayoutGroup, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Navbar from '../components/Navbar';
 import IntroLogoAnimation from '../components/IntroLogoAnimation';
 import './search_concept.css';
@@ -55,15 +55,6 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
     }
   });
 
-  const [dockStarted, setDockStarted] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    try {
-      return !!sessionStorage.getItem('breachshield_intro_seen');
-    } catch (_) {
-      return true;
-    }
-  });
-
   const [canAutoplayVideo, setCanAutoplayVideo] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth >= 768;
@@ -96,21 +87,15 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
     try {
       sessionStorage.setItem('breachshield_intro_seen', 'true');
     } catch (_) {}
-    setDockStarted(true);
     setIntroActive(false);
   };
 
-  const handleDockStart = () => {
-    setDockStarted(true);
-  };
-
   return (
-    <LayoutGroup id="breachshield-brand">
+    <>
       {/* Intro Logo Animation (Runs once per session on root route) */}
       {introActive && (
         <IntroLogoAnimation
           onComplete={handleIntroComplete}
-          onDockStart={handleDockStart}
         />
       )}
 
@@ -136,7 +121,7 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
         <div className="concept-background" aria-hidden="true" />
 
         {/* Sticky Shared Navbar */}
-        <Navbar isIntroActive={!dockStarted} />
+        <Navbar isIntroActive={introActive} />
 
         {/* Hero Section */}
         <main className="landing-hero-container">
@@ -424,6 +409,6 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
           </div>
         </footer>
       </div>
-    </LayoutGroup>
+    </>
   );
 }
