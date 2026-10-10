@@ -134,6 +134,7 @@
   justify-content: center;
   transform-origin: 0 0;
   will-change: transform;
+  visibility: hidden;
 }
 
 .intro-wordmark-wrap {
@@ -143,8 +144,13 @@
 }
 
 .intro-brand-name {
+  font-family: 'Orbitron', monospace !important;
   font-size: 2rem !important;
-  letter-spacing: 0.18em !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.14em !important;
+  line-height: 1 !important;
+  display: inline-flex;
+  align-items: center;
   filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.45));
 }
 
@@ -154,5 +160,9 @@
 
 .intro-letter {
   display: inline-block;
+  clip-path: inset(100%);
+  -webkit-clip-path: inset(100%);
+  opacity: 0;
+  will-change: clip-path, transform, opacity;
 }
 

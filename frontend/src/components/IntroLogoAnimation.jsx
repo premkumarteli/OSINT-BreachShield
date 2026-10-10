@@ -17,12 +17,29 @@ const BRAND_LETTERS = [
   { char: 'D', group: 'shield' },
 ];
 
+const getSlowMoFactor = () => {
+  if (process.env.NODE_ENV === 'production' || typeof window === 'undefined') {
+    return 1;
+  }
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const slowVal = parseInt(params.get('introSlow'), 10);
+    if (!isNaN(slowVal) && slowVal >= 1 && slowVal <= 10) {
+      return slowVal;
+    }
+  } catch (_) {}
+  return 1;
+};
+
 export default function IntroLogoAnimation({ onComplete, onDockStart }) {
   const shouldReduceMotion = useReducedMotion();
   const [step, setStep] = useState('initial'); // 'initial' | 'scan' | 'wordmark' | 'docking' | 'done'
-  const [isImageReady, setIsImageReady] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const isSkippedRef = useRef(false);
+  const initialWidthRef = useRef(typeof window !== 'undefined' ? window.innerWidth : 0);
   const [scope, animate] = useAnimate();
+
+  const slowFactor = getSlowMoFactor();
 
   const restoreScroll = useCallback(() => {
     if (typeof document !== 'undefined') {
@@ -42,8 +59,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     onComplete();
   }, [onComplete, restoreScroll]);
 
-  // Scroll lock: applied while the timeline can run (not reduced motion, not already seen)
-  // and released on any failure path, on Skip, and on unmount
+  // Scroll lock: applied while timeline can run and released on any exit path
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
@@ -66,11 +82,14 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     };
   }, [shouldReduceMotion, handleSkip, restoreScroll]);
 
-  // Window resize mid-intro: jump directly to final state (same as Skip)
+  // Window resize: only cancel if width changes (height-only changes from mobile URL bar are ignored)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    initialWidthRef.current = window.innerWidth;
+
     const handleWindowResize = () => {
-      if (!isSkippedRef.current) {
+      if (isSkippedRef.current) return;
+      if (window.innerWidth !== initialWidthRef.current) {
         handleSkip();
       }
     };
@@ -80,41 +99,55 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     };
   }, [handleSkip]);
 
-  // Start Clean: preload + decode logo image with a 1500ms max-wait timeout
+  // Start Clean: decode logo image AND preload Orbitron fonts under single 1500ms max-wait timeout
   useEffect(() => {
     let isMounted = true;
     let maxWaitTimer = null;
 
     if (typeof window === 'undefined') {
-      setIsImageReady(true);
+      setIsReady(true);
       return;
     }
 
     const markReady = () => {
       if (isMounted) {
         if (maxWaitTimer) clearTimeout(maxWaitTimer);
-        setIsImageReady(true);
+        setIsReady(true);
       }
     };
 
-    // 1500ms max-wait timeout ensures decode gate never hangs
+    // Shared 1500ms max-wait timeout ensures gate never hangs
     maxWaitTimer = setTimeout(markReady, 1500);
 
-    try {
-      const img = new Image();
-      img.src = '/logo-icon.png';
-
-      if (typeof img.decode === 'function') {
-        img.decode().then(markReady).catch(markReady);
-      } else if (img.complete) {
-        markReady();
-      } else {
-        img.onload = markReady;
-        img.onerror = markReady;
+    const imagePromise = new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.src = '/logo-icon.png';
+        if (typeof img.decode === 'function') {
+          img.decode().then(resolve).catch(resolve);
+        } else if (img.complete) {
+          resolve();
+        } else {
+          img.onload = resolve;
+          img.onerror = resolve;
+        }
+      } catch (_) {
+        resolve();
       }
-    } catch (_) {
-      markReady();
-    }
+    });
+
+    const fontPromise = (async () => {
+      if (typeof document !== 'undefined' && document.fonts && typeof document.fonts.load === 'function') {
+        try {
+          await Promise.all([
+            document.fonts.load('900 2rem Orbitron'),
+            document.fonts.load('900 1.03rem Orbitron')
+          ]);
+        } catch (_) {}
+      }
+    })();
+
+    Promise.all([imagePromise, fontPromise]).then(markReady).catch(markReady);
 
     return () => {
       isMounted = false;
@@ -124,7 +157,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
   // Single Timeline Sequence driven by Framer Motion useAnimate
   useEffect(() => {
-    if (!isImageReady || shouldReduceMotion) return;
+    if (!isReady || shouldReduceMotion) return;
 
     try {
       if (sessionStorage.getItem('breachshield_intro_seen')) return;
@@ -134,15 +167,19 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
     const runTimeline = async () => {
       try {
-        // 0.0 - 0.4s: Initial scan line at top fades in (at translateY: 0)
+        // 0.0 - 0.4s: Initial scan line at top fades in
         if (isSkippedRef.current || isCancelled) return;
         setStep('initial');
         if (scope.current) {
-          await animate('.intro-scan-line', { opacity: [0, 0.8], y: 0 }, { duration: 0.4 });
+          await animate(
+            '.intro-scan-line',
+            { opacity: [0, 0.8], y: 0 },
+            { duration: 0.4 * slowFactor }
+          );
         }
 
-        // 0.4 - 1.4s: Scan sweep top-to-bottom reveals logo (1.0s duration)
-        // Scan line translates Y from 0px to 140px, exactly tracking clip-path bottom inset 100% -> 0%
+        // 0.4 - 1.4s: Scan sweep top-to-bottom reveals logo (1.0s * slowFactor)
+        // Scan line translateY: [0, 140] exactly tracks clip-path bottom inset 100% -> 0%
         if (isSkippedRef.current || isCancelled) return;
         setStep('scan');
         if (scope.current) {
@@ -150,37 +187,56 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             animate(
               '.intro-scan-line',
               { y: [0, 140], opacity: [0.8, 1, 1, 0] },
-              { duration: 1.0, ease: 'easeInOut' }
+              { duration: 1.0 * slowFactor, ease: 'easeInOut' }
             ),
             animate(
               '.intro-logo-clip',
               { clipPath: ['inset(-30% -30% 100% -30%)', 'inset(-30% -30% 0% -30%)'] },
-              { duration: 1.0, ease: 'easeInOut' }
+              { duration: 1.0 * slowFactor, ease: 'easeInOut' }
             )
           ]);
           // Release bottom glow inset once scan line finishes
           if (!isSkippedRef.current && !isCancelled) {
-            animate('.intro-logo-clip', { clipPath: 'inset(-30% -30% -30% -30%)' }, { duration: 0.05 });
+            animate(
+              '.intro-logo-clip',
+              { clipPath: 'inset(-30% -30% -30% -30%)' },
+              { duration: 0.05 * slowFactor }
+            );
           }
         }
 
-        // 1.4 - 2.0s: Scan sweep finished. Wordmark letters animate in reading order
-        // Continuous stagger index (0.04s per letter) across all 12 letters B-R-E-A-C-H-S-H-I-E-L-D
+        // 1.4 - 2.0s: Wordmark reveals letter by letter in reading order B-R-E-A-C-H-S-H-I-E-L-D
+        // Make wordmark container visible, then unclip each letter at its stagger time
         if (isSkippedRef.current || isCancelled) return;
         setStep('wordmark');
         if (scope.current) {
+          const wordmarkEl = scope.current.querySelector('.intro-dock-wordmark');
+          if (wordmarkEl) {
+            wordmarkEl.style.visibility = 'visible';
+          }
+
           await animate(
             '.intro-letter',
-            { opacity: [0, 1], y: [6, 0] },
-            { delay: stagger(0.04), duration: 0.18, ease: 'easeOut' }
+            {
+              clipPath: ['inset(100%)', 'inset(0%)'],
+              opacity: [0, 1],
+              y: [6, 0]
+            },
+            {
+              delay: stagger(0.04 * slowFactor),
+              duration: 0.18 * slowFactor,
+              ease: 'easeOut'
+            }
           );
-        }
 
-        // Await font loading readiness if supported
-        if (typeof document !== 'undefined' && document.fonts && typeof document.fonts.ready?.then === 'function') {
-          try {
-            await document.fonts.ready;
-          } catch (_) {}
+          if (!isSkippedRef.current && !isCancelled) {
+            // Remove clip-path so glow and docking transforms are unconstrained
+            const letters = scope.current.querySelectorAll('.intro-letter');
+            letters.forEach((l) => {
+              l.style.clipPath = 'none';
+              l.style.webkitClipPath = 'none';
+            });
+          }
         }
 
         // Measure Navbar icon and wordmark bounding rects right before docking
@@ -194,7 +250,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         const introIconRect = introIconEl?.getBoundingClientRect();
         const introWordRect = introWordEl?.getBoundingClientRect();
 
-        // If rects are missing/zero (e.g. unmounted, invisible, display:none), jump directly to final state
+        // If rects are missing/zero, jump directly to final state
         if (
           !navIconRect || !navWordRect || !introIconRect || !introWordRect ||
           navIconRect.width === 0 || navIconRect.height === 0 ||
@@ -214,7 +270,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         const deltaWordY = navWordRect.top - introWordRect.top;
         const scaleWord = navWordRect.width / introWordRect.width;
 
-        // 2.0 - 2.8s: Direct transform dock over 0.8s with single easing
+        // 2.0 - 2.8s: Direct transform dock over 0.8s * slowFactor with single easing
+        // Remove Skip Button from DOM as soon as docking starts
         if (isSkippedRef.current || isCancelled) return;
         setStep('docking');
         if (onDockStart) onDockStart();
@@ -229,7 +286,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               originX: 0,
               originY: 0
             },
-            { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+            { duration: 0.8 * slowFactor, ease: [0.16, 1, 0.3, 1] }
           ),
           animate(
             '.intro-logo-glow-wrapper',
@@ -239,7 +296,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                 'drop-shadow(0 0 16px rgba(0, 240, 255, 0.65))'
               ]
             },
-            { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+            { duration: 0.8 * slowFactor, ease: [0.16, 1, 0.3, 1] }
           ),
           animate(
             '.intro-dock-wordmark',
@@ -250,16 +307,16 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               originX: 0,
               originY: 0
             },
-            { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+            { duration: 0.8 * slowFactor, ease: [0.16, 1, 0.3, 1] }
           ),
           animate(
             '.intro-overlay-bg',
             { opacity: [1, 0] },
-            { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+            { duration: 0.8 * slowFactor, ease: [0.16, 1, 0.3, 1] }
           )
         ]);
 
-        // On arrival: in one frame, reveal the real Navbar brand and unmount overlay
+        // On arrival: single-frame handoff (reveal navbar brand, unmount intro)
         if (isSkippedRef.current || isCancelled) return;
         try {
           sessionStorage.setItem('breachshield_intro_seen', 'true');
@@ -280,7 +337,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     return () => {
       isCancelled = true;
     };
-  }, [isImageReady, shouldReduceMotion, animate, handleSkip, onComplete, onDockStart, restoreScroll, scope]);
+  }, [isReady, shouldReduceMotion, animate, handleSkip, onComplete, onDockStart, restoreScroll, scope, slowFactor]);
 
   if (step === 'done') return null;
 
@@ -320,11 +377,11 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             />
           </div>
 
-          {/* Wordmark Container (single aria-label, individual letters aria-hidden) */}
+          {/* Wordmark Container (hidden initially, revealed at wordmark step) */}
           <div
             className="intro-dock-wordmark"
             aria-label="BreachShield"
-            style={{ transformOrigin: 'top left' }}
+            style={{ transformOrigin: 'top left', visibility: 'hidden' }}
           >
             <span className="brand-name intro-brand-name">
               <span className="brand-text-white intro-letter-group">
@@ -333,7 +390,13 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                     key={`b-${idx}`}
                     className="intro-letter"
                     aria-hidden="true"
-                    style={{ opacity: 0, transform: 'translateY(6px)', display: 'inline-block' }}
+                    style={{
+                      opacity: 0,
+                      clipPath: 'inset(100%)',
+                      WebkitClipPath: 'inset(100%)',
+                      transform: 'translateY(6px)',
+                      display: 'inline-block'
+                    }}
                   >
                     {letter.char}
                   </span>
@@ -345,7 +408,13 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                     key={`s-${idx}`}
                     className="intro-letter"
                     aria-hidden="true"
-                    style={{ opacity: 0, transform: 'translateY(6px)', display: 'inline-block' }}
+                    style={{
+                      opacity: 0,
+                      clipPath: 'inset(100%)',
+                      WebkitClipPath: 'inset(100%)',
+                      transform: 'translateY(6px)',
+                      display: 'inline-block'
+                    }}
                   >
                     {letter.char}
                   </span>
@@ -356,15 +425,17 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         </div>
       </div>
 
-      {/* Skip Intro Button: outside aria-hidden container, keyboard-reachable and focusable */}
-      <button
-        type="button"
-        className="intro-skip-btn"
-        onClick={handleSkip}
-        aria-label="Skip Intro Animation"
-      >
-        Skip Intro ✕
-      </button>
+      {/* Skip Intro Button: outside aria-hidden container; removed from DOM as soon as dock starts */}
+      {step !== 'docking' && step !== 'done' && (
+        <button
+          type="button"
+          className="intro-skip-btn"
+          onClick={handleSkip}
+          aria-label="Skip Intro Animation"
+        >
+          Skip Intro ✕
+        </button>
+      )}
     </div>
   );
 }

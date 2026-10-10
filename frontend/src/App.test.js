@@ -240,8 +240,9 @@ describe('AppRouter Integration & LandingPage', () => {
     expect(navLayoutIds.length).toBe(0);
   });
 
-  test('Phase 2.3: window resize mid-intro triggers handleSkip and unmounts intro', () => {
+  test('Phase 2.3/2.4: window width resize mid-intro triggers handleSkip and unmounts intro', () => {
     sessionStorage.clear();
+    const originalWidth = window.innerWidth;
     const { container } = render(
       <MemoryRouter>
         <LandingPage />
@@ -250,13 +251,76 @@ describe('AppRouter Integration & LandingPage', () => {
 
     expect(container.querySelector('.intro-container')).toBeInTheDocument();
 
-    // Trigger window resize event
+    // Trigger window width resize event
+    window.innerWidth = originalWidth + 100;
     act(() => {
       window.dispatchEvent(new Event('resize'));
     });
 
     expect(sessionStorage.getItem('breachshield_intro_seen')).toBe('true');
     expect(container.querySelector('.intro-container')).not.toBeInTheDocument();
+    window.innerWidth = originalWidth;
+  });
+
+  test('Phase 2.4: height-only resize does not skip intro', () => {
+    sessionStorage.clear();
+    const originalHeight = window.innerHeight;
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    expect(container.querySelector('.intro-container')).toBeInTheDocument();
+
+    // Trigger height-only resize event (e.g. mobile URL bar)
+    window.innerHeight = originalHeight + 200;
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    // Still running and not skipped
+    expect(container.querySelector('.intro-container')).toBeInTheDocument();
+    expect(sessionStorage.getItem('breachshield_intro_seen')).toBeNull();
+    window.innerHeight = originalHeight;
+  });
+
+  test('Phase 2.4: wordmark letters are hidden before wordmark step with clipPath and opacity 0', () => {
+    sessionStorage.clear();
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    const wordmark = container.querySelector('.intro-dock-wordmark');
+    expect(wordmark).toHaveStyle({ visibility: 'hidden' });
+
+    const letters = container.querySelectorAll('.intro-letter');
+    expect(letters.length).toBe(12);
+    letters.forEach((letter) => {
+      expect(letter).toHaveStyle({ opacity: 0 });
+      expect(letter.style.clipPath).toContain('inset(100%)');
+    });
+  });
+
+  test('Phase 2.4: Skip button is absent after the dock starts and absent after completion', () => {
+    sessionStorage.clear();
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    const skipBtn = screen.getByRole('button', { name: /Skip Intro Animation/i });
+    expect(skipBtn).toBeInTheDocument();
+
+    // Trigger Skip
+    fireEvent.click(skipBtn);
+
+    // After completion, skip button is absent
+    expect(screen.queryByRole('button', { name: /Skip Intro Animation/i })).not.toBeInTheDocument();
+    expect(container.querySelector('.intro-skip-btn')).not.toBeInTheDocument();
   });
 
   test('Phase 2.3: overlay is decorative with aria-hidden="true" and skip button is keyboard-reachable', () => {

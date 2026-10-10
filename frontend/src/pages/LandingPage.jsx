@@ -83,6 +83,17 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
+  // Reset scroll to top on mount when intro is active
+  useEffect(() => {
+    if (introActive && typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      try {
+        if (process.env.NODE_ENV !== 'test') {
+          window.scrollTo(0, 0);
+        }
+      } catch (_) {}
+    }
+  }, [introActive]);
+
   const handleIntroComplete = () => {
     try {
       sessionStorage.setItem('breachshield_intro_seen', 'true');
@@ -127,17 +138,17 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
         <main className="landing-hero-container">
           <motion.h1
             className="landing-headline"
-            initial={introActive ? { opacity: 0, y: 16 } : { opacity: 1, y: 0 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: introActive ? 2.8 : 0 }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: introActive ? 0 : 1, y: introActive ? 16 : 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
           >
             Check whether your email or phone appears in known breaches. [TODO]
           </motion.h1>
 
           <motion.div
-            initial={introActive ? { opacity: 0, y: 16 } : { opacity: 1, y: 0 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: introActive ? 2.95 : 0 }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: introActive ? 0 : 1, y: introActive ? 16 : 0 }}
+            transition={{ duration: 0.6, delay: introActive ? 0 : 0.15, ease: 'easeOut' }}
           >
             <Link
               to="/search"

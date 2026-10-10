@@ -9,7 +9,7 @@
   height: auto !important;
   max-height: none !important;
   width: 100%;
-  background: #04121F;
+  background: transparent;
   color: #f8fafc;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   scrollbar-gutter: stable;
