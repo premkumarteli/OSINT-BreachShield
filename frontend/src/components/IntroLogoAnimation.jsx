@@ -123,7 +123,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     const imagePromise = new Promise((resolve) => {
       try {
         const img = new Image();
-        img.src = '/logo-icon-clean.png';
+        img.src = '/logo-icon-mark.png';
         if (typeof img.decode === 'function') {
           img.decode().then(resolve).catch(resolve);
         } else if (img.complete) {
@@ -208,7 +208,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
         // 1.4s: Check mask-image support; if unsupported, skip sheen
         const supportsMask = typeof window !== 'undefined' && typeof window.CSS !== 'undefined' && typeof window.CSS.supports === 'function'
-          ? (window.CSS.supports('mask-image', 'url(/logo-icon-clean.png)') || window.CSS.supports('-webkit-mask-image', 'url(/logo-icon-clean.png)'))
+          ? (window.CSS.supports('mask-image', 'url(/logo-icon-mark.png)') || window.CSS.supports('-webkit-mask-image', 'url(/logo-icon-mark.png)'))
           : true;
 
         if (isSkippedRef.current || isCancelled) return;
@@ -280,16 +280,17 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             }
 
             // Wipe BREACH first (6 letters -> steps(6)), then SHIELD (6 letters -> steps(6))
+            // Negative insets on top, bottom, and left prevent cutting off the text-shadow/drop-shadow glow box
             await animate(
               '.intro-word-white',
-              { clipPath: ['inset(0 100% 0 0)', 'inset(0 0% 0 0)'] },
+              { clipPath: ['inset(-24px 100% -24px -24px)', 'inset(-24px -24px -24px -24px)'] },
               { duration: 0.3 * slowFactor, ease: 'steps(6, end)' }
             );
 
             if (!isSkippedRef.current && !isCancelled) {
               await animate(
                 '.intro-word-blue',
-                { clipPath: ['inset(0 100% 0 0)', 'inset(0 0% 0 0)'] },
+                { clipPath: ['inset(-24px 100% -24px -24px)', 'inset(-24px -24px -24px -24px)'] },
                 { duration: 0.3 * slowFactor, ease: 'steps(6, end)' }
               );
             }
@@ -440,7 +441,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                 }}
               >
                 <img
-                  src="/logo-icon-clean.png"
+                  src="/logo-icon-mark.png"
                   alt="BreachShield Shield"
                   className="intro-logo-img"
                 />
@@ -452,8 +453,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               <div
                 className="intro-sheen-container"
                 style={{
-                  WebkitMaskImage: 'url(/logo-icon-clean.png)',
-                  maskImage: 'url(/logo-icon-clean.png)'
+                  WebkitMaskImage: 'url(/logo-icon-mark.png)',
+                  maskImage: 'url(/logo-icon-mark.png)'
                 }}
               >
                 <div
@@ -480,8 +481,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               <span
                 className="brand-text-white intro-letter-group intro-word-white"
                 style={{
-                  clipPath: 'inset(0 100% 0 0)',
-                  WebkitClipPath: 'inset(0 100% 0 0)',
+                  clipPath: 'inset(-24px 100% -24px -24px)',
+                  WebkitClipPath: 'inset(-24px 100% -24px -24px)',
                   display: 'inline-flex'
                 }}
               >
@@ -499,8 +500,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               <span
                 className="brand-text-blue intro-letter-group intro-word-blue"
                 style={{
-                  clipPath: 'inset(0 100% 0 0)',
-                  WebkitClipPath: 'inset(0 100% 0 0)',
+                  clipPath: 'inset(-24px 100% -24px -24px)',
+                  WebkitClipPath: 'inset(-24px 100% -24px -24px)',
                   display: 'inline-flex'
                 }}
               >
