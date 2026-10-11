@@ -35,7 +35,7 @@ export default function Navbar({ isIntroActive = false }) {
           }}
         >
           <img
-            src="/logo-icon-clean.png"
+            src="/logo-icon-mark.png"
             alt="BreachShield Logo"
             className="brand-logo-icon"
             style={{ width: 48, height: 48 }}
