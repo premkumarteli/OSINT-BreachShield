@@ -23,22 +23,24 @@ export default function VerifyOtpPage() {
   const [timeLeft, setTimeLeft] = useState(300);
 
   // 30-second resend cooldown timer
+  const isCoolingDown = cooldown > 0;
   useEffect(() => {
-    if (cooldown <= 0) return;
+    if (!isCoolingDown) return;
     const timer = setInterval(() => {
       setCooldown((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [cooldown > 0]);
+  }, [isCoolingDown]);
 
   // 5-minute expiry timer
+  const isTimeRemaining = timeLeft > 0;
   useEffect(() => {
-    if (timeLeft <= 0) return;
+    if (!isTimeRemaining) return;
     const timer = setInterval(() => {
       setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft > 0]);
+  }, [isTimeRemaining]);
 
   // Route Guard: redirect to /search if pending identifier is missing
   if (!targetEmail) {

@@ -4,7 +4,6 @@ import Navbar from '../components/Navbar';
 import BreachTimeline from '../components/BreachTimeline';
 import { checkProtectedGuard } from '../lib/authGuards';
 import { maskIdentifier } from '../lib/maskIdentifier';
-import { sanitizeBreachText } from '../lib/sanitizeBreachText';
 import { sanitizeRecordContent } from '../lib/sanitizeRecordContent';
 import '../App.css';
 import '../auth.css';
@@ -24,23 +23,6 @@ function formatFactorLabel(label = '') {
 export default function ResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Guard check: ensures valid session credentials exist
-  const guard = checkProtectedGuard();
-  if (!guard.allow) {
-    return <Navigate to={guard.redirectTo || '/search'} replace />;
-  }
-
-  // If state is missing (refresh), redirect to /scanning (replace) to refetch.
-  // Do NOT store breach results in sessionStorage/localStorage.
-  const resultData = location.state?.result;
-  if (!resultData) {
-    return <Navigate to="/scanning" replace />;
-  }
-
-  const verifiedTarget = sessionStorage.getItem('osint_verified_email') || '';
-  const targetType = sessionStorage.getItem('osint_target_type') || (verifiedTarget.includes('@') ? 'email' : 'phone');
-  const maskedTarget = maskIdentifier(verifiedTarget, targetType);
 
   const [viewMode, setViewMode] = useState('timeline');
   const [copied, setCopied] = useState(false);
@@ -64,6 +46,23 @@ export default function ResultsPage() {
       document.documentElement.style.height = prevHtmlHeight;
     };
   }, []);
+
+  // Guard check: ensures valid session credentials exist
+  const guard = checkProtectedGuard();
+  if (!guard.allow) {
+    return <Navigate to={guard.redirectTo || '/search'} replace />;
+  }
+
+  // If state is missing (refresh), redirect to /scanning (replace) to refetch.
+  // Do NOT store breach results in sessionStorage/localStorage.
+  const resultData = location.state?.result;
+  if (!resultData) {
+    return <Navigate to="/scanning" replace />;
+  }
+
+  const verifiedTarget = sessionStorage.getItem('osint_verified_email') || '';
+  const targetType = sessionStorage.getItem('osint_target_type') || (verifiedTarget.includes('@') ? 'email' : 'phone');
+  const maskedTarget = maskIdentifier(verifiedTarget, targetType);
 
   const handleNewSearch = () => {
     sessionStorage.removeItem('osint_verified_email');
