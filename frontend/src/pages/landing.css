@@ -31,7 +31,7 @@ html.landing-page-root {
 }
 
 .concept-bg-video {
-  background-color: #04121F;
+  background-color: transparent;
 }
 
 /* Hero Section */
@@ -42,11 +42,44 @@ html.landing-page-root {
   justify-content: center;
   flex: 1;
   text-align: center;
-  padding: 100px 24px 80px;
-  max-width: 920px;
+  padding: 80px 24px 70px;
+  max-width: 960px;
   margin: 0 auto;
   position: relative;
   z-index: 5;
+}
+
+.landing-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  border-radius: 9999px;
+  padding: 4px 14px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #00f0ff;
+  letter-spacing: 0.14em;
+  margin-bottom: 20px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.15);
+}
+
+.landing-badge-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
+  animation: badgePulseDot 2s infinite ease-in-out;
+}
+
+@keyframes badgePulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.75); }
 }
 
 .landing-headline {
@@ -64,11 +97,20 @@ html.landing-page-root {
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0 0 32px 0;
+  margin: 0 0 16px 0;
   line-height: 1.18;
   filter: 
     drop-shadow(0 0 1px #ffffff)
-    drop-shadow(0 0 10px rgba(34, 211, 238, 0.28));
+    drop-shadow(0 0 12px rgba(34, 211, 238, 0.32));
+}
+
+.landing-subheadline {
+  font-size: 1.05rem;
+  color: #cbd5e1;
+  max-width: 680px;
+  margin: 0 auto 32px auto;
+  line-height: 1.6;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .landing-cta-btn {
@@ -321,14 +363,16 @@ html.landing-page-root {
   padding: 32px;
 }
 
-.todo-text-line {
-  font-size: 14px;
+.todo-text-line,
+.about-text-line {
+  font-size: 15px;
   color: #B8C7DB;
-  line-height: 1.6;
-  margin: 0 0 12px 0;
+  line-height: 1.65;
+  margin: 0 0 14px 0;
 }
 
-.todo-text-line:last-child {
+.todo-text-line:last-child,
+.about-text-line:last-child {
   margin-bottom: 0;
 }
 

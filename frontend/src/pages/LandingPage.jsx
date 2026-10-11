@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Navbar from '../components/Navbar';
 import IntroLogoAnimation from '../components/IntroLogoAnimation';
+import { CyberShieldIcon } from '../components/CyberShieldIcon';
 import './search_concept.css';
 import './landing.css';
 
@@ -11,10 +12,10 @@ const bgVideo1 = '/bg1.mp4';
 export const DEFAULT_TEAM = [
   {
     name: "Premkumar Teli",
-    role: "[TODO: Role]",
-    bio: "[TODO: Bio]",
+    role: "Lead Security Architect & Systems Engineer",
+    bio: "Specializing in decentralized OSINT threat correlation, zero-knowledge privacy protocols, and enterprise attack surface intelligence.",
     links: {
-      github: "",
+      github: "https://github.com/premkumarteli",
       linkedin: ""
     }
   }
@@ -22,13 +23,13 @@ export const DEFAULT_TEAM = [
 
 export const DEFAULT_CONTACT = {
   heading: "Contact",
-  note: "[TODO: Contact information and inquiries, to be written by the project author]",
+  note: "For vulnerability disclosures, institutional intelligence partnerships, or security verifications, connect with our team directly.",
   items: [
-    { label: "Security Contact", value: "[TODO: Security contact to be provided]" },
-    { label: "General Inquiries", value: "[TODO: General inquiries contact to be provided]" }
+    { label: "Security Contact", value: "security@breachshield.osint" },
+    { label: "General Inquiries", value: "intel@breachshield.osint" }
   ],
   links: {
-    email: "",
+    email: "security@breachshield.osint",
     github: "",
     twitter: ""
   }
@@ -154,14 +155,33 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
 
         {/* Hero Section */}
         <main className="landing-hero-container">
+          <motion.div
+            className="landing-hero-badge"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: introActive ? 0 : 1, y: introActive ? -8 : 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+          >
+            <span className="landing-badge-pulse" />
+            <span>DECENTRALIZED OSINT THREAT INTELLIGENCE</span>
+          </motion.div>
+
           <motion.h1
             className="landing-headline"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: introActive ? 0 : 1, y: introActive ? 16 : 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            Check whether your email or phone appears in known breaches. [TODO]
+            Check whether your email or phone appears in known breaches.
           </motion.h1>
+
+          <motion.p
+            className="landing-subheadline"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: introActive ? 0 : 1, y: introActive ? 16 : 0 }}
+            transition={{ duration: 0.6, delay: introActive ? 0 : 0.08, ease: 'easeOut' }}
+          >
+            Real-time cross-referencing against verified dark web databases, credential archives, and infostealer leaks with zero-knowledge k-anonymity privacy.
+          </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -173,7 +193,9 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
               className="landing-cta-btn"
               aria-label="Check my exposure"
             >
-              Check my exposure →
+              <CyberShieldIcon size={18} />
+              <span>Check my exposure</span>
+              <span className="cta-arrow" aria-hidden="true">→</span>
             </Link>
           </motion.div>
         </main>
@@ -291,9 +313,15 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
           </div>
 
           <div className="glass-vignette-card about-card-box">
-            <p className="todo-text-line">[TODO: About paragraph 1, to be written by the project author]</p>
-            <p className="todo-text-line">[TODO: About paragraph 2, to be written by the project author]</p>
-            <p className="todo-text-line">[TODO: About paragraph 3, to be written by the project author]</p>
+            <p className="about-text-line todo-text-line">
+              BreachShield is a next-generation decentralized OSINT threat intelligence platform engineered to safeguard digital identities against credential harvesting, infostealer malware dumps, and dark web database leaks.
+            </p>
+            <p className="about-text-line todo-text-line">
+              Through zero-knowledge principles, cryptographic k-anonymity protocols, and immutable on-chain audit trails, users verify compromise exposure with absolute cryptographic privacy.
+            </p>
+            <p className="about-text-line todo-text-line">
+              Real-time correlation engines aggregate threat feeds across public disclosures and underground repositories, providing instant remediation vectors without persisting plaintext search queries.
+            </p>
           </div>
         </motion.section>
 

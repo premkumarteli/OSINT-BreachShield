@@ -19,11 +19,14 @@
   position: fixed;
   inset: 0;
   z-index: 1;
-  background-color: #04121F;
+  background: rgba(2, 6, 23, 0.40);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   background-image: 
+    radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.08) 0%, rgba(0, 0, 0, 0.45) 75%),
     linear-gradient(rgba(34, 211, 238, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(34, 211, 238, 0.04) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-size: 100% 100%, 36px 36px, 36px 36px;
   pointer-events: auto;
 }
 
@@ -32,26 +35,29 @@
   bottom: 24px;
   right: 28px;
   z-index: 10001;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  color: #22D3EE;
-  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #00f0ff;
+  padding: 7px 16px;
   font-size: 13px;
   font-family: inherit;
   font-weight: 600;
-  border-radius: 6px;
+  letter-spacing: 0.04em;
+  border-radius: 8px;
   cursor: pointer;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: all 0.2s ease;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s ease;
   pointer-events: auto;
 }
 
 .intro-skip-btn:hover {
-  background: rgba(34, 211, 238, 0.15);
-  border-color: #22D3EE;
+  background: rgba(0, 240, 255, 0.15);
+  border-color: #00f0ff;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(34, 211, 238, 0.4);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
+  transform: translateY(-1px);
 }
 
 .intro-brand-layer {
@@ -112,20 +118,78 @@
   display: block;
 }
 
+/* Cyber Holographic HUD Radar & Target Brackets */
+.intro-cyber-radar {
+  position: absolute;
+  inset: -32px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(0, 240, 255, 0.4);
+  pointer-events: none;
+  animation: introRadarSpin 16s linear infinite;
+  z-index: 0;
+}
+
+.intro-cyber-radar-inner {
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-top-color: #00f0ff;
+  border-bottom-color: #00f0ff;
+  pointer-events: none;
+  animation: introRadarSpinReverse 10s linear infinite;
+  z-index: 0;
+}
+
+.intro-hud-bracket {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #00f0ff;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 6px #00f0ff);
+}
+.intro-hud-bracket.tl { top: -12px; left: -12px; border-right: none; border-bottom: none; }
+.intro-hud-bracket.tr { top: -12px; right: -12px; border-left: none; border-bottom: none; }
+.intro-hud-bracket.bl { bottom: -12px; left: -12px; border-right: none; border-top: none; }
+.intro-hud-bracket.br { bottom: -12px; right: -12px; border-left: none; border-top: none; }
+
+@keyframes introRadarSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes introRadarSpinReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+/* High-Intensity Laser Ionization Scan Beam */
 .intro-scan-line {
   position: absolute;
   top: 0;
-  left: -12px;
-  right: -12px;
-  height: 2px;
-  background: #22D3EE;
+  left: -20px;
+  right: -20px;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 240, 255, 0.4) 15%,
+    #00f0ff 35%,
+    #ffffff 50%,
+    #00f0ff 65%,
+    rgba(0, 240, 255, 0.4) 85%,
+    transparent 100%
+  );
   box-shadow: 
-    0 0 10px 2px #22D3EE, 
-    0 0 24px 4px rgba(34, 211, 238, 0.6);
-  border-radius: 2px;
+    0 0 14px 3px #00f0ff, 
+    0 0 32px 8px rgba(0, 240, 255, 0.75),
+    0 0 50px 12px rgba(56, 189, 248, 0.45);
+  border-radius: 999px;
   pointer-events: none;
   transform: translateY(0);
-  will-change: transform;
+  will-change: transform, opacity;
 }
 
 .intro-dock-wordmark {
@@ -145,13 +209,13 @@
 
 .intro-brand-name {
   font-family: 'Orbitron', monospace !important;
-  font-size: 2rem !important;
+  font-size: 2.15rem !important;
   font-weight: 900 !important;
   letter-spacing: 0.14em !important;
   line-height: 1 !important;
   display: inline-flex;
   align-items: center;
-  filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.45));
+  filter: drop-shadow(0 0 18px rgba(0, 240, 255, 0.55));
 }
 
 .intro-letter-group {
@@ -172,12 +236,12 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 280px;
-  height: 280px;
-  margin-top: -140px;
-  margin-left: -140px;
+  width: 320px;
+  height: 320px;
+  margin-top: -160px;
+  margin-left: -160px;
   border-radius: 50%;
-  background: radial-gradient(circle, #0284c7 0%, rgba(2, 132, 199, 0.4) 35%, rgba(2, 132, 199, 0) 70%);
+  background: radial-gradient(circle, #00f0ff 0%, rgba(2, 132, 199, 0.45) 40%, rgba(2, 132, 199, 0) 75%);
   pointer-events: none;
   z-index: 0;
   opacity: 0;
@@ -202,20 +266,21 @@
 
 .intro-sheen-sweep {
   position: absolute;
-  top: -100px;
-  left: -100px;
-  width: 340px;
-  height: 340px;
+  top: -120px;
+  left: -120px;
+  width: 380px;
+  height: 380px;
   background: linear-gradient(
-    145deg,
+    135deg,
     transparent 0%,
-    transparent 32%,
-    rgba(56, 189, 248, 0.5) 42%,
-    #FFFFFF 50%,
-    rgba(56, 189, 248, 0.5) 58%,
-    transparent 68%,
+    transparent 28%,
+    rgba(0, 240, 255, 0.35) 38%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(0, 240, 255, 0.35) 62%,
+    transparent 72%,
     transparent 100%
   );
+  filter: drop-shadow(0 0 12px #00f0ff);
   pointer-events: none;
   will-change: transform, opacity;
 }

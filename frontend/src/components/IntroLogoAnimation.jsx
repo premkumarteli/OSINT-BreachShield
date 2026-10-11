@@ -388,6 +388,11 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             '.intro-bloom',
             { opacity: [0.2, 0] },
             { duration: 0.8 * slowFactor, ease: [0.16, 1, 0.3, 1] }
+          ),
+          animate(
+            '.intro-cyber-radar, .intro-cyber-radar-inner, .intro-hud-bracket',
+            { opacity: [0.85, 0] },
+            { duration: 0.5 * slowFactor, ease: 'easeOut' }
           )
         ]);
 
@@ -427,6 +432,14 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         <div className="intro-brand-layer">
           {/* Logo Mark Container (140px square) */}
           <div className="intro-dock-icon" style={{ transformOrigin: 'top left' }}>
+            {/* Cyber Holographic HUD Radar & Target Brackets */}
+            <div className="intro-cyber-radar" aria-hidden="true" />
+            <div className="intro-cyber-radar-inner" aria-hidden="true" />
+            <div className="intro-hud-bracket tl" aria-hidden="true" />
+            <div className="intro-hud-bracket tr" aria-hidden="true" />
+            <div className="intro-hud-bracket bl" aria-hidden="true" />
+            <div className="intro-hud-bracket br" aria-hidden="true" />
+
             {/* Phase 2.5: Radial Bloom behind the logo */}
             <div className="intro-bloom" />
 
