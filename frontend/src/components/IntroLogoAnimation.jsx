@@ -205,8 +205,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
           }
         }
 
-        // 1.4 - 2.0s: Wordmark reveals letter by letter in reading order B-R-E-A-C-H-S-H-I-E-L-D
-        // Make wordmark container visible, then unclip each letter at its stagger time
+        // 1.4 - 2.0s: Wordmark reveals left-to-right as a continuous wipe across BREACH, then SHIELD
+        // Reveal with clip-path on word containers (.brand-text-white, .brand-text-blue) that carry the gradients
         if (isSkippedRef.current || isCancelled) return;
         setStep('wordmark');
         if (scope.current) {
@@ -215,26 +215,28 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             wordmarkEl.style.visibility = 'visible';
           }
 
+          // Wipe BREACH first (6 letters -> steps(6)), then SHIELD (6 letters -> steps(6))
+          // Total duration 0.6s * slowFactor (0.3s * slowFactor each)
           await animate(
-            '.intro-letter',
-            {
-              clipPath: ['inset(100%)', 'inset(0%)'],
-              opacity: [0, 1],
-              y: [6, 0]
-            },
-            {
-              delay: stagger(0.04 * slowFactor),
-              duration: 0.18 * slowFactor,
-              ease: 'easeOut'
-            }
+            '.intro-word-white',
+            { clipPath: ['inset(0 100% 0 0)', 'inset(0 0% 0 0)'] },
+            { duration: 0.3 * slowFactor, ease: 'steps(6, end)' }
           );
 
           if (!isSkippedRef.current && !isCancelled) {
-            // Remove clip-path so glow and docking transforms are unconstrained
-            const letters = scope.current.querySelectorAll('.intro-letter');
-            letters.forEach((l) => {
-              l.style.clipPath = 'none';
-              l.style.webkitClipPath = 'none';
+            await animate(
+              '.intro-word-blue',
+              { clipPath: ['inset(0 100% 0 0)', 'inset(0 0% 0 0)'] },
+              { duration: 0.3 * slowFactor, ease: 'steps(6, end)' }
+            );
+          }
+
+          if (!isSkippedRef.current && !isCancelled) {
+            // Remove clip-path so glow and docking transforms are completely unconstrained
+            const words = scope.current.querySelectorAll('.intro-word-white, .intro-word-blue');
+            words.forEach((w) => {
+              w.style.clipPath = 'none';
+              w.style.webkitClipPath = 'none';
             });
           }
         }
@@ -384,37 +386,39 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             style={{ transformOrigin: 'top left', visibility: 'hidden' }}
           >
             <span className="brand-name intro-brand-name">
-              <span className="brand-text-white intro-letter-group">
+              <span
+                className="brand-text-white intro-letter-group intro-word-white"
+                style={{
+                  clipPath: 'inset(0 100% 0 0)',
+                  WebkitClipPath: 'inset(0 100% 0 0)',
+                  display: 'inline-flex'
+                }}
+              >
                 {BRAND_LETTERS.filter((l) => l.group === 'breach').map((letter, idx) => (
                   <span
                     key={`b-${idx}`}
                     className="intro-letter"
                     aria-hidden="true"
-                    style={{
-                      opacity: 0,
-                      clipPath: 'inset(100%)',
-                      WebkitClipPath: 'inset(100%)',
-                      transform: 'translateY(6px)',
-                      display: 'inline-block'
-                    }}
+                    style={{ display: 'inline-block' }}
                   >
                     {letter.char}
                   </span>
                 ))}
               </span>
-              <span className="brand-text-blue intro-letter-group">
+              <span
+                className="brand-text-blue intro-letter-group intro-word-blue"
+                style={{
+                  clipPath: 'inset(0 100% 0 0)',
+                  WebkitClipPath: 'inset(0 100% 0 0)',
+                  display: 'inline-flex'
+                }}
+              >
                 {BRAND_LETTERS.filter((l) => l.group === 'shield').map((letter, idx) => (
                   <span
                     key={`s-${idx}`}
                     className="intro-letter"
                     aria-hidden="true"
-                    style={{
-                      opacity: 0,
-                      clipPath: 'inset(100%)',
-                      WebkitClipPath: 'inset(100%)',
-                      transform: 'translateY(6px)',
-                      display: 'inline-block'
-                    }}
+                    style={{ display: 'inline-block' }}
                   >
                     {letter.char}
                   </span>

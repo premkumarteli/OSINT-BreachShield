@@ -285,7 +285,7 @@ describe('AppRouter Integration & LandingPage', () => {
     window.innerHeight = originalHeight;
   });
 
-  test('Phase 2.4: wordmark letters are hidden before wordmark step with clipPath and opacity 0', () => {
+  test('Phase 2.4b: word containers have clip-path inset(0 100% 0 0) and visibility hidden before wordmark step', () => {
     sessionStorage.clear();
     const { container } = render(
       <MemoryRouter>
@@ -296,12 +296,12 @@ describe('AppRouter Integration & LandingPage', () => {
     const wordmark = container.querySelector('.intro-dock-wordmark');
     expect(wordmark).toHaveStyle({ visibility: 'hidden' });
 
-    const letters = container.querySelectorAll('.intro-letter');
-    expect(letters.length).toBe(12);
-    letters.forEach((letter) => {
-      expect(letter).toHaveStyle({ opacity: 0 });
-      expect(letter.style.clipPath).toContain('inset(100%)');
-    });
+    const wordWhite = container.querySelector('.intro-word-white');
+    const wordBlue = container.querySelector('.intro-word-blue');
+    expect(wordWhite).toBeInTheDocument();
+    expect(wordBlue).toBeInTheDocument();
+    expect(wordWhite.style.clipPath).toContain('inset(0 100% 0 0)');
+    expect(wordBlue.style.clipPath).toContain('inset(0 100% 0 0)');
   });
 
   test('Phase 2.4: Skip button is absent after the dock starts and absent after completion', () => {

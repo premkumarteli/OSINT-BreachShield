@@ -158,11 +158,12 @@
   display: inline-flex;
 }
 
+.intro-word-white,
+.intro-word-blue {
+  will-change: clip-path;
+}
+
 .intro-letter {
   display: inline-block;
-  clip-path: inset(100%);
-  -webkit-clip-path: inset(100%);
-  opacity: 0;
-  will-change: clip-path, transform, opacity;
 }
 
