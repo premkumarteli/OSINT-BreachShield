@@ -158,12 +158,27 @@ describe('AppRouter Integration & LandingPage', () => {
         <LandingPage />
       </MemoryRouter>
     );
-    const logos = container.querySelectorAll('img[src="/logo-icon-clean.png"]');
+    const logos = container.querySelectorAll('img[src="/logo-icon-mark.png"]');
     expect(logos.length).toBeGreaterThanOrEqual(2);
     const overlayLogoSrc = logos[0].getAttribute('src');
     const navbarLogoSrc = logos[1].getAttribute('src');
     expect(overlayLogoSrc).toBe(navbarLogoSrc);
-    expect(overlayLogoSrc).toBe('/logo-icon-clean.png');
+    expect(overlayLogoSrc).toBe('/logo-icon-mark.png');
+  });
+
+  test('Phase 2.8: landing-page-root class is added to documentElement on mount and removed on unmount', () => {
+    sessionStorage.setItem('breachshield_intro_seen', 'true');
+    expect(document.documentElement.classList.contains('landing-page-root')).toBe(false);
+
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <LandingPage />
+      </MemoryRouter>
+    );
+    expect(document.documentElement.classList.contains('landing-page-root')).toBe(true);
+
+    unmount();
+    expect(document.documentElement.classList.contains('landing-page-root')).toBe(false);
   });
 
   test('Phase 2.1/3.1 (b): body scroll is locked while overlay is mounted and restored after Skip', () => {
@@ -302,8 +317,8 @@ describe('AppRouter Integration & LandingPage', () => {
     const wordBlue = container.querySelector('.intro-word-blue');
     expect(wordWhite).toBeInTheDocument();
     expect(wordBlue).toBeInTheDocument();
-    expect(wordWhite.style.clipPath).toContain('inset(0 100% 0 0)');
-    expect(wordBlue.style.clipPath).toContain('inset(0 100% 0 0)');
+    expect(wordWhite.style.clipPath).toContain('inset(-24px 100% -24px -24px)');
+    expect(wordBlue.style.clipPath).toContain('inset(-24px 100% -24px -24px)');
   });
 
   test('Phase 2.4: Skip button is absent after the dock starts and absent after completion', () => {

@@ -69,6 +69,16 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Root scroller scrollbar-gutter: stable while LandingPage is mounted
+  useEffect(() => {
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.classList.add('landing-page-root');
+      return () => {
+        document.documentElement.classList.remove('landing-page-root');
+      };
+    }
+  }, []);
+
   // Pause video when document tab is hidden, resume if desktop
   useEffect(() => {
     const handleVisibilityChange = () => {
