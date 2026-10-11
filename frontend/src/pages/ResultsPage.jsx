@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 import BreachTimeline from '../components/BreachTimeline';
 import { checkProtectedGuard } from '../lib/authGuards';
 import { maskIdentifier } from '../lib/maskIdentifier';
+import { sanitizeBreachText } from '../lib/sanitizeBreachText';
 import '../App.css';
 import '../auth.css';
 import './search_concept.css';
@@ -64,10 +66,21 @@ export default function ResultsPage() {
 
   const data = resultData || {};
   const exposure = data?.analytics?.exposure || { score: 0, riskLevel: 'LOW', riskColor: '#00ff66', breakdown: [], entities: {} };
-  const timelineEvents = data?.analytics?.timeline || [];
-  const packets = data?.packets || [];
+  const rawTimelineEvents = data?.analytics?.timeline || [];
+  const timelineEvents = rawTimelineEvents.map((evt) => ({
+    ...evt,
+    source: sanitizeBreachText(evt.source || '', verifiedTarget, maskedTarget),
+    description: sanitizeBreachText(evt.description || '', verifiedTarget, maskedTarget)
+  }));
+  const rawPackets = data?.packets || [];
   // eslint-disable-next-line no-unused-vars
   const auditData = data?.blockchainAudit || null;
+
+  // Sanitize all packet info strings
+  const packets = rawPackets.map((pkt) => ({
+    ...pkt,
+    info: sanitizeBreachText(pkt.info || '', verifiedTarget, maskedTarget)
+  }));
 
   // Synthesize structured breach records from timeline or packets if records is empty
   let rawRecords = Array.isArray(data?.records) && data.records.length > 0 ? [...data.records] : [];
@@ -106,7 +119,13 @@ export default function ResultsPage() {
       }));
     }
   }
-  const records = rawRecords;
+
+  // Sanitize all record fields so full identifier never appears
+  const records = rawRecords.map((rec) => ({
+    ...rec,
+    title: sanitizeBreachText(rec.title || '', verifiedTarget, maskedTarget),
+    details: sanitizeBreachText(rec.details || '', verifiedTarget, maskedTarget)
+  }));
 
   const getRiskGradient = (level) => {
     switch (level) {
@@ -127,7 +146,7 @@ export default function ResultsPage() {
   };
 
   const handleCopyTerminal = () => {
-    const text = packets.map(p => p.info || '').join('\n\n');
+    const text = sanitizeBreachText(packets.map(p => p.info || '').join('\n\n'), verifiedTarget, maskedTarget);
     navigator.clipboard?.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -135,7 +154,7 @@ export default function ResultsPage() {
 
   return (
     <div className="concept-page-wrapper results-page-wrapper">
-      {/* Background Animated Video: bg3 while scanning/loading, bg2 when report loaded */}
+      {/* Background Animated Video */}
       <video
         key="report-bg"
         className="concept-bg-video"
@@ -155,30 +174,8 @@ export default function ResultsPage() {
       {/* Cyber Ambient Layer */}
       <div className="concept-background" aria-hidden="true" />
 
-      {/* Frosted Glass Navbar */}
-      <header className="concept-navbar">
-        <a href="/" className="concept-brand" onClick={(e) => { e.preventDefault(); handleNewSearch(); }} aria-label="BreachShield Home">
-          <img src="/logo-icon.png" alt="BreachShield Logo" className="brand-logo-icon" />
-          <div className="brand-text-wrap">
-            <span className="brand-name">
-              <span className="brand-text-white">BREACH</span>
-              <span className="brand-text-blue">SHIELD</span>
-            </span>
-          </div>
-        </a>
-
-        <nav className="concept-nav-links" aria-label="Main Navigation">
-          <a href="/" className="nav-link-item" onClick={(e) => { e.preventDefault(); handleNewSearch(); }}>Home</a>
-          <a href="#about" className="nav-link-item">About</a>
-          <a href="#features" className="nav-link-item">Features</a>
-          <a href="#contact" className="nav-link-item">Contact</a>
-        </nav>
-
-        <div className="system-status-pill">
-          <span className="status-dot"></span>
-          <span>System Online</span>
-        </div>
-      </header>
+      {/* Shared Navbar */}
+      <Navbar />
 
       {/* Main Results Container */}
       <main className="concept-main results-main">
@@ -272,7 +269,7 @@ export default function ResultsPage() {
               )}
             </div>
 
-            {/* View Navigation Switcher: Only Timeline, Data, and New Search (Pure Text, No Icons) */}
+            {/* View Navigation Switcher: Only Timeline, Data (dev only), and New Search (Pure Text, No Icons) */}
             <div className="view-nav">
               <button
                 className={`view-nav-btn ${viewMode === 'timeline' ? 'active' : ''}`}
@@ -281,13 +278,15 @@ export default function ResultsPage() {
               >
                 <span className="nav-label">Timeline</span>
               </button>
-              <button
-                className={`view-nav-btn ${viewMode === 'terminal' ? 'active' : ''}`}
-                onClick={() => setViewMode('terminal')}
-                aria-label="terminal-view"
-              >
-                <span className="nav-label">Data</span>
-              </button>
+              {process.env.NODE_ENV !== 'production' && (
+                <button
+                  className={`view-nav-btn ${viewMode === 'terminal' ? 'active' : ''}`}
+                  onClick={() => setViewMode('terminal')}
+                  aria-label="terminal-view"
+                >
+                  <span className="nav-label">Data</span>
+                </button>
+              )}
               <button
                 className="view-nav-btn new-search"
                 aria-label="new-search"
@@ -535,8 +534,8 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Terminal View */}
-            {viewMode === 'terminal' && (
+            {/* Terminal View (only rendered when not in production) */}
+            {viewMode === 'terminal' && process.env.NODE_ENV !== 'production' && (
               <div className="terminal-section">
                 <div className="terminal-header">
                   <div className="terminal-dots">
@@ -564,7 +563,7 @@ export default function ResultsPage() {
         </div>
       </main>
 
-      {/* Footer (Matches Header Size & Theme) */}
+      {/* Footer (Minimal Footer matching /search) */}
       <footer className="concept-footer">
         <div className="footer-left">
           <img src="/logo-icon.png" alt="" className="footer-brand-icon" aria-hidden="true" />
@@ -581,11 +580,6 @@ export default function ResultsPage() {
           <a href="#terms" className="footer-link">Terms of Use</a>
           <span className="footer-link-divider">|</span>
           <a href="#disclaimer" className="footer-link">Disclaimer</a>
-        </div>
-        <div className="footer-right">
-          <span className="footer-pillars-tagline">
-            Privacy First &nbsp;•&nbsp; AI Risk Analysis &nbsp;•&nbsp; Audit Integrity
-          </span>
         </div>
       </footer>
     </div>

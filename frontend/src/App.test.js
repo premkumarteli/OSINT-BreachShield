@@ -1107,4 +1107,166 @@ describe('Phase 5+6: /scanning, results states, and guards', () => {
     expect(sessionStorage.getItem('osint_token')).toBeNull();
     expect(screen.getByTestId('search-screen')).toBeInTheDocument();
   });
+
+  describe('Phase 7: Results cleanup & nav tests', () => {
+    const rawTarget = '+91 98765 43210';
+    const testResult = {
+      records: [
+        {
+          id: 'rec-1',
+          title: 'Leak with phone +91 98765 43210 and Aadhaar **mber',
+          category: 'Telecom Leak',
+          year: '2024',
+          dataClasses: ['PHONE', 'IDENTITY'],
+          details: 'Compromised record for 9876543210 and taxpayer **********pear'
+        }
+      ],
+      packets: [
+        {
+          info: [
+            'Subjects made: 15',
+            'Search time: 1.1s',
+            'This is free version of the bot.',
+            'Buying a subscription gives you access.',
+            'Mirror (in case of removal): @bot_mirror',
+            'Contact @admin_osint',
+            'Target Phone: +91 98765 43210',
+            'Raw digits: 9876543210',
+            'Spaced: 98765 43210',
+            'Aadhaar **mber: 1234 5678 9012',
+            'taxpayer **********pear'
+          ].join('\n')
+        }
+      ],
+      analytics: {
+        exposure: { score: 45, riskLevel: 'MEDIUM', breakdown: [] },
+        timeline: [
+          {
+            year: '2024',
+            source: 'Telecom Spill',
+            category: 'Data Breach',
+            description: 'Incident referencing +91 98765 43210'
+          }
+        ]
+      }
+    };
+
+    beforeEach(() => {
+      sessionStorage.setItem('osint_target_email', rawTarget);
+      sessionStorage.setItem('osint_verified_email', rawTarget);
+      sessionStorage.setItem('osint_target_type', 'phone');
+      sessionStorage.setItem('osint_token', 'valid-token-123');
+    });
+
+    test('full identifier is absent across every results tab (timeline, data, overview, cards)', () => {
+      const { container } = render(
+        <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: testResult } }]}>
+          <Routes>
+            <Route path="/results" element={<ResultsPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      const checkNoFullIdentifier = () => {
+        expect(container.textContent).not.toContain('+91 98765 43210');
+        expect(container.textContent).not.toContain('9876543210');
+        expect(container.textContent).not.toContain('98765 43210');
+      };
+
+      // 1. Initial Timeline tab
+      checkNoFullIdentifier();
+
+      // 2. Data / Terminal tab
+      const dataBtn = screen.getByRole('button', { name: /terminal-view/i });
+      fireEvent.click(dataBtn);
+      checkNoFullIdentifier();
+
+      // 3. Overview tab (via compatibility button)
+      const overviewBtn = screen.getByRole('button', { name: /overview-view/i });
+      fireEvent.click(overviewBtn);
+      checkNoFullIdentifier();
+
+      // 4. Cards tab (via compatibility button)
+      const cardsBtn = screen.getByRole('button', { name: /cards-view/i });
+      fireEvent.click(cardsBtn);
+      checkNoFullIdentifier();
+    });
+
+    test('Copy payload in Data tab sanitizes full identifier and removes bot handles & promo lines', () => {
+      let copiedText = '';
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: jest.fn((text) => {
+            copiedText = text;
+            return Promise.resolve();
+          })
+        }
+      });
+
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: testResult } }]}>
+          <Routes>
+            <Route path="/results" element={<ResultsPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      const dataBtn = screen.getByRole('button', { name: /terminal-view/i });
+      fireEvent.click(dataBtn);
+
+      const copyBtn = screen.getByRole('button', { name: /copy/i });
+      fireEvent.click(copyBtn);
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalled();
+      expect(copiedText).not.toContain('+91 98765 43210');
+      expect(copiedText).not.toContain('9876543210');
+      expect(copiedText).not.toContain('free version of the bot');
+      expect(copiedText).not.toContain('Buying a subscription');
+      expect(copiedText).not.toContain('Mirror (in case of removal');
+      expect(copiedText).not.toContain('@bot_mirror');
+      expect(copiedText).not.toContain('@admin_osint');
+      expect(copiedText).not.toContain('Subjects made');
+      expect(copiedText).not.toContain('Search time');
+      expect(copiedText).toContain('••••••••3210');
+    });
+
+    test('no "@" handle or bot promo text and no "System Online" pill in the Results DOM', () => {
+      const { container } = render(
+        <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: testResult } }]}>
+          <Routes>
+            <Route path="/results" element={<ResultsPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      expect(container.textContent).not.toContain('System Online');
+      expect(container.textContent).not.toContain('Privacy First • AI Risk Analysis • Audit Integrity');
+      expect(container.textContent).not.toContain('free version of the bot');
+      expect(container.textContent).not.toContain('Buying a subscription');
+      expect(container.textContent).not.toContain('Mirror (in case of removal');
+      expect(container.textContent).not.toContain('Subjects made');
+      expect(container.textContent).not.toContain('Search time');
+      expect(container.textContent).not.toContain('@bot_mirror');
+      expect(container.textContent).not.toContain('@admin_osint');
+    });
+
+    test('Navbar uses shared Chrome and links point to /#about, /#team, /#contact on non-landing routes', () => {
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: testResult } }]}>
+          <Routes>
+            <Route path="/results" element={<ResultsPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      expect(screen.getByRole('link', { name: /About/i })).toHaveAttribute('href', '/#about');
+      expect(screen.getByRole('link', { name: /Team/i })).toHaveAttribute('href', '/#team');
+      expect(screen.getByRole('link', { name: /Contact/i })).toHaveAttribute('href', '/#contact');
+
+      // Home link is not active on /results
+      const homeLink = screen.getByRole('link', { name: /^Home$/i });
+      expect(homeLink).toHaveAttribute('href', '/');
+      expect(homeLink).not.toHaveClass('active');
+    });
+  });
 });

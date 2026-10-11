@@ -1,20 +1,24 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 
 export default function Navbar({ isIntroActive = false }) {
+  const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
+  const isLandingRoute = location.pathname === '/';
 
   const handleAnchorClick = (e, targetId) => {
-    const targetElement = document.getElementById(targetId);
-    if (targetElement) {
-      e.preventDefault();
-      targetElement.scrollIntoView({
-        behavior: shouldReduceMotion ? 'auto' : 'smooth'
-      });
-      try {
-        window.history.pushState(null, '', `#${targetId}`);
-      } catch (_) {}
+    if (isLandingRoute) {
+      const targetElement = document.getElementById(targetId);
+      if (targetElement) {
+        e.preventDefault();
+        targetElement.scrollIntoView({
+          behavior: shouldReduceMotion ? 'auto' : 'smooth'
+        });
+        try {
+          window.history.pushState(null, '', `#${targetId}`);
+        } catch (_) {}
+      }
     }
   };
 
@@ -63,23 +67,23 @@ export default function Navbar({ isIntroActive = false }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: isIntroActive ? 2.8 : 0 }}
       >
-        <Link to="/" className="nav-link-item active">Home</Link>
+        <Link to="/" className={`nav-link-item ${isLandingRoute ? 'active' : ''}`}>Home</Link>
         <a
-          href="#about"
+          href={isLandingRoute ? '#about' : '/#about'}
           className="nav-link-item"
           onClick={(e) => handleAnchorClick(e, 'about')}
         >
           About
         </a>
         <a
-          href="#team"
+          href={isLandingRoute ? '#team' : '/#team'}
           className="nav-link-item"
           onClick={(e) => handleAnchorClick(e, 'team')}
         >
           Team
         </a>
         <a
-          href="#contact"
+          href={isLandingRoute ? '#contact' : '/#contact'}
           className="nav-link-item"
           onClick={(e) => handleAnchorClick(e, 'contact')}
         >

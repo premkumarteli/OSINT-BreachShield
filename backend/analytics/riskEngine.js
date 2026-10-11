@@ -244,7 +244,10 @@ function redactSensitiveData(rawText = '', verifiedTarget = '') {
   sanitized = sanitized.replace(
     /((?:document\s*number|aadhaar|aadhar|passport|pan|taxpayer|voter|national\s*id)[\s:=*]+)`?([0-9a-zA-Z -]{6,})`?/gi,
     (match, prefix, val) => {
+      if (!val) return match;
       const cleanVal = val.trim();
+      const digits = cleanVal.replace(/\D/g, '');
+      if (digits.length < 4) return match;
       const masked = cleanVal.length > 4 ? '*'.repeat(cleanVal.length - 4) + cleanVal.slice(-4) : '****';
       return `${prefix}${masked}`;
     }

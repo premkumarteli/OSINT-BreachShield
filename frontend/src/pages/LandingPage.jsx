@@ -93,7 +93,7 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  // Reset scroll to top on mount when intro is active
+  // Reset scroll to top on mount when intro is active, or scroll to hash if present
   useEffect(() => {
     if (introActive && typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
       try {
@@ -101,6 +101,14 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
           window.scrollTo(0, 0);
         }
       } catch (_) {}
+    } else if (!introActive && typeof window !== 'undefined' && window.location.hash) {
+      const targetId = window.location.hash.replace('#', '');
+      const el = document.getElementById(targetId);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
     }
   }, [introActive]);
 
