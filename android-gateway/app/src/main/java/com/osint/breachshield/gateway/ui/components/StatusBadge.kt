@@ -2,6 +2,7 @@ package com.osint.breachshield.gateway.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -66,6 +68,16 @@ fun StatusBadge(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
+            .border(
+                1.dp,
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.25f),
+                        dotColor.copy(alpha = 0.40f)
+                    )
+                ),
+                RoundedCornerShape(20.dp)
+            )
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
