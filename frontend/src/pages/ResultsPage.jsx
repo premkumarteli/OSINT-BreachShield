@@ -5,12 +5,21 @@ import BreachTimeline from '../components/BreachTimeline';
 import { checkProtectedGuard } from '../lib/authGuards';
 import { maskIdentifier } from '../lib/maskIdentifier';
 import { sanitizeBreachText } from '../lib/sanitizeBreachText';
+import { sanitizeRecordContent } from '../lib/sanitizeRecordContent';
 import '../App.css';
 import '../auth.css';
 import './search_concept.css';
 import '../results.css';
 
 const bgVideo2 = '/bg2.mp4';
+
+function formatFactorLabel(label = '') {
+  if (!label || typeof label !== 'string') return '';
+  if (/Phone.*Linked/i.test(label)) return 'Phone numbers found in matched records';
+  if (/Correlated Record Pair|Cross-Record Correlation/i.test(label)) return 'Records sharing fields';
+  if (/AI Phishing Probability/i.test(label)) return 'Phishing-link heuristic (URL check)';
+  return label;
+}
 
 export default function ResultsPage() {
   const navigate = useNavigate();
@@ -65,12 +74,12 @@ export default function ResultsPage() {
   };
 
   const data = resultData || {};
-  const exposure = data?.analytics?.exposure || { score: 0, riskLevel: 'LOW', riskColor: '#00ff66', breakdown: [], entities: {} };
+  const exposure = data?.analytics?.exposure || { score: 0, riskLevel: 'LOW', riskColor: '#00f0ff', breakdown: [], entities: {} };
   const rawTimelineEvents = data?.analytics?.timeline || [];
   const timelineEvents = rawTimelineEvents.map((evt) => ({
     ...evt,
-    source: sanitizeBreachText(evt.source || '', verifiedTarget, maskedTarget),
-    description: sanitizeBreachText(evt.description || '', verifiedTarget, maskedTarget)
+    source: sanitizeRecordContent(evt.source || '', verifiedTarget, maskedTarget),
+    description: sanitizeRecordContent(evt.description || '', verifiedTarget, maskedTarget)
   }));
   const rawPackets = data?.packets || [];
   // eslint-disable-next-line no-unused-vars
@@ -79,7 +88,7 @@ export default function ResultsPage() {
   // Sanitize all packet info strings
   const packets = rawPackets.map((pkt) => ({
     ...pkt,
-    info: sanitizeBreachText(pkt.info || '', verifiedTarget, maskedTarget)
+    info: sanitizeRecordContent(pkt.info || '', verifiedTarget, maskedTarget)
   }));
 
   // Synthesize structured breach records from timeline or packets if records is empty
@@ -120,33 +129,26 @@ export default function ResultsPage() {
     }
   }
 
-  // Sanitize all record fields so full identifier never appears
+  // Sanitize all record fields so full identifier and phone numbers never appear
   const records = rawRecords.map((rec) => ({
     ...rec,
-    title: sanitizeBreachText(rec.title || '', verifiedTarget, maskedTarget),
-    details: sanitizeBreachText(rec.details || '', verifiedTarget, maskedTarget)
+    source: sanitizeRecordContent(rec.source || '', verifiedTarget, maskedTarget),
+    title: sanitizeRecordContent(rec.title || '', verifiedTarget, maskedTarget),
+    details: sanitizeRecordContent(rec.details || '', verifiedTarget, maskedTarget)
   }));
 
-  const getRiskGradient = (level) => {
-    switch (level) {
-      case 'CRITICAL': return 'linear-gradient(135deg, #ff003c 0%, #ff6b6b 100%)';
-      case 'HIGH': return 'linear-gradient(135deg, #ff3b3b 0%, #ff8c42 100%)';
-      case 'MEDIUM': return 'linear-gradient(135deg, #ffd166 0%, #ffb347 100%)';
-      default: return 'linear-gradient(135deg, #00ff66 0%, #00eaff 100%)';
-    }
+  const getRiskGradient = () => {
+    // Neutral style for all levels since factors cannot be deterministically verified on frontend
+    return 'linear-gradient(135deg, rgba(34, 211, 238, 0.25) 0%, rgba(59, 130, 246, 0.35) 100%)';
   };
 
-  const getRiskIcon = (level) => {
-    switch (level) {
-      case 'CRITICAL': return '🚨';
-      case 'HIGH': return '⚠️';
-      case 'MEDIUM': return '⚡';
-      default: return '🛡️';
-    }
+  const getRiskIcon = () => {
+    // Neutral icon for all levels (no red alarm)
+    return '🛡️';
   };
 
   const handleCopyTerminal = () => {
-    const text = sanitizeBreachText(packets.map(p => p.info || '').join('\n\n'), verifiedTarget, maskedTarget);
+    const text = sanitizeRecordContent(packets.map(p => p.info || '').join('\n\n'), verifiedTarget, maskedTarget);
     navigator.clipboard?.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -213,34 +215,38 @@ export default function ResultsPage() {
               {/* Top Dashboard Grid (Side-by-side on desktop for balanced card sizes) */}
               <div className="results-top-grid">
                 {/* Risk Score Hero */}
-                <div className="risk-hero" style={{ '--risk-color': exposure.riskColor || '#00ff66' }}>
+                <div className="risk-hero" style={{ '--risk-color': '#00f0ff' }}>
                   <div className="risk-glow" style={{ background: getRiskGradient(exposure.riskLevel) }}></div>
-                  <div className="risk-score-ring" style={{ borderColor: exposure.riskColor || '#00ff66' }}>
+                  <div className="risk-score-ring" style={{ borderColor: '#00f0ff' }}>
                     <span className="risk-icon">{getRiskIcon(exposure.riskLevel)}</span>
                     <span className="risk-score-num">{exposure.score}</span>
                     <span className="risk-score-max">/100</span>
                   </div>
                   <div className="risk-info">
                     <div className="risk-level-badge" style={{ background: getRiskGradient(exposure.riskLevel) }}>
-                      THREAT LEVEL: {exposure.riskLevel}
+                      EXPOSURE LEVEL: {exposure.riskLevel}
                     </div>
-                    <div className="risk-subtitle">Threat Assessment for <strong>{maskedTarget}</strong></div>
+                    <div className="risk-score-meta">
+                      <span className="risk-score-title">Indicative score</span>
+                      <p className="risk-score-note">Heuristic estimate from matched records; not a verified assessment.</p>
+                    </div>
+                    <div className="risk-subtitle">Exposure for <strong>{maskedTarget}</strong></div>
                   <div className="entity-chips">
                     {exposure.entities?.hasDocument && (
-                      <span className="entity-chip alert-chip">National Document / Aadhaar Exposed</span>
+                      <span className="entity-chip neutral-chip">National Document / Aadhaar Exposed</span>
                     )}
                     {exposure.entities?.passwordCount > 0 && (
-                      <span className="entity-chip warn-chip">{exposure.entities.passwordCount} Password(s) Leaked</span>
+                      <span className="entity-chip neutral-chip">{exposure.entities.passwordCount} Password(s) Leaked</span>
                     )}
                     {exposure.entities?.phoneCount > 0 && (
-                      <span className="entity-chip info-chip">{exposure.entities.phoneCount} Phone(s) Linked</span>
+                      <span className="entity-chip neutral-chip">{exposure.entities.phoneCount} Phone numbers found in matched records</span>
                     )}
                     {exposure.entities?.recordCount > 0 && (
-                      <span className="entity-chip info-chip">{exposure.entities.recordCount} Record(s) Found</span>
+                      <span className="entity-chip neutral-chip">{exposure.entities.recordCount} Record(s) Found</span>
                     )}
                     {exposure.entities?.correlatedRecordPairs > 0 && (
-                      <span className="entity-chip correlation-chip">
-                        {exposure.entities.correlatedRecordPairs} Correlated Record Pair(s):
+                      <span className="entity-chip neutral-chip">
+                        {exposure.entities.correlatedRecordPairs} Records sharing fields:
                         {(exposure.entities.sharedFieldTypes || []).map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(', ')}
                       </span>
                     )}
@@ -259,8 +265,7 @@ export default function ResultsPage() {
                       <div key={idx} className="factor-card">
                         <div className="factor-bar" style={{ width: `${Math.min(100, item.points * 2)}%` }}></div>
                         <div className="factor-content">
-                          <span className="factor-text">{item.factor}</span>
-                          <span className="factor-pts">+{item.points}</span>
+                          <span className="factor-text">{formatFactorLabel(item.factor)}</span>
                         </div>
                       </div>
                     ))}
@@ -320,7 +325,7 @@ export default function ResultsPage() {
                       },
                       {
                         key: 'phishing_probability',
-                        label: 'AI Phishing Probability',
+                        label: 'Phishing-link heuristic (URL check)',
                         value: exposure.factors.phishing_probability || 0,
                         hint: 'Bulk URL scan phishing likelihood from AI models'
                       },
@@ -373,7 +378,7 @@ export default function ResultsPage() {
                   </div>
                   <div className="summary-stat">
                     <div className="stat-value">{exposure.score}/100</div>
-                    <div className="stat-label">Risk Score</div>
+                    <div className="stat-label">Indicative score</div>
                   </div>
                 </div>
 
@@ -450,7 +455,7 @@ export default function ResultsPage() {
                           },
                           {
                             key: 'phishing_probability',
-                            label: 'AI Phishing Probability',
+                            label: 'Phishing-link heuristic (URL check)',
                             value: exposure.factors.phishing_probability || 0,
                             hint: 'Bulk URL scan phishing likelihood from AI models'
                           },

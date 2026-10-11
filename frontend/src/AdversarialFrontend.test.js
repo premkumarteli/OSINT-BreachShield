@@ -383,7 +383,7 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
 
       await waitFor(() => {
         expect(screen.getByText('90')).toBeInTheDocument();
-        expect(screen.getByText(/THREAT LEVEL: CRITICAL/i)).toBeInTheDocument();
+        expect(screen.getByText(/EXPOSURE LEVEL: CRITICAL/i)).toBeInTheDocument();
         expect(screen.getByText(/National Document \/ Aadhaar Exposed/i)).toBeInTheDocument();
         expect(screen.getByText(/National identity card leaked in darkweb dump/i)).toBeInTheDocument();
       });

@@ -9,6 +9,8 @@ import ScanningPage from './pages/ScanningPage';
 import ResultsPage from './pages/ResultsPage';
 import Navbar from './components/Navbar';
 import { maskIdentifier } from './lib/maskIdentifier';
+import { sanitizeBreachText } from './lib/sanitizeBreachText';
+import { sanitizeRecordContent } from './lib/sanitizeRecordContent';
 import api from './lib/api';
 
 jest.mock('./lib/api');
@@ -755,12 +757,12 @@ describe('ResultsPage (/results route)', () => {
     await waitFor(() => {
       // Check Exposure Score
       expect(screen.getByText('75')).toBeInTheDocument();
-      expect(screen.getByText(/THREAT LEVEL: HIGH/i)).toBeInTheDocument();
+      expect(screen.getByText(/EXPOSURE LEVEL: HIGH/i)).toBeInTheDocument();
       expect(screen.getByText(/Multiple database breach occurrences/i)).toBeInTheDocument();
       // Entity correlation surfaced in UI
       expect(screen.getByText(/Risk Factor Attribution/i)).toBeInTheDocument();
       expect(screen.getAllByText(/Entity Correlation/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Correlated Record Pair/i)).toBeInTheDocument();
+      expect(screen.getByText(/Records sharing fields/i)).toBeInTheDocument();
       expect(screen.getByText(/1 record pair\(s\) share identity fields/i)).toBeInTheDocument();
     });
 
@@ -1267,6 +1269,199 @@ describe('Phase 5+6: /scanning, results states, and guards', () => {
       const homeLink = screen.getByRole('link', { name: /^Home$/i });
       expect(homeLink).toHaveAttribute('href', '/');
       expect(homeLink).not.toHaveClass('active');
+    });
+  });
+
+  describe('Phase 8: Results honesty pass (labels, string-repair deletion, phone number redaction, no 10+ digits)', () => {
+    test('removed string-repair rules: sanitizeBreachText does not repair Aadhaar **mber or taxpayer ***pear', () => {
+      // 1. Does NOT rewrite Aadhaar **mber to Aadhaar number
+      expect(sanitizeBreachText('Aadhaar **mber: secret')).toBe('Aadhaar **mber: secret');
+      // 2. Does NOT rewrite taxpayer **********pear to taxpayer numbers appear
+      expect(sanitizeBreachText('taxpayer **********pear')).toBe('taxpayer **********pear');
+      // 3. Still strips bot promo lines and @handles
+      const promoText = 'This is free version of the bot.\n@admin_bot\nReal breach incident';
+      expect(sanitizeBreachText(promoText).trim()).toBe('Real breach incident');
+      // 4. Still masks target identifier
+      const targetText = 'Incident exposing +91 98765 43210 and 9876543210';
+      const sanitized = sanitizeBreachText(targetText, '+91 98765 43210');
+      expect(sanitized).not.toContain('+91 98765 43210');
+      expect(sanitized).not.toContain('9876543210');
+      expect(sanitized).toContain('••••••••3210');
+    });
+
+    test('new honest labels: Phone numbers found in matched records, Records sharing fields, Phishing-link heuristic, Exposure level/for, Indicative score', () => {
+      sessionStorage.setItem('osint_target_email', 'target@test.com');
+      sessionStorage.setItem('osint_verified_email', 'target@test.com');
+      sessionStorage.setItem('osint_token', 'valid-token-123');
+
+      const honestyResult = {
+        records: [
+          {
+            id: 'r1',
+            title: 'Telecom Records Spill',
+            category: 'Telecom',
+            year: '2024',
+            dataClasses: ['PHONE', 'IDENTITY'],
+            details: 'Breach dataset with customer identifiers.'
+          }
+        ],
+        packets: [
+          { info: 'OSINT leak intelligence report' }
+        ],
+        analytics: {
+          exposure: {
+            score: 72,
+            riskLevel: 'HIGH',
+            factors: {
+              correlation_score: 1,
+              phishing_probability: 0.12,
+              severity: 0.8,
+              recency: 0.9,
+              source_reliability: 0.85
+            },
+            entities: {
+              phoneCount: 5,
+              correlatedRecordPairs: 2,
+              sharedFieldTypes: ['phone', 'email'],
+              recordCount: 3,
+              hasDocument: true
+            },
+            breakdown: [
+              { factor: 'Phone Numbers Linked', points: 15 },
+              { factor: 'Cross-Record Correlation', points: 9 },
+              { factor: 'AI Phishing Probability', points: 30 }
+            ]
+          },
+          timeline: []
+        }
+      };
+
+      const { container } = render(
+        <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: honestyResult } }]}>
+          <Routes>
+            <Route path="/results" element={<ResultsPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // Label 1: "Phone numbers found in matched records" (count only, not numbers)
+      expect(screen.getAllByText(/Phone numbers found in matched records/i).length).toBeGreaterThan(0);
+      expect(container.textContent).not.toContain('Phone(s) Linked');
+
+      // Label 2: "Records sharing fields"
+      expect(screen.getAllByText(/Records sharing fields/i).length).toBeGreaterThan(0);
+      expect(container.textContent).not.toContain('Correlated Record Pair(s)');
+
+      // Label 3: "Phishing-link heuristic (URL check)"
+      expect(screen.getAllByText(/Phishing-link heuristic \(URL check\)/i).length).toBeGreaterThan(0);
+
+      // Label 4: "Exposure level" & "Exposure for"
+      expect(screen.getByText(/EXPOSURE LEVEL: HIGH/i)).toBeInTheDocument();
+      expect(screen.getByText(/Exposure for/i)).toBeInTheDocument();
+      expect(container.textContent).not.toContain('THREAT LEVEL:');
+      expect(container.textContent).not.toContain('Threat Assessment for');
+
+      // Overall number as "Indicative score" + one-line note
+      expect(screen.getAllByText(/Indicative score/i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Heuristic estimate from matched records; not a verified assessment\./i)).toBeInTheDocument();
+
+      // Per-factor +N values are removed or relative bars only (no "+15", "+9", "+30" in factor text)
+      const factorGrid = container.querySelector('.factors-grid');
+      expect(factorGrid.textContent).not.toContain('+15');
+      expect(factorGrid.textContent).not.toContain('+9');
+      expect(factorGrid.textContent).not.toContain('+30');
+
+      // Neutral style (no red alarm in score ring)
+      const scoreRing = container.querySelector('.risk-score-ring');
+      expect(scoreRing.textContent).not.toContain('🚨');
+      expect(scoreRing.textContent).toContain('🛡️');
+    });
+
+    test('phone numbers in matched records show only count, never numbers themselves, and no raw 10+ digit sequences across ANY tab', () => {
+      sessionStorage.setItem('osint_target_email', '+91 98765 43210');
+      sessionStorage.setItem('osint_verified_email', '+91 98765 43210');
+      sessionStorage.setItem('osint_target_type', 'phone');
+      sessionStorage.setItem('osint_token', 'valid-token-123');
+
+      const testResultWithPhones = {
+        records: [
+          {
+            id: 'r1',
+            title: 'Leak with phone 917337771210 and Aadhaar 602882687143',
+            category: 'Telecom Spill',
+            year: '2024',
+            dataClasses: ['PHONE', 'IDENTITY'],
+            details: 'Telephone: 917337771210, 9876500001\nDocument number: 602882687143\nAadhaar: 1234 5678 9012'
+          }
+        ],
+        packets: [
+          {
+            info: [
+              'Target Phone: +91 98765 43210',
+              'Telephone: 917337771210, 9876500001',
+              'Document number: 602882687143',
+              'Aadhaar number: 1234 5678 9012',
+              'Random serial: 99887766554'
+            ].join('\n')
+          }
+        ],
+        analytics: {
+          exposure: {
+            score: 55,
+            riskLevel: 'MEDIUM',
+            entities: { phoneCount: 3, recordCount: 1, hasDocument: true },
+            breakdown: []
+          },
+          timeline: [
+            {
+              year: '2024',
+              source: 'Telecom Spill',
+              category: 'Data Breach',
+              description: 'Customer Telephone: 917337771210 and phone 9876500001 leaked'
+            }
+          ]
+        }
+      };
+
+      const { container } = render(
+        <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: testResultWithPhones } }]}>
+          <Routes>
+            <Route path="/results" element={<ResultsPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      const verifyNoRawDigitsOrPhoneNumbers = () => {
+        // Numbers themselves must NEVER appear
+        expect(container.textContent).not.toContain('917337771210');
+        expect(container.textContent).not.toContain('9876500001');
+        expect(container.textContent).not.toContain('602882687143');
+        expect(container.textContent).not.toContain('1234 5678 9012');
+        expect(container.textContent).not.toContain('99887766554');
+        expect(container.textContent).not.toContain('+91 98765 43210');
+
+        // No raw digit sequences of 10+ digits anywhere in DOM
+        expect(container.textContent).not.toMatch(/\b\d{10,}\b/);
+      };
+
+      // 1. Timeline tab
+      verifyNoRawDigitsOrPhoneNumbers();
+      expect(container.textContent).toContain('phone number');
+
+      // 2. Data / Terminal tab
+      const dataBtn = screen.getByRole('button', { name: /terminal-view/i });
+      fireEvent.click(dataBtn);
+      verifyNoRawDigitsOrPhoneNumbers();
+
+      // 3. Overview tab
+      const overviewBtn = screen.getByRole('button', { name: /overview-view/i });
+      fireEvent.click(overviewBtn);
+      verifyNoRawDigitsOrPhoneNumbers();
+
+      // 4. Cards tab
+      const cardsBtn = screen.getByRole('button', { name: /cards-view/i });
+      fireEvent.click(cardsBtn);
+      verifyNoRawDigitsOrPhoneNumbers();
     });
   });
 });

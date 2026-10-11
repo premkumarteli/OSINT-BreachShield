@@ -5,7 +5,6 @@ import { maskIdentifier } from './maskIdentifier';
  * 1. Removes third-party bot promo, handle lines, and metadata.
  * 2. Redacts all @handles.
  * 3. Replaces all forms of the user's identifier (with/without +, with/without 91, digits-only, spaced) with the masked target.
- * 4. Fixes text corruption where dictionary words were accidentally redacted as document numbers.
  */
 export function sanitizeBreachText(text, target = '', maskedTarget = '') {
   if (!text || typeof text !== 'string') return '';
@@ -28,24 +27,7 @@ export function sanitizeBreachText(text, target = '', maskedTarget = '') {
   // 2. Strip / redact any @handle
   out = out.replace(/@[a-zA-Z0-9_]{2,}/g, '');
 
-  // 3. Fix document number text corruption
-  out = out.replace(/Aadhaar\s*\*\*mber/gi, 'Aadhaar number');
-  out = out.replace(/\*{10,}pear/gi, 'taxpayer numbers appear');
-
-  // Fix document number regex so it only redacts document-number-like digit strings
-  out = out.replace(
-    /((?:document\s*number|aadhaar|aadhar|passport|pan|taxpayer|voter|national\s*id)[\s:=*]+)`?([0-9a-zA-Z -]{6,})`?/gi,
-    (match, prefix, val) => {
-      if (!val) return match;
-      const cleanVal = val.trim();
-      const digits = cleanVal.replace(/\D/g, '');
-      if (digits.length < 4) return match;
-      const masked = cleanVal.length > 4 ? '*'.repeat(cleanVal.length - 4) + cleanVal.slice(-4) : '****';
-      return `${prefix}${masked}`;
-    }
-  );
-
-  // 4. Sanitize every form of the target identifier
+  // 3. Sanitize every form of the target identifier
   if (target) {
     const targetStr = String(target).trim();
     const effectiveMask = maskedTarget || maskIdentifier(targetStr, targetStr.includes('@') ? 'email' : 'phone');
