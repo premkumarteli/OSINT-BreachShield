@@ -192,8 +192,6 @@
   pointer-events: none;
   z-index: 3;
   overflow: hidden;
-  -webkit-mask-image: url(/logo-icon.png);
-  mask-image: url(/logo-icon.png);
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useReducedMotion, useAnimate, stagger } from 'framer-motion';
+import { useReducedMotion, useAnimate } from 'framer-motion';
 import './intro_animation.css';
 
 const BRAND_LETTERS = [
@@ -449,7 +449,13 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
             {/* Phase 2.5: Sheen container masked strictly to logo alpha */}
             {showSheen && (
-              <div className="intro-sheen-container">
+              <div
+                className="intro-sheen-container"
+                style={{
+                  WebkitMaskImage: 'url(/logo-icon.png)',
+                  maskImage: 'url(/logo-icon.png)'
+                }}
+              >
                 <div
                   className="intro-sheen-sweep"
                   style={{ opacity: 0 }}
