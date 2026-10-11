@@ -1081,26 +1081,48 @@ html:has(.results-page-wrapper) {
   position: relative;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(15, 40, 80, 0.26) 24%,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(15, 40, 80, 0.28) 22%,
     rgba(12, 32, 65, 0.20) 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 14px;
-  padding: 18px;
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 18px 20px;
+  backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
+  -webkit-backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.28),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  overflow: hidden;
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Glass Reflection Highlight on Top Edge matching Risk Card */
+.breach-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 35%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.02) 75%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
 }
 
 .breach-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(0, 240, 255, 0.4);
-  box-shadow: 0 12px 36px rgba(0, 240, 255, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.22);
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 12px 36px rgba(0, 240, 255, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.22);
 }
 
 .card-header {
@@ -1290,19 +1312,42 @@ html:has(.results-page-wrapper) {
 
 /* Empty State */
 .empty-state {
+  position: relative;
   text-align: center;
   padding: 40px 20px;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(15, 40, 80, 0.26) 24%,
-    rgba(12, 32, 65, 0.18) 100%
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(15, 40, 80, 0.28) 22%,
+    rgba(12, 32, 65, 0.20) 100%
   );
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
+  -webkit-backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.28),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+
+/* Glass Reflection Highlight on Top Edge matching Risk Card */
+.empty-state::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 35%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.02) 75%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
 }
 
 .empty-icon { font-size: 2.8rem; margin-bottom: 10px; }
@@ -1327,19 +1372,44 @@ html:has(.results-page-wrapper) {
   position: relative;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(15, 40, 80, 0.26) 24%,
-    rgba(12, 32, 65, 0.18) 100%
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(15, 40, 80, 0.28) 22%,
+    rgba(12, 32, 65, 0.20) 100%
   );
-  backdrop-filter: blur(32px) brightness(1.06);
-  -webkit-backdrop-filter: blur(32px) brightness(1.06);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
+  -webkit-backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
-  padding: 20px 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.14);
+  padding: 22px 26px;
+  overflow: hidden;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.28),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+  transition: all 0.3s ease;
+}
+
+/* Glass Reflection Highlight on Top Edge matching Risk Card */
+.timeline-section::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 35%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.02) 75%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
 }
 
 .breach-timeline-container {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -1536,83 +1606,148 @@ html:has(.results-page-wrapper) {
 }
 
 /* --------------------------------------------------------------------------
-   Terminal Section
+   Terminal Section (Unified with Risk Card Glass Theme)
    -------------------------------------------------------------------------- */
 .terminal-section {
-  background: rgba(2, 6, 23, 0.75);
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(15, 40, 80, 0.28) 22%,
+    rgba(12, 32, 65, 0.20) 100%
+  );
+  backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
+  -webkit-backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
-  backdrop-filter: blur(35px);
-  -webkit-backdrop-filter: blur(35px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.28),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+  transition: all 0.3s ease;
+}
+
+/* Glass Reflection Highlight on Top Edge matching Risk Card */
+.terminal-section::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 35%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.02) 75%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
 }
 
 .terminal-header {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
+  gap: 12px;
+  padding: 12px 20px;
   background: rgba(255, 255, 255, 0.04);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .terminal-dots {
   display: flex;
-  gap: 6px;
+  gap: 7px;
 }
 
 .terminal-dots .dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
 }
 
-.terminal-dots .red { background: #ef4444; }
-.terminal-dots .yellow { background: #f59e0b; }
-.terminal-dots .green { background: #10b981; }
+.terminal-dots .red { background: #ff4d6d; }
+.terminal-dots .yellow { background: #ffd166; }
+.terminal-dots .green { background: #06d6a0; }
 
 .terminal-title {
   flex: 1;
-  font-family: monospace;
-  font-size: 0.72rem;
-  color: #94a3b8;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  color: #38bdf8;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .copy-btn {
-  background: rgba(0, 240, 255, 0.1);
-  border: 1px solid rgba(0, 240, 255, 0.3);
+  background: rgba(0, 240, 255, 0.10);
+  border: 1px solid rgba(0, 240, 255, 0.30);
   color: #00f0ff;
-  padding: 3px 10px;
-  border-radius: 5px;
+  padding: 4px 14px;
+  border-radius: 9999px;
   cursor: pointer;
   font-size: 0.70rem;
-  font-family: monospace;
-  transition: all 0.2s;
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
 }
 
 .copy-btn:hover {
-  background: rgba(0, 240, 255, 0.2);
+  background: rgba(0, 240, 255, 0.22);
   border-color: #00f0ff;
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
+  color: #ffffff;
 }
 
 .terminal-body {
-  padding: 14px;
-  max-height: 440px;
+  position: relative;
+  z-index: 2;
+  padding: 18px 22px;
+  max-height: 460px;
   overflow-y: auto;
 }
 
+.terminal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.terminal-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+}
+.terminal-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.22);
+  border-radius: 8px;
+}
+.terminal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.40);
+}
+
 .terminal-output {
-  background: transparent;
-  color: #34d399;
-  font-family: 'Fira Mono', 'Consolas', monospace;
-  font-size: 0.78rem;
-  line-height: 1.55;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  color: #e2e8f0;
+  font-family: 'Fira Code', 'Consolas', 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;
-  margin: 0;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  margin: 0 0 12px 0;
+  padding: 14px 18px;
+  backdrop-filter: blur(10px);
+  letter-spacing: 0.02em;
+}
+
+.terminal-output:last-child {
+  margin-bottom: 0;
 }
 
 /* --------------------------------------------------------------------------
