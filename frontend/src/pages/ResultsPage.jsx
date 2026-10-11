@@ -5,6 +5,7 @@ import BreachTimeline from '../components/BreachTimeline';
 import { checkProtectedGuard } from '../lib/authGuards';
 import { maskIdentifier } from '../lib/maskIdentifier';
 import { sanitizeRecordContent } from '../lib/sanitizeRecordContent';
+import { CyberShieldIcon, CyberAlertIcon, CyberEmptyShieldIcon } from '../components/CyberShieldIcon';
 import '../App.css';
 import '../auth.css';
 import './search_concept.css';
@@ -142,8 +143,13 @@ export default function ResultsPage() {
   };
 
   const getRiskIcon = () => {
-    // Neutral icon for all levels (no red alarm)
-    return '🛡️';
+    // Neutral animated cyber shield icon for all levels (no red alarm)
+    return (
+      <>
+        <CyberShieldIcon size={26} />
+        <span style={{ display: 'none' }} aria-hidden="true">🛡️</span>
+      </>
+    );
   };
 
   const handleCopyTerminal = () => {
@@ -193,7 +199,9 @@ export default function ResultsPage() {
           {/* Distinct No-Breaches Found State if records/packets are empty or recordCount is 0 */}
           {records.length === 0 && packets.length === 0 ? (
             <div className="empty-state no-breaches-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
-              <div className="empty-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🛡️</div>
+              <div className="empty-icon" style={{ marginBottom: '16px' }}>
+                <CyberEmptyShieldIcon size={52} />
+              </div>
               <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#f8fafc', marginBottom: '8px' }}>
                 No Breaches Found
               </h2>
@@ -215,7 +223,6 @@ export default function ResultsPage() {
               <div className="results-top-grid">
                 {/* Risk Score Hero */}
                 <div className="risk-hero" style={{ '--risk-color': '#00f0ff' }}>
-                  <div className="risk-glow" style={{ background: getRiskGradient(exposure.riskLevel) }}></div>
                   <div className="risk-score-ring" style={{ borderColor: '#00f0ff' }}>
                     <span className="risk-icon">{getRiskIcon(exposure.riskLevel)}</span>
                     <span className="risk-score-num">{exposure.score}</span>
@@ -385,7 +392,9 @@ export default function ResultsPage() {
                 <div className="breach-data-section">
                   <div className="breach-section-header">
                     <div className="breach-header-left">
-                      <span className="breach-header-icon">🚨</span>
+                      <span className="breach-header-icon">
+                        <CyberAlertIcon size={22} />
+                      </span>
                       <div>
                         <h2 className="breach-section-title">Detected Breach Incidents & Compromised Data</h2>
                         <div className="breach-section-sub">
@@ -426,7 +435,9 @@ export default function ResultsPage() {
                     </div>
                   ) : (
                     <div className="empty-state">
-                      <div className="empty-icon">🛡️</div>
+                      <div className="empty-icon">
+                        <CyberEmptyShieldIcon size={48} />
+                      </div>
                       <h3>Clean Profile Detected</h3>
                       <p>No public credential leaks or infostealer infections detected in primary intelligence feeds.</p>
                     </div>
@@ -523,7 +534,9 @@ export default function ResultsPage() {
                   </div>
                 ) : (
                   <div className="empty-state">
-                    <div className="empty-icon">🛡️</div>
+                    <div className="empty-icon">
+                      <CyberEmptyShieldIcon size={48} />
+                    </div>
                     <h3>Clean Profile Detected</h3>
                     <p>No public credential leaks or infostealer infections detected in primary intelligence feeds.</p>
                   </div>
