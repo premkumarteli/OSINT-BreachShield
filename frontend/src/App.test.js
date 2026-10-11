@@ -158,12 +158,12 @@ describe('AppRouter Integration & LandingPage', () => {
         <LandingPage />
       </MemoryRouter>
     );
-    const logos = container.querySelectorAll('img[src="/logo-icon.png"]');
+    const logos = container.querySelectorAll('img[src="/logo-icon-clean.png"]');
     expect(logos.length).toBeGreaterThanOrEqual(2);
     const overlayLogoSrc = logos[0].getAttribute('src');
     const navbarLogoSrc = logos[1].getAttribute('src');
     expect(overlayLogoSrc).toBe(navbarLogoSrc);
-    expect(overlayLogoSrc).toBe('/logo-icon.png');
+    expect(overlayLogoSrc).toBe('/logo-icon-clean.png');
   });
 
   test('Phase 2.1/3.1 (b): body scroll is locked while overlay is mounted and restored after Skip', () => {
@@ -620,7 +620,7 @@ describe('VerifyOtpPage (/verify and /verify-otp routes)', () => {
     jest.useRealTimers();
   });
 
-  test('Phase 4: successful verify navigates to /results and stores token & verified email', async () => {
+  test('Phase 4: successful verify navigates to /scanning and stores token & verified email', async () => {
     sessionStorage.setItem('osint_target_email', 'target@domain.com');
     api.post.mockResolvedValueOnce({
       data: { success: true, token: 'mock-jwt-token', email: 'target@domain.com' }

@@ -19,52 +19,55 @@ beforeEach(() => {
 });
 
 describe('Adversarial Verification: Route Guards and Fallbacks', () => {
-  test('Requirement 1: Unverified direct visit to /results redirects immediately to / or /search', () => {
+  test('Requirement 1: Unverified direct visit to /results redirects immediately to /search', () => {
     // Ensure no session storage or auth tokens
     sessionStorage.clear();
 
     render(
       <MemoryRouter initialEntries={['/results']}>
         <Routes>
-          <Route path="/" element={<div data-testid="root-landing">Search Landing Page</div>} />
-          <Route path="/search" element={<div data-testid="root-landing">Search Landing Page</div>} />
+          <Route path="/" element={<div data-testid="root-home">Home Landing Page</div>} />
+          <Route path="/search" element={<div data-testid="search-landing">Search Landing Page</div>} />
           <Route path="/results" element={<ResultsPage />} />
         </Routes>
       </MemoryRouter>
     );
 
-    expect(screen.getByTestId('root-landing')).toBeInTheDocument();
+    expect(screen.getByTestId('search-landing')).toBeInTheDocument();
+    expect(screen.queryByTestId('root-home')).not.toBeInTheDocument();
     expect(screen.queryByText(/Target Intelligence/i)).not.toBeInTheDocument();
   });
 
-  test('Requirement 1 Edge Case: /results with email but verified=false in state redirects to / or /search', () => {
+  test('Requirement 1 Edge Case: /results with email but verified=false in state redirects to /search', () => {
     render(
       <MemoryRouter initialEntries={[{ pathname: '/results', state: { email: 'test@victim.com', verified: false } }]}>
         <Routes>
-          <Route path="/" element={<div data-testid="root-landing">Search Landing Page</div>} />
-          <Route path="/search" element={<div data-testid="root-landing">Search Landing Page</div>} />
+          <Route path="/" element={<div data-testid="root-home">Home Landing Page</div>} />
+          <Route path="/search" element={<div data-testid="search-landing">Search Landing Page</div>} />
           <Route path="/results" element={<ResultsPage />} />
         </Routes>
       </MemoryRouter>
     );
 
-    expect(screen.getByTestId('root-landing')).toBeInTheDocument();
+    expect(screen.getByTestId('search-landing')).toBeInTheDocument();
+    expect(screen.queryByTestId('root-home')).not.toBeInTheDocument();
   });
 
-  test('Requirement 2: Uninitiated direct visit to /verify-otp redirects immediately to /search or /', () => {
+  test('Requirement 2: Uninitiated direct visit to /verify-otp redirects immediately to /search', () => {
     sessionStorage.clear();
 
     render(
       <MemoryRouter initialEntries={['/verify-otp']}>
         <Routes>
-          <Route path="/" element={<div data-testid="root-landing">Search Landing Page</div>} />
-          <Route path="/search" element={<div data-testid="root-landing">Search Landing Page</div>} />
+          <Route path="/" element={<div data-testid="root-home">Home Landing Page</div>} />
+          <Route path="/search" element={<div data-testid="search-landing">Search Landing Page</div>} />
           <Route path="/verify-otp" element={<VerifyOtpPage />} />
         </Routes>
       </MemoryRouter>
     );
 
-    expect(screen.getByTestId('root-landing')).toBeInTheDocument();
+    expect(screen.getByTestId('search-landing')).toBeInTheDocument();
+    expect(screen.queryByTestId('root-home')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('otp-input')).not.toBeInTheDocument();
   });
 
@@ -401,7 +404,7 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
       expect(screen.queryByText(/CHRONOLOGICAL EXPOSURE TIMELINE/i)).not.toBeInTheDocument();
     });
 
-    test('Try another query clears session storage and returns to /', async () => {
+    test('Try another query clears session storage and returns to /search', async () => {
       sessionStorage.setItem('osint_verified_email', 'charlie@hacker.io');
       sessionStorage.setItem('osint_target_email', 'charlie@hacker.io');
       sessionStorage.setItem('osint_token', 'token123');
@@ -415,8 +418,8 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
       render(
         <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: dummyResult } }]}>
           <Routes>
-            <Route path="/search" element={<div data-testid="home-page">Search Home</div>} />
-            <Route path="/" element={<div data-testid="home-page">Search Home</div>} />
+            <Route path="/search" element={<div data-testid="search-home">Search Home</div>} />
+            <Route path="/" element={<div data-testid="root-home">Root Home</div>} />
             <Route path="/results" element={<ResultsPage />} />
           </Routes>
         </MemoryRouter>
@@ -432,7 +435,8 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
       expect(sessionStorage.getItem('osint_verified_email')).toBeNull();
       expect(sessionStorage.getItem('osint_target_email')).toBeNull();
       expect(sessionStorage.getItem('osint_token')).toBeNull();
-      expect(screen.getByTestId('home-page')).toBeInTheDocument();
+      expect(screen.getByTestId('search-home')).toBeInTheDocument();
+      expect(screen.queryByTestId('root-home')).not.toBeInTheDocument();
     });
   });
 

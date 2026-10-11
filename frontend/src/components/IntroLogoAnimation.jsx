@@ -123,7 +123,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     const imagePromise = new Promise((resolve) => {
       try {
         const img = new Image();
-        img.src = '/logo-icon.png';
+        img.src = '/logo-icon-clean.png';
         if (typeof img.decode === 'function') {
           img.decode().then(resolve).catch(resolve);
         } else if (img.complete) {
@@ -192,15 +192,15 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             ),
             animate(
               '.intro-logo-clip',
-              { clipPath: ['inset(-30% -30% 100% -30%)', 'inset(-30% -30% 0% -30%)'] },
+              { clipPath: ['inset(0% 0% 100% 0%)', 'inset(0% 0% 0% 0%)'] },
               { duration: 1.0 * slowFactor, ease: 'easeInOut' }
             )
           ]);
-          // Release bottom glow inset once scan line finishes
+          // Release scan clip once scan line finishes
           if (!isSkippedRef.current && !isCancelled) {
             animate(
               '.intro-logo-clip',
-              { clipPath: 'inset(-30% -30% -30% -30%)' },
+              { clipPath: 'inset(0% 0% 0% 0%)' },
               { duration: 0.05 * slowFactor }
             );
           }
@@ -208,7 +208,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
         // 1.4s: Check mask-image support; if unsupported, skip sheen
         const supportsMask = typeof window !== 'undefined' && typeof window.CSS !== 'undefined' && typeof window.CSS.supports === 'function'
-          ? (window.CSS.supports('mask-image', 'url(/logo-icon.png)') || window.CSS.supports('-webkit-mask-image', 'url(/logo-icon.png)'))
+          ? (window.CSS.supports('mask-image', 'url(/logo-icon-clean.png)') || window.CSS.supports('-webkit-mask-image', 'url(/logo-icon-clean.png)'))
           : true;
 
         if (isSkippedRef.current || isCancelled) return;
@@ -431,16 +431,16 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
             {/* Unclipped glow wrapper */}
             <div className="intro-logo-glow-wrapper">
-              {/* Clipped image wrapper with negative insets */}
+              {/* Clipped image wrapper */}
               <div
                 className="intro-logo-clip"
                 style={{
-                  clipPath: 'inset(-30% -30% 100% -30%)',
-                  WebkitClipPath: 'inset(-30% -30% 100% -30%)'
+                  clipPath: 'inset(0% 0% 100% 0%)',
+                  WebkitClipPath: 'inset(0% 0% 100% 0%)'
                 }}
               >
                 <img
-                  src="/logo-icon.png"
+                  src="/logo-icon-clean.png"
                   alt="BreachShield Shield"
                   className="intro-logo-img"
                 />
@@ -452,8 +452,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               <div
                 className="intro-sheen-container"
                 style={{
-                  WebkitMaskImage: 'url(/logo-icon.png)',
-                  maskImage: 'url(/logo-icon.png)'
+                  WebkitMaskImage: 'url(/logo-icon-clean.png)',
+                  maskImage: 'url(/logo-icon-clean.png)'
                 }}
               >
                 <div
