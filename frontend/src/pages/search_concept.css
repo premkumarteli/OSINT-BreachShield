@@ -275,76 +275,31 @@
   opacity: 0.9;
 }
 
-/* 5. True Apple-Style Glassmorphic Search Card with Optical Refraction */
+/* 5. True Plain Colorless Frosted Glassmorphic Card (Reflecting background directly) */
 .concept-search-card {
   position: relative;
   width: 100%;
   max-width: 480px;
-  /* Top light highlight transitioning into ultra-translucent glass */
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(15, 40, 80, 0.28) 22%,
-    rgba(12, 32, 65, 0.22) 100%
-  );
-  backdrop-filter: blur(35px) brightness(1.1) saturate(1.1);
-  -webkit-backdrop-filter: blur(35px) brightness(1.1) saturate(1.1);
+  background: rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.25),
-    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   border-radius: 16px;
   padding: 16px 24px 14px;
   margin-bottom: 10px;
   transition: all 0.3s ease;
 }
 
-/* Optical Refraction Lens: Magnifies (scale 1.03) and refracts background map */
-.concept-search-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: inherit;
-  backdrop-filter: blur(35px);
-  -webkit-backdrop-filter: blur(35px);
-  transform: scale(1.03);
-  filter: brightness(1.15) saturate(1.10);
-  opacity: 0.85;
-  z-index: -1;
-  pointer-events: none;
-}
-
-/* Glass Reflection Layer (Light catching top 35% of the glass pane) */
+.concept-search-card::before,
 .concept-search-card::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 35%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.02) 75%,
-    transparent 100%
-  );
-  pointer-events: none;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
+  display: none !important;
 }
 
 .concept-search-card:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.16) 0%,
-    rgba(18, 48, 95, 0.32) 22%,
-    rgba(14, 38, 75, 0.26) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 
-    0 12px 38px rgba(0, 0, 0, 0.32),
-    inset 0 1px 1px rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.26);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.45);
 }
 
 .card-header-row {
@@ -518,9 +473,9 @@
   left: 0;
   right: 0;
   z-index: 50;
-  background: rgba(14, 30, 60, 0.75);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
   border-radius: 10px;
@@ -881,19 +836,16 @@
   text-shadow: none;
 }
 
-/* Translucent Apple Glass Card for OTP with Compact Viewport Fit */
+/* Plain Colorless Glass Card for OTP with Compact Viewport Fit */
 .otp-card-refinement {
   max-width: 480px !important;
   padding: 16px 24px 14px !important;
   margin-bottom: 8px !important;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(25, 55, 110, 0.22) 20%,
-    rgba(15, 38, 80, 0.18) 100%
-  ) !important;
-  backdrop-filter: blur(35px) !important;
-  -webkit-backdrop-filter: blur(35px) !important;
+  background: rgba(0, 0, 0, 0.22) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
 }
 
 .otp-card-refinement .card-header-row {

@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navbar from '../components/Navbar';
 import { checkProtectedGuard } from '../lib/authGuards';
+import { CyberAlertIcon } from '../components/CyberShieldIcon';
 import '../App.css';
 import '../auth.css';
 import './search_concept.css';
@@ -203,7 +204,9 @@ export default function ScanningPage() {
         <div className="results-container">
           {error ? (
             <div className="error-card" role="status" aria-live="polite">
-              <div className="error-icon">⚠️</div>
+              <div className="error-icon" style={{ marginBottom: '14px' }}>
+                <CyberAlertIcon size={38} />
+              </div>
               <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#f8fafc', marginBottom: '8px' }}>
                 {error.type === 'rate_limit' ? 'Rate Limit Exceeded' : 'Scan Failed'}
               </h2>

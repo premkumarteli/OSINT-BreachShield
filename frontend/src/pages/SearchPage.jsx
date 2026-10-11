@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { buildSendOtpPayload } from '../lib/otpPayload';
 import Navbar from '../components/Navbar';
+import { CyberShieldIcon } from '../components/CyberShieldIcon';
 import './search_concept.css';
 
 const bgVideo1 = '/bg1.mp4';
@@ -237,9 +238,7 @@ export default function SearchPage() {
               disabled={loading || !isFormValid()}
               aria-label="generate-otp-button"
             >
-              <svg className="btn-icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
+              <CyberShieldIcon size={18} className="btn-icon-shield" />
               <span>{loading ? 'Transmitting OTP...' : 'Generate Secure OTP'}</span>
               <span className="btn-arrow" aria-hidden="true">→</span>
             </button>

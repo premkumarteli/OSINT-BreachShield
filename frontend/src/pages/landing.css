@@ -139,12 +139,12 @@ html.landing-page-root {
 /* Vignette Box Utility */
 .glass-vignette-card {
   position: relative;
-  background: radial-gradient(circle at 50% 30%, rgba(15, 38, 72, 0.55) 0%, rgba(4, 18, 31, 0.65) 100%);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 16px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 /* Section (a): How It Works */
@@ -156,20 +156,21 @@ html.landing-page-root {
 
 .step-card {
   padding: 28px 22px;
-  background: rgba(14, 32, 60, 0.45);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(34, 211, 238, 0.16);
+  background: rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   transition: all 0.25s ease;
   display: flex;
   flex-direction: column;
 }
 
 .step-card:hover {
-  border-color: rgba(34, 211, 238, 0.4);
+  border-color: rgba(255, 255, 255, 0.25);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.12);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
 }
 
 .step-number {
@@ -200,7 +201,7 @@ html.landing-page-root {
   max-width: 760px;
   margin: 0 auto;
   padding: 30px;
-  border: 1px solid rgba(34, 211, 238, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.10);
 }
 
 .sample-badge-bar {
@@ -337,7 +338,7 @@ html.landing-page-root {
   margin: 0 auto;
   padding: 32px 28px;
   text-align: center;
-  border: 1px solid rgba(34, 211, 238, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -353,7 +354,7 @@ html.landing-page-root {
 .team-card {
   padding: 28px 22px;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   display: flex;
   flex-direction: column;
   align-items: center;
