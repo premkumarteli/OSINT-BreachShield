@@ -167,3 +167,59 @@
   display: inline-block;
 }
 
+/* Phase 2.5: Bloom & Sheen */
+.intro-bloom {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 280px;
+  height: 280px;
+  margin-top: -140px;
+  margin-left: -140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0284c7 0%, rgba(2, 132, 199, 0.4) 35%, rgba(2, 132, 199, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+.intro-sheen-container {
+  position: absolute;
+  inset: 0;
+  width: 140px;
+  height: 140px;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+  -webkit-mask-image: url(/logo-icon.png);
+  mask-image: url(/logo-icon.png);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.intro-sheen-sweep {
+  position: absolute;
+  top: -100px;
+  left: -100px;
+  width: 340px;
+  height: 340px;
+  background: linear-gradient(
+    145deg,
+    transparent 0%,
+    transparent 32%,
+    rgba(56, 189, 248, 0.5) 42%,
+    #FFFFFF 50%,
+    rgba(56, 189, 248, 0.5) 58%,
+    transparent 68%,
+    transparent 100%
+  );
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+

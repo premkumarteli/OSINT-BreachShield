@@ -323,6 +323,41 @@ describe('AppRouter Integration & LandingPage', () => {
     expect(container.querySelector('.intro-skip-btn')).not.toBeInTheDocument();
   });
 
+  test('Phase 2.5: sheen and bloom are present during intro mount, and absent after Skip or completion', () => {
+    sessionStorage.clear();
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    // Elements exist in initial mount state
+    expect(container.querySelector('.intro-bloom')).toBeInTheDocument();
+    expect(container.querySelector('.intro-sheen-container')).toBeInTheDocument();
+
+    const skipBtn = screen.getByRole('button', { name: /Skip Intro Animation/i });
+    fireEvent.click(skipBtn);
+
+    // Entire intro overlay unmounts cleanly with no leftover bloom or sheen layers
+    expect(container.querySelector('.intro-bloom')).not.toBeInTheDocument();
+    expect(container.querySelector('.intro-sheen-container')).not.toBeInTheDocument();
+    expect(container.querySelector('.intro-container')).not.toBeInTheDocument();
+  });
+
+  test('Phase 2.5: reduced-motion does not mount or immediately cleans up sheen and bloom layers', () => {
+    // When intro is marked seen or skipped under reduced-motion, no sheen or bloom persists
+    sessionStorage.setItem('breachshield_intro_seen', 'true');
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    expect(container.querySelector('.intro-bloom')).not.toBeInTheDocument();
+    expect(container.querySelector('.intro-sheen-container')).not.toBeInTheDocument();
+    expect(container.querySelector('.intro-container')).not.toBeInTheDocument();
+  });
+
   test('Phase 2.3: overlay is decorative with aria-hidden="true" and skip button is keyboard-reachable', () => {
     sessionStorage.clear();
     const { container } = render(

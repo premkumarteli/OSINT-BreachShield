@@ -33,7 +33,8 @@ const getSlowMoFactor = () => {
 
 export default function IntroLogoAnimation({ onComplete, onDockStart }) {
   const shouldReduceMotion = useReducedMotion();
-  const [step, setStep] = useState('initial'); // 'initial' | 'scan' | 'wordmark' | 'docking' | 'done'
+  const [step, setStep] = useState('initial'); // 'initial' | 'scan' | 'sheen' | 'wordmark' | 'docking' | 'done'
+  const [showSheen, setShowSheen] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const isSkippedRef = useRef(false);
   const initialWidthRef = useRef(typeof window !== 'undefined' ? window.innerWidth : 0);
@@ -205,41 +206,106 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
           }
         }
 
-        // 1.4 - 2.0s: Wordmark reveals left-to-right as a continuous wipe across BREACH, then SHIELD
-        // Reveal with clip-path on word containers (.brand-text-white, .brand-text-blue) that carry the gradients
+        // 1.4s: Check mask-image support; if unsupported, skip sheen
+        const supportsMask = typeof window !== 'undefined' && typeof window.CSS !== 'undefined' && typeof window.CSS.supports === 'function'
+          ? (window.CSS.supports('mask-image', 'url(/logo-icon.png)') || window.CSS.supports('-webkit-mask-image', 'url(/logo-icon.png)'))
+          : true;
+
         if (isSkippedRef.current || isCancelled) return;
-        setStep('wordmark');
-        if (scope.current) {
-          const wordmarkEl = scope.current.querySelector('.intro-dock-wordmark');
-          if (wordmarkEl) {
-            wordmarkEl.style.visibility = 'visible';
-          }
+        setStep('sheen');
 
-          // Wipe BREACH first (6 letters -> steps(6)), then SHIELD (6 letters -> steps(6))
-          // Total duration 0.6s * slowFactor (0.3s * slowFactor each)
-          await animate(
-            '.intro-word-white',
-            { clipPath: ['inset(0 100% 0 0)', 'inset(0 0% 0 0)'] },
-            { duration: 0.3 * slowFactor, ease: 'steps(6, end)' }
-          );
-
-          if (!isSkippedRef.current && !isCancelled) {
+        // Phase 2.5: BLOOM (1.4s to 2.6s, total 1.2s * slowFactor)
+        // Opacity: 0 -> 0.5 (peak at ~1.65s, duration 0.25s) -> 0.2 resting (duration 0.95s)
+        const bloomPromise = (async () => {
+          if (!scope.current) return;
+          try {
             await animate(
-              '.intro-word-blue',
+              '.intro-bloom',
+              { opacity: [0, 0.5] },
+              { duration: 0.25 * slowFactor, ease: 'easeOut' }
+            );
+            if (!isSkippedRef.current && !isCancelled) {
+              await animate(
+                '.intro-bloom',
+                { opacity: [0.5, 0.2] },
+                { duration: 0.95 * slowFactor, ease: 'easeOut' }
+              );
+            }
+          } catch (_) {}
+        })();
+
+        // Phase 2.5: SHEEN SWEEP (1.4s to 1.95s, one pass ~0.55s * slowFactor)
+        // Sweeps diagonal band (35 deg) from top-right to bottom-left across the logo's alpha mask
+        // Peak opacity <= 0.8
+        const sheenSweepPromise = (async () => {
+          if (!scope.current || !supportsMask) {
+            setShowSheen(false);
+            return;
+          }
+          try {
+            await animate(
+              '.intro-sheen-sweep',
+              {
+                x: [100, -100],
+                y: [-70, 70],
+                opacity: [0, 0.78, 0.78, 0]
+              },
+              { duration: 0.55 * slowFactor, ease: [0.16, 1, 0.3, 1] }
+            );
+            // Remove sheen element from DOM once it finishes
+            setShowSheen(false);
+          } catch (_) {
+            setShowSheen(false);
+          }
+        })();
+
+        // Halfway through sheen (~0.27s after 1.4s = ~1.67s / ~1.6s): start the existing wordmark wipe
+        // Total wordmark wipe: 0.6s (0.3s * slowFactor BREACH + 0.3s * slowFactor SHIELD) -> finishes at ~2.27s
+        const wordmarkWipePromise = (async () => {
+          // Sheen midpoint wait: 0.27s * slowFactor
+          await new Promise((res) => {
+            if (scope.current) {
+              animate(scope.current, {}, { duration: 0.27 * slowFactor }).then(res).catch(res);
+            } else {
+              res();
+            }
+          });
+
+          if (isSkippedRef.current || isCancelled) return;
+          setStep('wordmark');
+          if (scope.current) {
+            const wordmarkEl = scope.current.querySelector('.intro-dock-wordmark');
+            if (wordmarkEl) {
+              wordmarkEl.style.visibility = 'visible';
+            }
+
+            // Wipe BREACH first (6 letters -> steps(6)), then SHIELD (6 letters -> steps(6))
+            await animate(
+              '.intro-word-white',
               { clipPath: ['inset(0 100% 0 0)', 'inset(0 0% 0 0)'] },
               { duration: 0.3 * slowFactor, ease: 'steps(6, end)' }
             );
-          }
 
-          if (!isSkippedRef.current && !isCancelled) {
-            // Remove clip-path so glow and docking transforms are completely unconstrained
-            const words = scope.current.querySelectorAll('.intro-word-white, .intro-word-blue');
-            words.forEach((w) => {
-              w.style.clipPath = 'none';
-              w.style.webkitClipPath = 'none';
-            });
+            if (!isSkippedRef.current && !isCancelled) {
+              await animate(
+                '.intro-word-blue',
+                { clipPath: ['inset(0 100% 0 0)', 'inset(0 0% 0 0)'] },
+                { duration: 0.3 * slowFactor, ease: 'steps(6, end)' }
+              );
+            }
+
+            if (!isSkippedRef.current && !isCancelled) {
+              const words = scope.current.querySelectorAll('.intro-word-white, .intro-word-blue');
+              words.forEach((w) => {
+                w.style.clipPath = 'none';
+                w.style.webkitClipPath = 'none';
+              });
+            }
           }
-        }
+        })();
+
+        // Wait for sheen sweep, bloom resting transition, and wordmark wipe to complete
+        await Promise.all([sheenSweepPromise, bloomPromise, wordmarkWipePromise]);
 
         // Measure Navbar icon and wordmark bounding rects right before docking
         const navIconEl = document.getElementById('navbar-brand-icon') || document.querySelector('.navbar-brand-icon-slot');
@@ -272,8 +338,9 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         const deltaWordY = navWordRect.top - introWordRect.top;
         const scaleWord = navWordRect.width / introWordRect.width;
 
-        // 2.0 - 2.8s: Direct transform dock over 0.8s * slowFactor with single easing
+        // Dock over 0.8s * slowFactor with single easing
         // Remove Skip Button from DOM as soon as docking starts
+        // Bloom on brand layer fades out with overlay background
         if (isSkippedRef.current || isCancelled) return;
         setStep('docking');
         if (onDockStart) onDockStart();
@@ -315,6 +382,11 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             '.intro-overlay-bg',
             { opacity: [1, 0] },
             { duration: 0.8 * slowFactor, ease: [0.16, 1, 0.3, 1] }
+          ),
+          animate(
+            '.intro-bloom',
+            { opacity: [0.2, 0] },
+            { duration: 0.8 * slowFactor, ease: [0.16, 1, 0.3, 1] }
           )
         ]);
 
@@ -354,6 +426,9 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         <div className="intro-brand-layer">
           {/* Logo Mark Container (140px square) */}
           <div className="intro-dock-icon" style={{ transformOrigin: 'top left' }}>
+            {/* Phase 2.5: Radial Bloom behind the logo */}
+            <div className="intro-bloom" />
+
             {/* Unclipped glow wrapper */}
             <div className="intro-logo-glow-wrapper">
               {/* Clipped image wrapper with negative insets */}
@@ -371,6 +446,16 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                 />
               </div>
             </div>
+
+            {/* Phase 2.5: Sheen container masked strictly to logo alpha */}
+            {showSheen && (
+              <div className="intro-sheen-container">
+                <div
+                  className="intro-sheen-sweep"
+                  style={{ opacity: 0 }}
+                />
+              </div>
+            )}
 
             {/* Sweeping Cyan Scan-Line */}
             <div
