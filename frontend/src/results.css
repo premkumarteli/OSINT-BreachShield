@@ -416,16 +416,16 @@ html:has(.results-page-wrapper) {
   position: relative;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(15, 40, 80, 0.28) 22%,
-    rgba(12, 32, 65, 0.20) 100%
+    rgba(12, 32, 65, 0.35) 0%,
+    rgba(8, 20, 48, 0.40) 50%,
+    rgba(5, 15, 38, 0.45) 100%
   );
-  backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
-  -webkit-backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  border: 1px solid rgba(0, 240, 255, 0.20);
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.28),
-    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 15px rgba(0, 240, 255, 0.08);
   border-radius: 16px;
   padding: 18px 22px;
   display: flex;
@@ -434,25 +434,6 @@ html:has(.results-page-wrapper) {
   overflow: hidden;
   height: 100%;
   transition: all 0.3s ease;
-}
-
-/* Glass Reflection Highlight on Top Edge */
-.risk-hero::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 35%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(255, 255, 255, 0.02) 75%,
-    transparent 100%
-  );
-  pointer-events: none;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
 }
 
 .risk-glow {
@@ -615,16 +596,18 @@ html:has(.results-page-wrapper) {
   position: relative;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(15, 40, 80, 0.26) 24%,
-    rgba(12, 32, 65, 0.18) 100%
+    rgba(12, 32, 65, 0.35) 0%,
+    rgba(8, 20, 48, 0.40) 50%,
+    rgba(5, 15, 38, 0.45) 100%
   );
-  backdrop-filter: blur(32px) brightness(1.06);
-  -webkit-backdrop-filter: blur(32px) brightness(1.06);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  border: 1px solid rgba(0, 240, 255, 0.20);
   border-radius: 16px;
   padding: 18px 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.14);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 15px rgba(0, 240, 255, 0.08);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1081,18 +1064,18 @@ html:has(.results-page-wrapper) {
   position: relative;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(15, 40, 80, 0.28) 22%,
-    rgba(12, 32, 65, 0.20) 100%
+    rgba(12, 32, 65, 0.35) 0%,
+    rgba(8, 20, 48, 0.40) 50%,
+    rgba(5, 15, 38, 0.45) 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.20);
   border-radius: 16px;
   padding: 18px 20px;
-  backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
-  -webkit-backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.28),
-    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 15px rgba(0, 240, 255, 0.08);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1100,29 +1083,10 @@ html:has(.results-page-wrapper) {
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* Glass Reflection Highlight on Top Edge matching Risk Card */
-.breach-card::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 35%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(255, 255, 255, 0.02) 75%,
-    transparent 100%
-  );
-  pointer-events: none;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-}
-
 .breach-card:hover {
   transform: translateY(-3px);
   border-color: rgba(0, 240, 255, 0.45);
-  box-shadow: 0 12px 36px rgba(0, 240, 255, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 36px rgba(0, 240, 255, 0.22);
 }
 
 .card-header {
@@ -1164,16 +1128,18 @@ html:has(.results-page-wrapper) {
   position: relative;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(15, 40, 80, 0.28) 22%,
-    rgba(12, 32, 65, 0.20) 100%
+    rgba(12, 32, 65, 0.35) 0%,
+    rgba(8, 20, 48, 0.40) 50%,
+    rgba(5, 15, 38, 0.45) 100%
   );
-  backdrop-filter: blur(35px) brightness(1.08);
-  -webkit-backdrop-filter: blur(35px) brightness(1.08);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
   border: 1px solid rgba(0, 240, 255, 0.20);
   border-radius: 16px;
   padding: 20px 22px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.16);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 15px rgba(0, 240, 255, 0.08);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1317,37 +1283,18 @@ html:has(.results-page-wrapper) {
   padding: 40px 20px;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(15, 40, 80, 0.28) 22%,
-    rgba(12, 32, 65, 0.20) 100%
+    rgba(12, 32, 65, 0.35) 0%,
+    rgba(8, 20, 48, 0.40) 50%,
+    rgba(5, 15, 38, 0.45) 100%
   );
-  backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
-  -webkit-backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  border: 1px solid rgba(0, 240, 255, 0.20);
   border-radius: 16px;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.28),
-    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 15px rgba(0, 240, 255, 0.08);
   overflow: hidden;
-}
-
-/* Glass Reflection Highlight on Top Edge matching Risk Card */
-.empty-state::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 35%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(255, 255, 255, 0.02) 75%,
-    transparent 100%
-  );
-  pointer-events: none;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
 }
 
 .empty-icon { font-size: 2.8rem; margin-bottom: 10px; }
@@ -1372,39 +1319,20 @@ html:has(.results-page-wrapper) {
   position: relative;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(15, 40, 80, 0.28) 22%,
-    rgba(12, 32, 65, 0.20) 100%
+    rgba(12, 32, 65, 0.35) 0%,
+    rgba(8, 20, 48, 0.40) 50%,
+    rgba(5, 15, 38, 0.45) 100%
   );
-  backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
-  -webkit-backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  border: 1px solid rgba(0, 240, 255, 0.20);
   border-radius: 16px;
   padding: 22px 26px;
   overflow: hidden;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.28),
-    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 15px rgba(0, 240, 255, 0.08);
   transition: all 0.3s ease;
-}
-
-/* Glass Reflection Highlight on Top Edge matching Risk Card */
-.timeline-section::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 35%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(255, 255, 255, 0.02) 75%,
-    transparent 100%
-  );
-  pointer-events: none;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
 }
 
 .breach-timeline-container {
@@ -1506,13 +1434,18 @@ html:has(.results-page-wrapper) {
 }
 
 .timeline-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(15, 40, 80, 0.22) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: linear-gradient(
+    180deg,
+    rgba(12, 32, 65, 0.35) 0%,
+    rgba(8, 20, 48, 0.40) 50%,
+    rgba(5, 15, 38, 0.45) 100%
+  );
+  border: 1px solid rgba(0, 240, 255, 0.18);
   border-radius: 12px;
   padding: 14px;
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(25px) saturate(1.2);
+  -webkit-backdrop-filter: blur(25px) saturate(1.2);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1521,8 +1454,8 @@ html:has(.results-page-wrapper) {
 
 .timeline-card:hover {
   transform: translateX(4px);
-  border-color: rgba(0, 240, 255, 0.4);
-  box-shadow: 0 6px 24px rgba(0, 240, 255, 0.16);
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 6px 24px rgba(0, 240, 255, 0.20);
 }
 
 .timeline-card-header {
@@ -1612,38 +1545,19 @@ html:has(.results-page-wrapper) {
   position: relative;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(15, 40, 80, 0.28) 22%,
-    rgba(12, 32, 65, 0.20) 100%
+    rgba(12, 32, 65, 0.35) 0%,
+    rgba(8, 20, 48, 0.40) 50%,
+    rgba(5, 15, 38, 0.45) 100%
   );
-  backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
-  -webkit-backdrop-filter: blur(35px) brightness(1.08) saturate(1.1);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  border: 1px solid rgba(0, 240, 255, 0.20);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.28),
-    inset 0 1px 1px rgba(255, 255, 255, 0.16);
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 15px rgba(0, 240, 255, 0.08);
   transition: all 0.3s ease;
-}
-
-/* Glass Reflection Highlight on Top Edge matching Risk Card */
-.terminal-section::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 35%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(255, 255, 255, 0.02) 75%,
-    transparent 100%
-  );
-  pointer-events: none;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
 }
 
 .terminal-header {
@@ -1653,8 +1567,8 @@ html:has(.results-page-wrapper) {
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(4, 12, 28, 0.35);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.12);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -1731,23 +1645,21 @@ html:has(.results-page-wrapper) {
 }
 
 .terminal-output {
-  background: rgba(0, 0, 0, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  background: transparent;
   color: #e2e8f0;
   font-family: 'Fira Code', 'Consolas', 'JetBrains Mono', monospace;
   font-size: 0.82rem;
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;
-  margin: 0 0 12px 0;
-  padding: 14px 18px;
-  backdrop-filter: blur(10px);
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.08);
   letter-spacing: 0.02em;
 }
 
 .terminal-output:last-child {
-  margin-bottom: 0;
+  border-bottom: none;
 }
 
 /* --------------------------------------------------------------------------
