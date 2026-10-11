@@ -1,8 +1,11 @@
 package com.osint.breachshield.gateway.ui.home
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -12,6 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +53,22 @@ fun HomeScreen(
     val gatewaysOnline = (metrics?.gatewaysOnline ?: 0).coerceAtLeast(1)
     val gatewaysTotal = (metrics?.gatewaysTotal ?: 0).coerceAtLeast(1)
 
+    // Interactive selected bar index for the Platform Activity Chart
+    var selectedBarIndex by remember { mutableStateOf<Int?>(null) }
+    var isManualScanning by remember { mutableStateOf(false) }
+
+    // Smooth continuous rotation animation for the refresh button
+    val infiniteTransition = rememberInfiniteTransition(label = "refreshRotation")
+    val refreshRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotationDeg"
+    )
+
     AmbientCyberCanvas {
         LazyColumn(
             modifier = Modifier
@@ -63,7 +85,7 @@ fun HomeScreen(
                 )
             }
 
-            // Topbar Header (Greeting & Manual Refresh)
+            // Topbar Header (Greeting & Tactile Refresh Action)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -91,32 +113,62 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
-                            onClick = onNavigateToLanding,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF0F172A),
-                                contentColor = AccentCyan
-                            ),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, AccentCyan.copy(alpha = 0.4f)),
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        // Citizen Portal Pill with tactile press
+                        Box(
+                            modifier = Modifier
+                                .liquidGlass(
+                                    shape = RoundedCornerShape(16.dp),
+                                    fillColor = Color(0xFF0F172A).copy(alpha = 0.85f),
+                                    borderBrush = Brush.verticalGradient(
+                                        listOf(AccentCyan.copy(alpha = 0.5f), AccentCyan.copy(alpha = 0.15f))
+                                    ),
+                                    elevation = 4.dp
+                                )
+                                .tactilePress { onNavigateToLanding() }
+                                .padding(horizontal = 12.dp, vertical = 7.dp)
                         ) {
-                            Text("🌐 Citizen Portal", fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                AppIcon(
+                                    icon = AppIconType.Shield,
+                                    modifier = Modifier.size(13.dp),
+                                    tint = AccentCyan
+                                )
+                                Text(
+                                    text = "Citizen Portal",
+                                    color = AccentCyan,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
 
-                        IconButton(
-                            onClick = viewModel::fetchOverview,
-                            enabled = !isRefreshing
-                        ) {
-                            if (isRefreshing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    color = AccentCyan,
-                                    strokeWidth = 2.dp
+                        // Animated Refresh Button
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .liquidGlass(
+                                    shape = CircleShape,
+                                    fillColor = Color(0xFF0F172A).copy(alpha = 0.85f),
+                                    borderBrush = LiquidGlassSpecularBorder,
+                                    elevation = 4.dp
                                 )
-                            } else {
-                                Text("⟳", color = AccentCyan, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            }
+                                .tactilePress(enabled = !isRefreshing) { viewModel.fetchOverview() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AppIcon(
+                                icon = AppIconType.Refresh,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .run {
+                                        if (isRefreshing) rotate(refreshRotation) else this
+                                    },
+                                tint = AccentCyan,
+                                strokeWidth = 2.dp
+                            )
                         }
                     }
                 }
@@ -127,82 +179,133 @@ fun HomeScreen(
                 item {
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
-                        borderColor = CriticalRed
+                        borderColor = CriticalRed,
+                        elevation = 6.dp
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                                Text(
-                                    text = "CONNECTION WARNING",
-                                    color = CriticalRed,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = errorMessage ?: "Failed to reach backend",
-                                    color = SlateTextPrimary,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            Button(
-                                onClick = viewModel::fetchOverview,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = CriticalRed.copy(alpha = 0.2f),
-                                    contentColor = CriticalRed
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            Row(
+                                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Text("Retry", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                AppIcon(
+                                    icon = AppIconType.Warning,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = CriticalRed
+                                )
+                                Column {
+                                    Text(
+                                        text = "CONNECTION WARNING",
+                                        color = CriticalRed,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = errorMessage ?: "Failed to reach backend",
+                                        color = SlateTextPrimary,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(CriticalRed.copy(alpha = 0.2f))
+                                    .border(1.dp, CriticalRed.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                    .tactilePress { viewModel.fetchOverview() }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text("Retry", color = CriticalRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
             }
 
-            // Figma Concentric Pulsing Radar Hero Card
+            // Concentric Pulsing Radar Hero Card with Tap-to-Scan Interaction
             item {
                 val activeAlerts = metrics?.activeAlertsCount ?: 0
-                ConcentricPulseHeroCard(
-                    statusTitle = if (activeAlerts > 0) "System attention required" else "All systems secure",
-                    statusSubtitle = if (activeAlerts > 0) "$activeAlerts unresolved security alerts" else "Zero critical perimeter intrusions",
-                    isLive = activeAlerts == 0
-                )
+                val title = if (isManualScanning) {
+                    "Scanning perimeter..."
+                } else if (activeAlerts > 0) {
+                    "System attention required"
+                } else {
+                    "All systems secure"
+                }
+
+                val subtitle = if (isManualScanning) {
+                    "Live cryptographic probe in progress"
+                } else if (activeAlerts > 0) {
+                    "$activeAlerts unresolved security alerts"
+                } else {
+                    "Zero perimeter breaches detected"
+                }
+
+                Box(
+                    modifier = Modifier.tactilePress {
+                        isManualScanning = true
+                        viewModel.fetchOverview()
+                    }
+                ) {
+                    ConcentricPulseHeroCard(
+                        statusTitle = title,
+                        statusSubtitle = subtitle,
+                        isLive = activeAlerts == 0
+                    )
+                }
             }
 
-            // Figma 2x2 Metrics Grid
+            // iOS Liquid Glass 2x2 Interactive Metrics Grid
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Row 1: Users & Gateways
+                    // Row 1: Active Users & Gateways Online
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // Metric 1: Active Users (Violet)
                         GlassCard(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onNavigateToUsers() }
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToUsers
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(AccentViolet.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("◉", color = AccentViolet, fontSize = 14.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(AccentViolet.copy(alpha = 0.16f))
+                                        .border(1.dp, AccentViolet.copy(alpha = 0.35f), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AppIcon(
+                                        icon = AppIconType.Users,
+                                        modifier = Modifier.size(17.dp),
+                                        tint = AccentViolet,
+                                        filled = true
+                                    )
+                                }
+
+                                AppIcon(
+                                    icon = AppIconType.ChevronRight,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = SlateTextMuted
+                                )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = "${metrics?.activeUsersCount ?: 0}",
                                 color = SlateTextPrimary,
-                                fontSize = 24.sp,
+                                fontSize = 26.sp,
                                 fontWeight = FontWeight.Black,
                                 fontFamily = FontFamily.Monospace
                             )
@@ -210,26 +313,42 @@ fun HomeScreen(
                             Text("Live monitored", color = AccentViolet, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                         }
 
-                        // Metric 2: Gateways Online (Blue)
+                        // Metric 2: Gateways Online (Cyan/Green)
                         GlassCard(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onNavigateToGateways() }
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToGateways
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(AccentBlue.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("◈", color = AccentBlue, fontSize = 14.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(MatrixGreen.copy(alpha = 0.16f))
+                                        .border(1.dp, MatrixGreen.copy(alpha = 0.35f), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AppIcon(
+                                        icon = AppIconType.Gateways,
+                                        modifier = Modifier.size(17.dp),
+                                        tint = MatrixGreen
+                                    )
+                                }
+
+                                AppIcon(
+                                    icon = AppIconType.ChevronRight,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = SlateTextMuted
+                                )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = "$gatewaysOnline / $gatewaysTotal",
                                 color = MatrixGreen,
-                                fontSize = 24.sp,
+                                fontSize = 26.sp,
                                 fontWeight = FontWeight.Black,
                                 fontFamily = FontFamily.Monospace
                             )
@@ -243,27 +362,47 @@ fun HomeScreen(
                         }
                     }
 
-                    // Row 2: Breaches & Alerts
+                    // Row 2: Breach Records & Active Alerts
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // Metric 3: Breach Records (Cyan)
-                        GlassCard(modifier = Modifier.weight(1f)) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(AccentCyan.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
+                        GlassCard(
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToAlerts
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("⛃", color = AccentCyan, fontSize = 14.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(AccentCyan.copy(alpha = 0.16f))
+                                        .border(1.dp, AccentCyan.copy(alpha = 0.35f), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AppIcon(
+                                        icon = AppIconType.Database,
+                                        modifier = Modifier.size(17.dp),
+                                        tint = AccentCyan
+                                    )
+                                }
+
+                                AppIcon(
+                                    icon = AppIconType.ChevronRight,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = SlateTextMuted
+                                )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = "${metrics?.breachesCount ?: 1027}",
                                 color = SlateTextPrimary,
-                                fontSize = 24.sp,
+                                fontSize = 26.sp,
                                 fontWeight = FontWeight.Black,
                                 fontFamily = FontFamily.Monospace
                             )
@@ -271,26 +410,48 @@ fun HomeScreen(
                             Text("Verified feeds", color = AccentCyan, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                         }
 
-                        // Metric 4: Active Alerts (Amber)
+                        // Metric 4: Active Alerts (Amber/Red)
                         GlassCard(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onNavigateToAlerts() }
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToAlerts
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(WarningAmber.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("▲", color = WarningAmber, fontSize = 14.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(
+                                            (if ((metrics?.activeAlertsCount ?: 0) > 0) WarningAmber else MatrixGreen).copy(alpha = 0.16f)
+                                        )
+                                        .border(
+                                            1.dp,
+                                            (if ((metrics?.activeAlertsCount ?: 0) > 0) WarningAmber else MatrixGreen).copy(alpha = 0.35f),
+                                            RoundedCornerShape(10.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AppIcon(
+                                        icon = AppIconType.Alerts,
+                                        modifier = Modifier.size(17.dp),
+                                        tint = if ((metrics?.activeAlertsCount ?: 0) > 0) WarningAmber else MatrixGreen
+                                    )
+                                }
+
+                                AppIcon(
+                                    icon = AppIconType.ChevronRight,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = SlateTextMuted
+                                )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = "${metrics?.activeAlertsCount ?: 0}".padStart(2, '0'),
                                 color = if ((metrics?.activeAlertsCount ?: 0) > 0) WarningAmber else MatrixGreen,
-                                fontSize = 24.sp,
+                                fontSize = 26.sp,
                                 fontWeight = FontWeight.Black,
                                 fontFamily = FontFamily.Monospace
                             )
@@ -306,10 +467,13 @@ fun HomeScreen(
                 }
             }
 
-            // Figma Platform Activity Chart
+            // Interactive Touch-Scrub Platform Activity Chart
             item {
                 val sparkline = overview?.activitySparkline ?: emptyList()
                 val smsSentLabel = "${metrics?.smsSentToday ?: 0} SMS today"
+                val defaultBars = listOf(35, 52, 44, 68, 85, 55, 92, 110, 78, 95)
+                val bars = if (sparkline.isNotEmpty()) sparkline else defaultBars
+                val maxBar = (bars.maxOrNull() ?: 100).coerceAtLeast(1)
 
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Row(
@@ -318,44 +482,131 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("LAST 24 HOURS", color = SlateTextMuted, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                AppIcon(
+                                    icon = AppIconType.Activity,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = AccentCyan
+                                )
+                                Text("LAST 24 HOURS", color = SlateTextMuted, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                            }
                             Text("Platform Activity", color = SlateTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                         }
-                        Text(
-                            text = smsSentLabel,
-                            color = AccentCyan,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Vertical Throughput Bars from real sparkline or fallback
-                    val bars = if (sparkline.isNotEmpty()) sparkline else listOf(25, 40, 30, 55, 68, 45, 80, 95, 70, 88)
-                    val maxBar = (bars.maxOrNull() ?: 100).coerceAtLeast(1)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(55.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        bars.forEach { h ->
-                            Box(
-                                modifier = Modifier
-                                    .width((280 / bars.size.coerceAtLeast(1)).coerceIn(8, 22).dp)
-                                    .fillMaxHeight(h.toFloat() / maxBar.toFloat())
-                                    .background(
-                                        color = if (h.toFloat() / maxBar > 0.8f) AccentCyan else AccentCyan.copy(alpha = 0.5f),
-                                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
-                                    )
+                        // Status Chip
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AccentCyan.copy(alpha = 0.12f))
+                                .border(1.dp, AccentCyan.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = smsSentLabel,
+                                color = AccentCyan,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Interactive Tooltip if bar is touched
+                    AnimatedVisibility(
+                        visible = selectedBarIndex != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        selectedBarIndex?.let { idx ->
+                            val value = bars.getOrElse(idx) { 0 }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                                    .liquidGlass(
+                                        shape = RoundedCornerShape(12.dp),
+                                        fillColor = Color(0xFF0F172A).copy(alpha = 0.9f),
+                                        borderBrush = LiquidGlassActiveBorder,
+                                        elevation = 4.dp
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Interval #${idx + 1}: $value Operations",
+                                        color = AccentCyan,
+                                        fontSize = 12.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Tap to dismiss",
+                                        color = SlateTextMuted,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Tactile Interactive Vertical Throughput Bars
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(65.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        bars.forEachIndexed { idx, h ->
+                            val isSelected = selectedBarIndex == idx
+                            val targetHeight = (h.toFloat() / maxBar.toFloat()).coerceIn(0.12f, 1f)
+
+                            val animatedHeight by animateFloatAsState(
+                                targetValue = targetHeight,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "barHeight_$idx"
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .width((280 / bars.size.coerceAtLeast(1)).coerceIn(8, 24).dp)
+                                    .fillMaxHeight(animatedHeight)
+                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                    .background(
+                                        if (isSelected) {
+                                            Brush.verticalGradient(
+                                                listOf(AccentCyan, Color.White)
+                                            )
+                                        } else if (h.toFloat() / maxBar > 0.8f) {
+                                            Brush.verticalGradient(
+                                                listOf(AccentCyan, AccentCyan.copy(alpha = 0.5f))
+                                            )
+                                        } else {
+                                            Brush.verticalGradient(
+                                                listOf(AccentCyan.copy(alpha = 0.45f), AccentCyan.copy(alpha = 0.15f))
+                                            )
+                                        }
+                                    )
+                                    .clickable {
+                                        selectedBarIndex = if (selectedBarIndex == idx) null else idx
+                                    }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -367,30 +618,55 @@ fun HomeScreen(
                 }
             }
 
-            // Quick Actions Block
+            // Quick Hardware Console Link
             item {
-                Row(
+                GlassCard(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    onClick = onNavigateToGateways
                 ) {
-                    Button(
-                        onClick = viewModel::fetchOverview,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F172A), contentColor = AccentCyan),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorderColor),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("⟳ Sync Feeds", fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                    }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MatrixGreen.copy(alpha = 0.14f))
+                                    .border(1.dp, MatrixGreen.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AppIcon(
+                                    icon = AppIconType.SimCard,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MatrixGreen
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Physical SIM Hardware Relay",
+                                    color = SlateTextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Inspect local Android GSM dispatcher node",
+                                    color = SlateTextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
 
-                    Button(
-                        onClick = onNavigateToUsers,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F172A), contentColor = AccentCyan),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorderColor),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("◉ View Users", fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                        AppIcon(
+                            icon = AppIconType.ChevronRight,
+                            modifier = Modifier.size(16.dp),
+                            tint = SlateTextMuted
+                        )
                     }
                 }
             }

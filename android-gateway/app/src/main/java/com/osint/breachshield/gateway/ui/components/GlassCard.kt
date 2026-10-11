@@ -1,45 +1,61 @@
 package com.osint.breachshield.gateway.ui.components
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.osint.breachshield.gateway.ui.theme.GlassBorderColor
-import com.osint.breachshield.gateway.ui.theme.GlassSurfaceColor
+import com.osint.breachshield.gateway.ui.theme.*
 
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(22.dp),
-    backgroundColor: Color = GlassSurfaceColor,
-    borderColor: Color = GlassBorderColor,
+    shape: Shape = RoundedCornerShape(24.dp),
+    backgroundColor: Color = LiquidGlassFillRegular,
+    borderColor: Color? = null,
+    borderBrush: Brush = LiquidGlassSpecularBorder,
     borderWidth: Dp = 1.dp,
+    elevation: Dp = 8.dp,
+    hasSheen: Boolean = true,
+    padding: PaddingValues = PaddingValues(18.dp),
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val cardModifier = if (onClick != null) {
-        modifier.clickable(onClick = onClick)
+    val effectiveBorderBrush = if (borderColor != null) {
+        Brush.verticalGradient(
+            listOf(
+                borderColor.copy(alpha = 0.85f),
+                borderColor.copy(alpha = 0.35f)
+            )
+        )
     } else {
-        modifier
+        borderBrush
     }
 
-    Surface(
-        modifier = cardModifier,
-        shape = shape,
-        color = backgroundColor,
-        border = BorderStroke(borderWidth, borderColor),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp
-    ) {
+    val glassModifier = modifier
+        .liquidGlass(
+            shape = shape,
+            fillColor = backgroundColor,
+            borderBrush = effectiveBorderBrush,
+            borderWidth = borderWidth,
+            elevation = elevation,
+            hasSheen = hasSheen
+        )
+        .run {
+            if (onClick != null) {
+                tactilePress(onClick = onClick)
+            } else {
+                this
+            }
+        }
+
+    Box(modifier = glassModifier) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier.padding(padding),
             content = content
         )
     }
