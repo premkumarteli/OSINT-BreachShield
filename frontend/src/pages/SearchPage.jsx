@@ -92,6 +92,9 @@ export default function SearchPage() {
 
       const res = await api.post('/api/auth/send-otp', payload);
       if (res.data && res.data.success === true) {
+        // Clear stale verified state when a new identifier is submitted
+        sessionStorage.removeItem('osint_token');
+        sessionStorage.removeItem('osint_verified_email');
         const storedTarget = isPhoneType ? cleanTarget.replace(/[\s-]/g, '') : cleanTarget.toLowerCase();
         sessionStorage.setItem('osint_target_email', storedTarget);
         sessionStorage.setItem('osint_target_type', identifierType);

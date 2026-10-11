@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import LandingPage from './pages/LandingPage';
 import SearchPage from './pages/SearchPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
+import ScanningPage from './pages/ScanningPage';
 import ResultsPage from './pages/ResultsPage';
 
 export function VerifyOtpRedirect() {
@@ -18,6 +19,7 @@ export default function AppRouter() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/verify" element={<VerifyOtpPage />} />
         <Route path="/verify-otp" element={<VerifyOtpRedirect />} />
+        <Route path="/scanning" element={<ScanningPage />} />
         <Route path="/results" element={<ResultsPage />} />
         {/* Wildcard fallback redirects unknown routes directly to / */}
         <Route path="*" element={<Navigate to="/" replace />} />

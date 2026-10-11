@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import AppRouter from './AppRouter';
 import SearchPage from './pages/SearchPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
+import ScanningPage from './pages/ScanningPage';
 import ResultsPage from './pages/ResultsPage';
 import BreachTimeline from './components/BreachTimeline';
 import api from './lib/api';
@@ -18,7 +19,7 @@ beforeEach(() => {
 });
 
 describe('Adversarial Verification: Route Guards and Fallbacks', () => {
-  test('Requirement 1: Unverified direct visit to /results redirects immediately to /', () => {
+  test('Requirement 1: Unverified direct visit to /results redirects immediately to / or /search', () => {
     // Ensure no session storage or auth tokens
     sessionStorage.clear();
 
@@ -26,6 +27,7 @@ describe('Adversarial Verification: Route Guards and Fallbacks', () => {
       <MemoryRouter initialEntries={['/results']}>
         <Routes>
           <Route path="/" element={<div data-testid="root-landing">Search Landing Page</div>} />
+          <Route path="/search" element={<div data-testid="root-landing">Search Landing Page</div>} />
           <Route path="/results" element={<ResultsPage />} />
         </Routes>
       </MemoryRouter>
@@ -35,11 +37,12 @@ describe('Adversarial Verification: Route Guards and Fallbacks', () => {
     expect(screen.queryByText(/Target Intelligence/i)).not.toBeInTheDocument();
   });
 
-  test('Requirement 1 Edge Case: /results with email but verified=false in state redirects to /', () => {
+  test('Requirement 1 Edge Case: /results with email but verified=false in state redirects to / or /search', () => {
     render(
       <MemoryRouter initialEntries={[{ pathname: '/results', state: { email: 'test@victim.com', verified: false } }]}>
         <Routes>
           <Route path="/" element={<div data-testid="root-landing">Search Landing Page</div>} />
+          <Route path="/search" element={<div data-testid="root-landing">Search Landing Page</div>} />
           <Route path="/results" element={<ResultsPage />} />
         </Routes>
       </MemoryRouter>
@@ -250,7 +253,7 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
       expect(resendBtn.textContent).toMatch(/Resend in \d+s/);
     });
 
-    test('successful verify-otp stores token & verified status and redirects to /results', async () => {
+    test('successful verify-otp stores token & verified status and redirects to /scanning', async () => {
       sessionStorage.setItem('osint_target_email', 'bob@defense.gov');
       api.post.mockResolvedValueOnce({
         data: {
@@ -265,7 +268,7 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
         <MemoryRouter initialEntries={['/verify-otp']}>
           <Routes>
             <Route path="/verify-otp" element={<VerifyOtpPage />} />
-            <Route path="/results" element={<div data-testid="results-screen">Results Loaded</div>} />
+            <Route path="/scanning" element={<div data-testid="scanning-screen">Scanning Screen</div>} />
           </Routes>
         </MemoryRouter>
       );
@@ -283,14 +286,16 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
         });
         expect(sessionStorage.getItem('osint_token')).toBe('jwt_mock_token_xyz');
         expect(sessionStorage.getItem('osint_verified_email')).toBe('bob@defense.gov');
-        expect(screen.getByTestId('results-screen')).toBeInTheDocument();
+        expect(screen.getByTestId('scanning-screen')).toBeInTheDocument();
       });
     });
   });
 
   describe('Page 3: ResultsPage & BreachTimeline', () => {
-    test('redirects to /verify-otp if search API returns 403 Forbidden', async () => {
+    test('redirects to /verify if search API returns 403 Forbidden', async () => {
+      sessionStorage.setItem('osint_target_email', 'charlie@hacker.io');
       sessionStorage.setItem('osint_verified_email', 'charlie@hacker.io');
+      sessionStorage.setItem('osint_token', 'jwt_test_token');
 
       api.post.mockRejectedValueOnce({
         response: {
@@ -300,9 +305,9 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
       });
 
       render(
-        <MemoryRouter initialEntries={['/results']}>
+        <MemoryRouter initialEntries={['/scanning']}>
           <Routes>
-            <Route path="/results" element={<ResultsPage />} />
+            <Route path="/scanning" element={<ScanningPage />} />
             <Route path="/verify" element={<div data-testid="verify-redirect">Verify OTP Required</div>} />
             <Route path="/verify-otp" element={<div data-testid="verify-redirect">Verify OTP Required</div>} />
           </Routes>
@@ -361,10 +366,12 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
         }
       };
 
-      api.post.mockResolvedValueOnce({ data: mockData });
+      sessionStorage.setItem('osint_target_email', 'alice@corp.internal');
+      sessionStorage.setItem('osint_verified_email', 'alice@corp.internal');
+      sessionStorage.setItem('osint_token', 'token-123');
 
       render(
-        <MemoryRouter initialEntries={['/results']}>
+        <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: mockData.data } }]}>
           <Routes>
             <Route path="/results" element={<ResultsPage />} />
           </Routes>
@@ -399,20 +406,16 @@ describe('Adversarial Verification: 3-Page Flow & Component State Transitions', 
       sessionStorage.setItem('osint_target_email', 'charlie@hacker.io');
       sessionStorage.setItem('osint_token', 'token123');
 
-      api.post.mockResolvedValueOnce({
-        data: {
-          success: true,
-          data: {
-            packets: [{ info: 'Some breach info' }],
-            pagination: { current: 1, total: 1 },
-            analytics: { exposure: { score: 10, riskLevel: 'LOW' }, timeline: [] }
-          }
-        }
-      });
+      const dummyResult = {
+        packets: [{ info: 'Some breach info' }],
+        pagination: { current: 1, total: 1 },
+        analytics: { exposure: { score: 10, riskLevel: 'LOW' }, timeline: [] }
+      };
 
       render(
-        <MemoryRouter initialEntries={['/results']}>
+        <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: dummyResult } }]}>
           <Routes>
+            <Route path="/search" element={<div data-testid="home-page">Search Home</div>} />
             <Route path="/" element={<div data-testid="home-page">Search Home</div>} />
             <Route path="/results" element={<ResultsPage />} />
           </Routes>

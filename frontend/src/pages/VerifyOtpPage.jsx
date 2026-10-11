@@ -71,7 +71,7 @@ export default function VerifyOtpPage() {
           sessionStorage.setItem('osint_token', res.data.token);
         }
         sessionStorage.setItem('osint_verified_email', targetEmail);
-        navigate('/results', { state: { email: targetEmail, verified: true } });
+        navigate('/scanning', { replace: true });
       } else {
         const errorMsg = res.data?.error || 'Invalid verification code.';
         setApiError(errorMsg);
@@ -257,6 +257,8 @@ export default function VerifyOtpPage() {
               onClick={() => {
                 sessionStorage.removeItem('osint_target_email');
                 sessionStorage.removeItem('osint_target_type');
+                sessionStorage.removeItem('osint_token');
+                sessionStorage.removeItem('osint_verified_email');
                 navigate('/search');
               }}
               style={{ fontSize: '14px', color: '#22D3EE', background: 'none', border: 'none', cursor: 'pointer' }}

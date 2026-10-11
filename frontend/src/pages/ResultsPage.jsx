@@ -1,47 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
-import api from '../lib/api';
 import BreachTimeline from '../components/BreachTimeline';
+import { checkProtectedGuard } from '../lib/authGuards';
+import { maskIdentifier } from '../lib/maskIdentifier';
 import '../App.css';
 import '../auth.css';
 import './search_concept.css';
 import '../results.css';
 
 const bgVideo2 = '/bg2.mp4';
-const bgVideo3 = '/bg3.mp4';
-
-const MIN_SCAN_TIME_MS = process.env.NODE_ENV === 'test' ? 0 : 4000;
-
-const SCAN_STEPS = [
-  'Correlating multi-source breach intelligence feeds...',
-  'Scanning dark web dumps, infostealer logs & Telegram channels...',
-  'Cross-referencing compromised credential archives for target...',
-  'Compiling threat assessment & finalizing intelligence report...'
-];
 
 export default function ResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const stateVerified = location.state?.verified !== false;
-  const verifiedEmail = (stateVerified && (location.state?.email || sessionStorage.getItem('osint_verified_email'))) || '';
+  // Guard check: ensures valid session credentials exist
+  const guard = checkProtectedGuard();
+  if (!guard.allow) {
+    return <Navigate to={guard.redirectTo || '/search'} replace />;
+  }
 
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(null);
-  const [error, setError] = useState('');
+  // If state is missing (refresh), redirect to /scanning (replace) to refetch.
+  // Do NOT store breach results in sessionStorage/localStorage.
+  const resultData = location.state?.result;
+  if (!resultData) {
+    return <Navigate to="/scanning" replace />;
+  }
+
+  const verifiedTarget = sessionStorage.getItem('osint_verified_email') || '';
+  const targetType = sessionStorage.getItem('osint_target_type') || (verifiedTarget.includes('@') ? 'email' : 'phone');
+  const maskedTarget = maskIdentifier(verifiedTarget, targetType);
+
   const [viewMode, setViewMode] = useState('timeline');
-  const [redirectVerify, setRedirectVerify] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [scanStep, setScanStep] = useState(0);
-
-  // Cycle through scanning status steps every 2.5s while searching
-  useEffect(() => {
-    if (!loading) return;
-    const interval = setInterval(() => {
-      setScanStep(prev => (prev + 1) % SCAN_STEPS.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [loading]);
 
   // Explicitly ensure page scrolling is unblocked on mount
   useEffect(() => {
@@ -63,83 +54,15 @@ export default function ResultsPage() {
     };
   }, []);
 
-  const [retryTrigger, setRetryTrigger] = useState(0);
-  const activeSearchKeyRef = useRef('');
-  const isMountedRef = useRef(true);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!verifiedEmail) return;
-    const currentKey = `${verifiedEmail}_${retryTrigger}`;
-    if (activeSearchKeyRef.current === currentKey) return;
-    activeSearchKeyRef.current = currentKey;
-
-    async function fetchResults() {
-      setLoading(true);
-      setError('');
-      const startTime = Date.now();
-      let fetchError = null;
-      let fetchResponseData = null;
-
-      try {
-        const token = sessionStorage.getItem('osint_token');
-        const searchType = verifiedEmail.includes('@') ? 'Email' : 'Phone';
-        const payload = { query: verifiedEmail, searchType, osintType: 'MOBILE_OSINT' };
-        if (token) payload.token = token;
-        const res = await api.post('/api/search', payload);
-        if (res.data && res.data.success) {
-          fetchResponseData = res.data.data;
-        } else {
-          fetchError = res.data?.error || 'Failed to retrieve scan results.';
-        }
-      } catch (err) {
-        if (err.response?.status === 403) {
-          if (isMountedRef.current) {
-            sessionStorage.removeItem('osint_verified_email');
-            setRedirectVerify(true);
-          }
-          return;
-        }
-        fetchError = err.code === 'ECONNABORTED' || err.message?.includes('timeout')
-          ? 'Live threat intelligence feed timed out. The upstream Telegram bot took longer than expected to respond.'
-          : (err.response?.data?.error || err.message || 'Error communicating with intelligence feeds.');
-      }
-
-      // Enforce minimum scan time for UI animation
-      const elapsed = Date.now() - startTime;
-      const remaining = Math.max(0, MIN_SCAN_TIME_MS - elapsed);
-      if (remaining > 0) {
-        await new Promise(resolve => setTimeout(resolve, remaining));
-      }
-
-      if (isMountedRef.current) {
-        if (fetchError) {
-          setError(fetchError);
-        } else {
-          setData(fetchResponseData || {});
-        }
-        setLoading(false);
-      }
-    }
-    fetchResults();
-  }, [verifiedEmail, retryTrigger]);
-
-  if (redirectVerify) return <Navigate to="/verify" replace />;
-  if (!verifiedEmail) return <Navigate to="/" replace />;
-
   const handleNewSearch = () => {
     sessionStorage.removeItem('osint_verified_email');
     sessionStorage.removeItem('osint_target_email');
+    sessionStorage.removeItem('osint_target_type');
     sessionStorage.removeItem('osint_token');
-    navigate('/');
+    navigate('/search');
   };
 
+  const data = resultData || {};
   const exposure = data?.analytics?.exposure || { score: 0, riskLevel: 'LOW', riskColor: '#00ff66', breakdown: [], entities: {} };
   const timelineEvents = data?.analytics?.timeline || [];
   const packets = data?.packets || [];
@@ -214,9 +137,9 @@ export default function ResultsPage() {
     <div className="concept-page-wrapper results-page-wrapper">
       {/* Background Animated Video: bg3 while scanning/loading, bg2 when report loaded */}
       <video
-        key={loading ? 'scanning-bg' : 'report-bg'}
+        key="report-bg"
         className="concept-bg-video"
-        src={loading ? bgVideo3 : bgVideo2}
+        src={bgVideo2}
         autoPlay
         muted
         loop
@@ -264,72 +187,47 @@ export default function ResultsPage() {
           <h1 className="concept-hero-title results-hero-title">INTELLIGENCE REPORT</h1>
           <div className="results-target-pill">
             <span className="hero-label">TARGET</span>
-            <span className="hero-email">{verifiedEmail}</span>
+            <span className="hero-email">{maskedTarget}</span>
           </div>
         </section>
 
         <div className="results-container">
-        {loading ? (
-          <div className="loading-card scanning-card">
-            {/* Biometric Thumb Icon (Clean, No Black Box, Proportional Size) */}
-            <div className="thumb-scan-container">
-              <div className="thumb-scan-beam" />
-              <svg
-                className="thumb-scan-svg"
-                viewBox="0 0 100 125"
-                fill="none"
-                stroke="#00f0ff"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          {/* Distinct No-Breaches Found State if records/packets are empty or recordCount is 0 */}
+          {records.length === 0 && packets.length === 0 ? (
+            <div className="empty-state no-breaches-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
+              <div className="empty-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🛡️</div>
+              <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#f8fafc', marginBottom: '8px' }}>
+                No Breaches Found
+              </h2>
+              <p style={{ fontSize: '14px', color: '#94a3b8', maxWidth: '440px', margin: '0 auto 24px', lineHeight: 1.5 }}>
+                No compromise records detected for <strong style={{ color: '#22D3EE' }}>{maskedTarget}</strong> across known breach databases or threat intelligence feeds.
+              </p>
+              <button
+                className="search-btn"
+                onClick={handleNewSearch}
+                aria-label="new-search"
+                style={{ minWidth: '140px' }}
               >
-                <path d="M 12 88 C 10 60, 15 32, 30 16 C 42 4, 58 4, 70 16 C 85 32, 90 60, 88 88" />
-                <path d="M 18 95 C 16 70, 20 42, 33 25 C 43 14, 57 14, 67 25 C 80 42, 84 70, 82 95" />
-                <path d="M 24 100 C 22 78, 26 50, 37 34 C 45 23, 55 23, 63 34 C 74 50, 78 78, 76 100" />
-                <path d="M 30 105 C 29 84, 32 60, 41 44 C 47 34, 53 34, 59 44 C 68 60, 71 84, 70 105" />
-                <path d="M 37 108 C 36 90, 39 70, 45 54 C 48 45, 52 45, 55 54 C 61 70, 64 90, 63 108" />
-                <path d="M 43 111 C 43 96, 45 78, 48 64 C 49 58, 51 58, 52 64 C 55 78, 57 96, 57 111" />
-                <path d="M 50 72 L 50 112" />
-                <path d="M 8 78 C 7 62, 10 48, 18 36" />
-                <path d="M 92 78 C 93 62, 90 48, 82 36" />
-                <path d="M 14 105 C 13 95, 12 85, 13 75" />
-                <path d="M 86 105 C 87 95, 88 85, 87 75" />
-              </svg>
-            </div>
-            <div className="loading-text">{SCAN_STEPS[scanStep]}</div>
-            <div className="loading-subtext">Scanning dark web dumps, infostealer logs & entity correlation engines for <strong>{verifiedEmail}</strong></div>
-            <div className="loading-dots"><span>.</span><span>.</span><span>.</span></div>
-          </div>
-        ) : error ? (
-          <div className="error-card">
-            <div className="error-icon">⚠️</div>
-            <div className="error-message">{error}</div>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
-              <button className="search-btn retry-btn" onClick={() => { setError(''); setRetryTrigger(prev => prev + 1); }}>
-                Retry Scan
-              </button>
-              <button className="search-btn" onClick={handleNewSearch} aria-label="new-search">
-                Start New Search
+                Search again
               </button>
             </div>
-          </div>
-        ) : (
-          <>
-            {/* Top Dashboard Grid (Side-by-side on desktop for balanced card sizes) */}
-            <div className="results-top-grid">
-              {/* Risk Score Hero */}
-              <div className="risk-hero" style={{ '--risk-color': exposure.riskColor || '#00ff66' }}>
-                <div className="risk-glow" style={{ background: getRiskGradient(exposure.riskLevel) }}></div>
-                <div className="risk-score-ring" style={{ borderColor: exposure.riskColor || '#00ff66' }}>
-                  <span className="risk-icon">{getRiskIcon(exposure.riskLevel)}</span>
-                  <span className="risk-score-num">{exposure.score}</span>
-                  <span className="risk-score-max">/100</span>
-                </div>
-                <div className="risk-info">
-                  <div className="risk-level-badge" style={{ background: getRiskGradient(exposure.riskLevel) }}>
-                    THREAT LEVEL: {exposure.riskLevel}
+          ) : (
+            <>
+              {/* Top Dashboard Grid (Side-by-side on desktop for balanced card sizes) */}
+              <div className="results-top-grid">
+                {/* Risk Score Hero */}
+                <div className="risk-hero" style={{ '--risk-color': exposure.riskColor || '#00ff66' }}>
+                  <div className="risk-glow" style={{ background: getRiskGradient(exposure.riskLevel) }}></div>
+                  <div className="risk-score-ring" style={{ borderColor: exposure.riskColor || '#00ff66' }}>
+                    <span className="risk-icon">{getRiskIcon(exposure.riskLevel)}</span>
+                    <span className="risk-score-num">{exposure.score}</span>
+                    <span className="risk-score-max">/100</span>
                   </div>
-                  <div className="risk-subtitle">Threat Assessment for <strong>{verifiedEmail}</strong></div>
+                  <div className="risk-info">
+                    <div className="risk-level-badge" style={{ background: getRiskGradient(exposure.riskLevel) }}>
+                      THREAT LEVEL: {exposure.riskLevel}
+                    </div>
+                    <div className="risk-subtitle">Threat Assessment for <strong>{maskedTarget}</strong></div>
                   <div className="entity-chips">
                     {exposure.entities?.hasDocument && (
                       <span className="entity-chip alert-chip">National Document / Aadhaar Exposed</span>
@@ -390,8 +288,12 @@ export default function ResultsPage() {
               >
                 <span className="nav-label">Data</span>
               </button>
-              <button className="view-nav-btn new-search" aria-label="new-search" onClick={handleNewSearch}>
-                <span className="nav-label">New Search</span>
+              <button
+                className="view-nav-btn new-search"
+                aria-label="new-search"
+                onClick={handleNewSearch}
+              >
+                <span className="nav-label">Search again</span>
               </button>
             </div>
 
@@ -484,7 +386,7 @@ export default function ResultsPage() {
                       <div>
                         <h2 className="breach-section-title">Detected Breach Incidents & Compromised Data</h2>
                         <div className="breach-section-sub">
-                          Verified database leaks, dark web spills, and credentials exposing <strong>{verifiedEmail}</strong>
+                          Verified database leaks, dark web spills, and credentials exposing <strong>{maskedTarget}</strong>
                         </div>
                       </div>
                     </div>

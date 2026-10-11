@@ -5,8 +5,10 @@ import AppRouter, { VerifyOtpRedirect } from './AppRouter';
 import LandingPage from './pages/LandingPage';
 import SearchPage from './pages/SearchPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
+import ScanningPage from './pages/ScanningPage';
 import ResultsPage from './pages/ResultsPage';
 import Navbar from './components/Navbar';
+import { maskIdentifier } from './lib/maskIdentifier';
 import api from './lib/api';
 
 jest.mock('./lib/api');
@@ -628,7 +630,7 @@ describe('VerifyOtpPage (/verify and /verify-otp routes)', () => {
       <MemoryRouter initialEntries={['/verify']}>
         <Routes>
           <Route path="/verify" element={<VerifyOtpPage />} />
-          <Route path="/results" element={<div>Verified Results Page</div>} />
+          <Route path="/scanning" element={<div>Scanning Screen</div>} />
         </Routes>
       </MemoryRouter>
     );
@@ -646,13 +648,15 @@ describe('VerifyOtpPage (/verify and /verify-otp routes)', () => {
       });
       expect(sessionStorage.getItem('osint_verified_email')).toBe('target@domain.com');
       expect(sessionStorage.getItem('osint_token')).toBe('mock-jwt-token');
-      expect(screen.getByText('Verified Results Page')).toBeInTheDocument();
+      expect(screen.getByText('Scanning Screen')).toBeInTheDocument();
     });
   });
 
   test('Phase 4: change email/number clears pending keys and navigates to /search', () => {
     sessionStorage.setItem('osint_target_email', 'target@domain.com');
     sessionStorage.setItem('osint_target_type', 'email');
+    sessionStorage.setItem('osint_token', 'token-123');
+    sessionStorage.setItem('osint_verified_email', 'target@domain.com');
 
     render(
       <MemoryRouter initialEntries={['/verify']}>
@@ -668,16 +672,18 @@ describe('VerifyOtpPage (/verify and /verify-otp routes)', () => {
 
     expect(sessionStorage.getItem('osint_target_email')).toBeNull();
     expect(sessionStorage.getItem('osint_target_type')).toBeNull();
+    expect(sessionStorage.getItem('osint_token')).toBeNull();
+    expect(sessionStorage.getItem('osint_verified_email')).toBeNull();
     expect(screen.getByText('Search Screen')).toBeInTheDocument();
   });
 });
 
 describe('ResultsPage (/results route)', () => {
-  test('redirects to / when unverified', () => {
+  test('redirects to /search when unverified', () => {
     render(
       <MemoryRouter initialEntries={['/results']}>
         <Routes>
-          <Route path="/" element={<div>Root Search Page</div>} />
+          <Route path="/search" element={<div>Root Search Page</div>} />
           <Route path="/results" element={<ResultsPage />} />
         </Routes>
       </MemoryRouter>
@@ -686,8 +692,10 @@ describe('ResultsPage (/results route)', () => {
     expect(screen.getByText('Root Search Page')).toBeInTheDocument();
   });
 
-  test('auto-executes search on mount and renders Exposure Score and Breach Timeline', async () => {
+  test('renders Exposure Score and Breach Timeline from location state', async () => {
+    sessionStorage.setItem('osint_target_email', 'victim@domain.com');
     sessionStorage.setItem('osint_verified_email', 'victim@domain.com');
+    sessionStorage.setItem('osint_token', 'valid-token-123');
 
     const mockSearchResponse = {
       success: true,
@@ -721,10 +729,8 @@ describe('ResultsPage (/results route)', () => {
       }
     };
 
-    api.post.mockResolvedValueOnce({ data: mockSearchResponse });
-
     render(
-      <MemoryRouter initialEntries={['/results']}>
+      <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: mockSearchResponse.data } }]}>
         <Routes>
           <Route path="/results" element={<ResultsPage />} />
         </Routes>
@@ -732,11 +738,6 @@ describe('ResultsPage (/results route)', () => {
     );
 
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith('/api/search', {
-        query: 'victim@domain.com',
-        searchType: 'Email',
-        osintType: 'MOBILE_OSINT'
-      });
       // Check Exposure Score
       expect(screen.getByText('75')).toBeInTheDocument();
       expect(screen.getByText(/THREAT LEVEL: HIGH/i)).toBeInTheDocument();
@@ -758,7 +759,9 @@ describe('ResultsPage (/results route)', () => {
   });
 
   test('renders SIMULATED badge and honest details for rule-based heuristic records', async () => {
+    sessionStorage.setItem('osint_target_email', 'victim@domain.com');
     sessionStorage.setItem('osint_verified_email', 'victim@domain.com');
+    sessionStorage.setItem('osint_token', 'valid-token-123');
 
     const mockSearchResponse = {
       success: true,
@@ -783,10 +786,8 @@ describe('ResultsPage (/results route)', () => {
       }
     };
 
-    api.post.mockResolvedValueOnce({ data: mockSearchResponse });
-
     render(
-      <MemoryRouter initialEntries={['/results']}>
+      <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: mockSearchResponse.data } }]}>
         <Routes>
           <Route path="/results" element={<ResultsPage />} />
         </Routes>
@@ -804,5 +805,291 @@ describe('ResultsPage (/results route)', () => {
     await waitFor(() => {
       expect(screen.getByText(/no live feed consulted/i)).toBeInTheDocument();
     });
+  });
+});
+
+describe('Phase 5+6: /scanning, results states, and guards', () => {
+  test('guard redirects: no target -> /search', () => {
+    sessionStorage.clear();
+    render(
+      <MemoryRouter initialEntries={['/scanning']}>
+        <Routes>
+          <Route path="/search" element={<div data-testid="search-screen">Search Screen</div>} />
+          <Route path="/scanning" element={<ScanningPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('search-screen')).toBeInTheDocument();
+  });
+
+  test('guard redirects: target but unverified -> /verify', () => {
+    sessionStorage.setItem('osint_target_email', 'user@domain.com');
+    // no token or verified email
+    render(
+      <MemoryRouter initialEntries={['/scanning']}>
+        <Routes>
+          <Route path="/verify" element={<div data-testid="verify-screen">Verify Screen</div>} />
+          <Route path="/scanning" element={<ScanningPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('verify-screen')).toBeInTheDocument();
+  });
+
+  test('guard redirects: verified for a DIFFERENT identifier -> /verify', () => {
+    sessionStorage.setItem('osint_target_email', 'target@domain.com');
+    sessionStorage.setItem('osint_verified_email', 'other@domain.com');
+    sessionStorage.setItem('osint_token', 'valid-jwt');
+    render(
+      <MemoryRouter initialEntries={['/scanning']}>
+        <Routes>
+          <Route path="/verify" element={<div data-testid="verify-screen">Verify Screen</div>} />
+          <Route path="/scanning" element={<ScanningPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('verify-screen')).toBeInTheDocument();
+  });
+
+  test('verification success lands on /scanning', async () => {
+    sessionStorage.setItem('osint_target_email', 'auth@domain.com');
+    api.post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        token: 'auth-jwt-token',
+        email: 'auth@domain.com',
+        message: 'Verified successfully'
+      }
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/verify-otp']}>
+        <Routes>
+          <Route path="/verify-otp" element={<VerifyOtpPage />} />
+          <Route path="/scanning" element={<div data-testid="scanning-screen">Scanning Screen</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const otpInput = screen.getByLabelText('otp-input');
+    const verifyBtn = screen.getByRole('button', { name: /verify-otp-button/i });
+    fireEvent.change(otpInput, { target: { value: '123456' } });
+    fireEvent.click(verifyBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scanning-screen')).toBeInTheDocument();
+      expect(sessionStorage.getItem('osint_token')).toBe('auth-jwt-token');
+      expect(sessionStorage.getItem('osint_verified_email')).toBe('auth@domain.com');
+    });
+  });
+
+  test('/scanning makes exactly ONE API call under StrictMode', async () => {
+    sessionStorage.setItem('osint_target_email', 'user@strict.com');
+    sessionStorage.setItem('osint_verified_email', 'user@strict.com');
+    sessionStorage.setItem('osint_token', 'jwt-token-strict');
+
+    api.post.mockResolvedValue({
+      data: {
+        success: true,
+        data: { packets: [], records: [] }
+      }
+    });
+
+    render(
+      <React.StrictMode>
+        <MemoryRouter initialEntries={['/scanning']}>
+          <Routes>
+            <Route path="/scanning" element={<ScanningPage />} />
+            <Route path="/results" element={<div>Results Target</div>} />
+          </Routes>
+        </MemoryRouter>
+      </React.StrictMode>
+    );
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('minimum duration (1000ms) respected (tested with fake timers)', async () => {
+    jest.useFakeTimers();
+    sessionStorage.setItem('osint_target_email', 'fast@timer.com');
+    sessionStorage.setItem('osint_verified_email', 'fast@timer.com');
+    sessionStorage.setItem('osint_token', 'jwt-timer-token');
+
+    let resolveApi;
+    const apiPromise = new Promise((resolve) => {
+      resolveApi = resolve;
+    });
+    api.post.mockReturnValueOnce(apiPromise);
+
+    render(
+      <MemoryRouter initialEntries={['/scanning']}>
+        <Routes>
+          <Route path="/scanning" element={<ScanningPage />} />
+          <Route path="/results" element={<div data-testid="results-done">Done</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Resolve API call immediately at t=0
+    resolveApi({ data: { success: true, data: { records: [] } } });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // At 500ms, MIN_SCAN_TIME_MS (1000ms) has not elapsed yet
+    act(() => {
+      jest.advanceTimersByTime(500);
+    });
+    expect(screen.queryByTestId('results-done')).not.toBeInTheDocument();
+
+    // Advance beyond 1000ms
+    act(() => {
+      jest.advanceTimersByTime(600);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('results-done')).toBeInTheDocument();
+    });
+    jest.useRealTimers();
+  });
+
+  test('403 API response redirects to /verify', async () => {
+    sessionStorage.setItem('osint_target_email', 'forbidden@domain.com');
+    sessionStorage.setItem('osint_verified_email', 'forbidden@domain.com');
+    sessionStorage.setItem('osint_token', 'expired-token');
+
+    api.post.mockRejectedValueOnce({
+      response: {
+        status: 403,
+        data: { error: 'You can only search the email/phone you verified.' }
+      }
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/scanning']}>
+        <Routes>
+          <Route path="/scanning" element={<ScanningPage />} />
+          <Route path="/verify" element={<div data-testid="verify-redirect">Verify Screen</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('verify-redirect')).toBeInTheDocument();
+      expect(sessionStorage.getItem('osint_token')).toBeNull();
+      expect(sessionStorage.getItem('osint_verified_email')).toBeNull();
+    });
+  });
+
+  test('error state offers retry and back to search', async () => {
+    sessionStorage.setItem('osint_target_email', 'retry@domain.com');
+    sessionStorage.setItem('osint_verified_email', 'retry@domain.com');
+    sessionStorage.setItem('osint_token', 'valid-token');
+
+    api.post.mockRejectedValueOnce(new Error('Network connection dropped'));
+
+    render(
+      <MemoryRouter initialEntries={['/scanning']}>
+        <Routes>
+          <Route path="/scanning" element={<ScanningPage />} />
+          <Route path="/search" element={<div data-testid="search-screen">Search Screen</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Network connection dropped/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    });
+
+    // Retry resets guard and fires request again
+    api.post.mockResolvedValueOnce({
+      data: { success: true, data: { records: [] } }
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('results refresh without state redirects to /scanning', () => {
+    sessionStorage.setItem('osint_target_email', 'user@domain.com');
+    sessionStorage.setItem('osint_verified_email', 'user@domain.com');
+    sessionStorage.setItem('osint_token', 'valid-token');
+
+    render(
+      <MemoryRouter initialEntries={['/results']}>
+        <Routes>
+          <Route path="/results" element={<ResultsPage />} />
+          <Route path="/scanning" element={<div data-testid="scanning-screen">Scanning Refetch Screen</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('scanning-screen')).toBeInTheDocument();
+  });
+
+  test('no-breaches state rendered when records and packets are empty', () => {
+    sessionStorage.setItem('osint_target_email', 'clean@domain.com');
+    sessionStorage.setItem('osint_verified_email', 'clean@domain.com');
+    sessionStorage.setItem('osint_token', 'valid-token');
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: { records: [], packets: [], analytics: { exposure: { score: 0 } } } } }]}>
+        <Routes>
+          <Route path="/results" element={<ResultsPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('No Breaches Found')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /new-search/i })).toBeInTheDocument();
+  });
+
+  test('full identifier is absent from results DOM (only masked appears)', () => {
+    sessionStorage.setItem('osint_target_email', 'secret.person@defense.gov');
+    sessionStorage.setItem('osint_verified_email', 'secret.person@defense.gov');
+    sessionStorage.setItem('osint_token', 'valid-token');
+
+    const { container } = render(
+      <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: { records: [{ id: '1', title: 'Test Breach', year: '2024', dataClasses: ['EMAIL'] }], packets: [], analytics: { exposure: { score: 20 } } } } }]}>
+        <Routes>
+          <Route path="/results" element={<ResultsPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Full unmasked identifier must NOT be present anywhere in DOM
+    expect(container.textContent).not.toContain('secret.person@defense.gov');
+    // Masked identifier must be present
+    expect(container.textContent).toContain(maskIdentifier('secret.person@defense.gov'));
+  });
+
+  test('"Search again" button clears all osint_* keys and goes to /search', () => {
+    sessionStorage.setItem('osint_target_email', 'test@domain.com');
+    sessionStorage.setItem('osint_target_type', 'EMAIL');
+    sessionStorage.setItem('osint_verified_email', 'test@domain.com');
+    sessionStorage.setItem('osint_token', 'valid-token');
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/results', state: { result: { records: [], packets: [], analytics: { exposure: { score: 0 } } } } }]}>
+        <Routes>
+          <Route path="/results" element={<ResultsPage />} />
+          <Route path="/search" element={<div data-testid="search-screen">Search Screen</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const searchAgainBtn = screen.getByRole('button', { name: /new-search/i });
+    fireEvent.click(searchAgainBtn);
+
+    expect(sessionStorage.getItem('osint_target_email')).toBeNull();
+    expect(sessionStorage.getItem('osint_target_type')).toBeNull();
+    expect(sessionStorage.getItem('osint_verified_email')).toBeNull();
+    expect(sessionStorage.getItem('osint_token')).toBeNull();
+    expect(screen.getByTestId('search-screen')).toBeInTheDocument();
   });
 });
