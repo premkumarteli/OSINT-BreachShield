@@ -12,7 +12,7 @@ figures_dir = r'C:\Users\prem\OSINT-breach-Finder-main\docs\final paper\figures'
 
 doc = docx.Document()
 
-# Base IEEE A4 geometry
+# IEEE A4 Geometry
 sec0 = doc.sections[0]
 sec0.page_width = Inches(8.27)
 sec0.page_height = Inches(11.69)
@@ -37,14 +37,14 @@ p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p_title.paragraph_format.space_before = Pt(0)
 p_title.paragraph_format.space_after = Pt(4)
 p_title.paragraph_format.line_spacing = 1.05
-set_run(p_title, "BreachShield: A Privacy-Preserving OSINT Breach Intelligence Platform with k-Anonymous Search and Blockchain-Anchored Audit Logging", size=Pt(19), bold=True)
+set_run(p_title, "BreachShield: A Privacy-Preserving OSINT Breach Intelligence Platform — Design, Verified Capabilities, and a Multi-Stage Audit of AI-Assisted Development Claims", size=Pt(18), bold=True)
 
 # Footnote banner
 p_foot = doc.add_paragraph()
 p_foot.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p_foot.paragraph_format.space_before = Pt(0)
 p_foot.paragraph_format.space_after = Pt(8)
-set_run(p_foot, "*This paper documents the design, engineering implementation, and empirical evaluation of Major Project Phase II (Course Code: BIS786) by Batch 05, Department of Information Science and Engineering, Acharya Institute of Technology, affiliated with Visvesvaraya Technological University (VTU), Belagavi, Karnataka, India.", size=Pt(8.0), italic=True)
+set_run(p_foot, "*This paper documents the design, verified engineering implementation, and empirical audit methodology of Major Project Phase II (Course Code: BIS786) by Batch 05, Department of Information Science and Engineering, Acharya Institute of Technology, affiliated with Visvesvaraya Technological University (VTU), Belagavi, Karnataka, India.", size=Pt(8.0), italic=True)
 
 # Authors Table (borderless, 2 rows x 3 columns)
 table_auth = doc.add_table(rows=2, cols=3)
@@ -96,7 +96,7 @@ for row in table_auth.rows:
     for cell in row.cells:
         remove_cell_borders(cell)
 
-# Transition to 2-column layout for body
+# Two-column section for body
 sec1 = doc.add_section(WD_SECTION.CONTINUOUS)
 sec1.page_width = Inches(8.27)
 sec1.page_height = Inches(11.69)
@@ -213,7 +213,7 @@ def add_styled_table(title, headers, rows):
             p.paragraph_format.space_after = Pt(1)
             set_run(p, str(val), size=Pt(8.0))
             
-    # Set standard IEEE borders (top, header bottom, table bottom)
+    # Standard IEEE borders
     tblPr = t._tbl.tblPr
     for b in tblPr.xpath('./w:tblBorders'):
         tblPr.remove(b)
@@ -246,319 +246,214 @@ def add_callout_box(title, text_lines):
     tcPr.append(shd)
     tcPr.append(borders)
 
-print("Writing document content...")
+print("Writing document content from BreachShield_IEEE_Paper_v2...")
 
 # Abstract and Keywords
-add_abstract("Breach-checking services face a structural privacy tension: to determine whether a personal identifier has been compromised, users are conventionally required to submit that identifier in plaintext to a remote server, transforming protective tooling into a vector for query surveillance. This paper presents BreachShield, an open-source intelligence (OSINT) breach detection and dark web intelligence platform that resolves this tension through a client-side k-anonymity search protocol based on 20-bit SHA-256 prefix disclosure. The platform integrates a dual-channel out-of-band one-time password (OTP) identity gate, a pluggable multi-source OSINT aggregation registry, a dynamically computed regex-based exposure risk-scoring engine, a gradient-boosted breach severity classifier (XGBoost, achieving 89.2% accuracy on 1,034 curated breach records), and a Merkle-tree-batched audit log anchored to a local Ethereum Virtual Machine (EVM) smart contract. Automated verification confirms full passes across 101 backend tests and 50 frontend component tests, while a live pretrained URL-transformer classifier operates concurrently on the production search path. We provide an exact architectural description based on real class structures and call flows, deliver a comparative benchmark of tree-based against neural architectures for breach triage, and report an unvarnished audit of current engineering limitations and scheduled remediations.")
+add_abstract("Breach-checking and dark-web exposure monitoring services face a structural privacy paradox: to learn whether an identifier has been compromised, users are typically asked to submit that identifier, in the clear, to a third-party server. This paper presents BreachShield, a privacy-preserving OSINT breach intelligence platform built across two academic project phases, and reports its capabilities as established through live, reproducible verification rather than as originally specified. The platform implements a client-side k-anonymity search protocol (5-hex-character SHA-256 prefix disclosure), a dual-channel out-of-band OTP identity gate, a pluggable OSINT source registry including a live Telegram scraper, a gradient-boosted breach-severity classifier (XGBoost, 89.2% test accuracy on 1,034 curated records), and a Merkle-tree-batched audit log anchored to a local EVM smart contract. Because substantial portions of the codebase were produced with AI coding-agent assistance, the development team adopted an explicit policy: no capability claim was retained in this paper without independent, live re-verification, carried out in three stages – dual independent audit, live cross-checking against running system behaviour, and independent third-party reproduction. This process both confirmed genuine results (a fully deterministic, checkpoint-loaded severity classifier; 101/101 backend and 50/50 frontend tests passing; a working live phishing-URL classifier) and surfaced fabricated or non-functional claims introduced during development (an unrelated, uncheckpointed comparison model set; a blockchain auto-deploy path that fails on a missing credential; and, separately, a set of latency figures and literature citations that were never measured or verified but had been written directly into paper-generation scripts). We report both the verified system and the audit methodology that distinguished it from what had merely been claimed.")
 
-add_keywords("OSINT, breach intelligence, dark web monitoring, k-anonymity, XGBoost, blockchain audit log, tamper-evident logging, phishing detection.")
+add_keywords("breach intelligence, k-anonymity, OSINT, blockchain audit log, XGBoost, verification methodology, AI-assisted software engineering.")
 
 # Section I
 add_h1("I. Introduction")
-add_body("The rapid proliferation of digital services and identity-linked platforms has coincided with an unprecedented surge in corporate data disclosures, credential leaks, and illicit commercial trade across dark web forums and underground communication channels [1]. According to IBM's 2024 Cost of a Data Breach Report, the global average financial impact of an organizational breach reached USD 4.88 million, reflecting a 10% escalation over the previous year, with stolen or compromised credentials remaining the most prevalent attack vector, accounting for 16% of all studied security breaches [17].")
-add_body("In response to this expanding threat landscape, consumer and enterprise breach-notification utilities have emerged as primary defensive mechanisms. However, contemporary compromise-checking infrastructure remains predominantly reactive and structurally flawed from a privacy perspective. To query whether an email address, telephone number, or national identity token appears within known exposure catalogs, end users are typically forced to transmit the raw target identifier in plaintext across the network to a centralised third-party repository. This operational model transforms what is intended as a security audit into an acute privacy liability: the querying service gains visibility into the sensitive identifiers an investigator or individual is actively monitoring, creating single points of forensic surveillance and correlation risk.")
-add_body("To address these vulnerabilities, this paper introduces BreachShield, an end-to-end, privacy-preserving OSINT breach intelligence and threat detection platform developed across Project Phase 1 (conceptual formulation, system requirements, and baseline architectural design) and Project Phase 2 (production-level implementation, multi-tier orchestration, and rigorous empirical validation) at the Department of Information Science and Engineering, Acharya Institute of Technology. Whereas the initial Phase 1 conceptual scope envisioned an expansive suite encompassing client browser filtering, general vulnerability scanning, and public threat feeds, Phase 2 engineering strategically narrowed focus to a defensible, mathematically grounded core: eliminating server-side query surveillance via client-side k-anonymity prefix partitioning, enforcing strict identity accountability through an out-of-band carrier SMS/email gate, providing transparent multi-source OSINT correlation, and establishing a tamper-evident audit trail anchored cryptographically to an EVM smart contract.")
-add_body("The core scientific and engineering contributions of this work are fourfold:")
-add_bullet("Privacy-Preserving Multi-Tier Architecture: A cohesive four-tier architecture combining client-side k-anonymity range search, out-of-band dual-channel OTP verification, an asynchronous OSINT adapter registry, and a Merkle-batched smart contract audit log, documented according to concrete class structures and operational sequence flows.")
-add_bullet("Dynamic Regex-Driven Risk Scoring: An algorithmic exposure scoring engine that analyzes aggregated multi-source breach corpora using weighted regular expression pattern recognition, cross-record structural correlation, and integrated URL phishing probabilities, eliminating reliance on static lookup heuristics.")
-add_bullet("Empirical Severity Classification Benchmark: A rigorous comparative benchmark evaluating gradient-boosted decision trees (XGBoost) against deep recurrent, convolutional, and self-attention neural architectures across a curated corpus of 1,034 breach records, demonstrating an 89.2% test accuracy and establishing the superiority of tree-based ensembles on tabular breach metadata.")
-add_bullet("Transparent Empirical Verification and Defect Audit: A comprehensive evaluation supported by 101 passing backend tests and 50 passing frontend tests, coupled with a completely transparent, non-fabricated disclosure of current implementation constraints (including an EVM deployer credential issue, unintegrated secondary feeds, and class-imbalance boundaries) and a scheduled remediation roadmap.")
+add_body("The continued growth of online services has been accompanied by a corresponding growth in credential leaks, phishing campaigns, and dark-web trade in compromised personal data [1]. Existing breach-notification tooling is largely reactive: users typically learn of compromise only after an incident is publicly disclosed, and the act of checking exposure itself often requires submitting a raw email address or phone number to a third-party lookup service, converting a protective tool into a potential surveillance point.")
+add_body("This paper documents BreachShield, an OSINT-based breach intelligence platform developed across Project Phase 1 (conceptual design, exploratory literature survey, initial system requirements) and Project Phase 2 (production-oriented implementation) at the Department of Information Science and Engineering, Acharya Institute of Technology. The Phase 1 proposal described a broad cybersecurity suite spanning browser phishing protection, a general vulnerability scanner, third-party threat-feed integration, and blockchain-anchored logging. Phase 2 development concentrated engineering effort on a narrower, more defensible core: eliminating server-side query surveillance through client-side k-anonymity, and establishing a tamper-evident audit trail, while treating machine-learning severity scoring as a rigorously benchmarked but separately-tracked research artifact rather than an unverified production claim.")
+add_body("A second, methodological theme runs through this paper. A significant share of BreachShield’s implementation was produced with AI coding-agent assistance. During development, capability claims were at various points introduced into the codebase, its accompanying documentation, and early paper drafts that did not survive direct verification: an unrelated set of comparison models was, at one stage, believed to be loaded and functioning; a blockchain deployment step was reported as verified when it in fact failed; and a set of literature citations and system-latency figures were found, on inspection, to have been written directly into paper-generation tooling rather than measured or sourced. Rather than omit this from the record, we treat it as a relevant finding: this paper reports what a three-stage, live-verification-first methodology actually confirmed, separately from what had merely been asserted, and we regard the methodology itself as a contribution applicable to any team combining AI-assisted development with academic or peer-reviewed reporting.")
+add_body("The contributions of this paper are:")
+add_bullet("1) A privacy-preserving breach intelligence architecture combining client-side k-anonymity search, dual-channel OTP identity gating, a pluggable multi-source OSINT registry, a benchmarked ML severity classifier, and a Merkle-batched blockchain audit log.")
+add_bullet("2) A three-stage verification methodology – dual independent audit, live cross-checking, and independent third-party reproduction – used to separate verified system behaviour from unverified or fabricated claims prior to publication.")
+add_bullet("3) A transparent, evidence-attached account of which subsystems are verified and reproducible, which were found broken or fabricated and subsequently fixed, and which remain open, together with the specific root causes involved.")
 
 # Section II
 add_h1("II. Related Work")
-add_h2("A. Phishing and Malicious URL Classification")
-add_body("Deep learning architectures applied to lexical and structural URL attributes have received extensive academic focus. Aljofey et al. [1] demonstrated an end-to-end character-level Convolutional Neural Network (CNN) operating on raw URL sequences without requiring manual feature engineering, achieving high detection rates on large-scale web corpora. Sahingoz et al. [2] conducted a comprehensive comparative benchmark of five distinct neural network architectures (ANN, CNN, RNN, BiRNN, and attention-based networks) across approximately five million labeled URLs, identifying CNN models as the superior single-architecture paradigm for localized textual pattern extraction (achieving 98.74% accuracy). These findings directly informed BreachShield's dual-model strategy: deploying a pretrained transformer-based URL classifier (UrlBERT) on the active search path for real-time lexical inference, while validating a 1D-CNN as the strongest neural baseline in our offline text classification benchmark (Section VII).")
+add_h2("A. Phishing and Malicious-URL Detection")
+add_body("Character- and URL-level deep learning has been widely applied to phishing detection. Aljofey et al. [1] proposed a character-level CNN operating directly on raw URL strings, avoiding hand-engineered lexical features. Sahingoz et al. [2] benchmarked five deep architectures (ANN, CNN, RNN, BiRNN, attention networks) across roughly five million labelled URLs, reporting CNNs as the strongest performer for URL-only classification. These results motivate BreachShield’s use of a pretrained URL-transformer classifier (UrlBERT) on the live search path, rather than a hand-built lexical model.")
 
-add_h2("B. Mitigating Class Imbalance in Cybersecurity")
-add_body("Cybersecurity threat catalogs inherently suffer from severe class imbalance, where catastrophic or critical security incidents represent a small fraction of observed events relative to minor infractions. Alsubaei et al. [3] demonstrated that incorporating Synthetic Minority Over-sampling Technique (SMOTE) within a hybrid deep-learning framework improved classification accuracy from 83% to 98% across sparse threat distributions. This empirical precedent is directly relevant to BreachShield's severity triage, where the highest-severity classification tier represents an inherently scarce subset of the training corpus (Section X).")
+add_h2("B. Handling Class Imbalance in Security Classification")
+add_body("Severity and threat-classification datasets are frequently imbalanced toward common, lower-severity classes. Alsubaei et al. [3] report that applying SMOTE to a hybrid deep-learning phishing classifier improved accuracy from 83% to 98% on their benchmark, a result we return to in Section X when discussing BreachShield’s own CRITICAL-tier class-imbalance limitation.")
 
-add_h2("C. Explainable and Few-Shot Threat Intelligence")
-add_body("The operational adoption of automated threat triage depends critically on model interpretability. Pavani et al. [4] applied SHapley Additive exPlanations (SHAP) and Local Interpretable Model-agnostic Explanations (LIME) to malicious URL classifiers, establishing that transparent feature attribution significantly improves security analysts' triage efficiency compared to uncalibrated confidence scores. Similarly, Tawfik et al. [5] addressed emerging threat campaigns through few-shot learning with BERT-derived embeddings, showing that compact, high-dimensional textual representations can deliver robust generalizability even when labeled incident data is constrained.")
+add_h2("C. Explainability and Few-Shot Detection")
+add_body("Pavani et al. [4] apply SHAP and LIME to malicious-URL classifiers to produce human-interpretable feature attributions, motivating our own use of per-model probability breakdowns rather than a single opaque severity score. Tawfik et al. [5] demonstrate few-shot BERT-based detection for emerging phishing campaigns with limited labelled data, a regime closely analogous to BreachShield’s 1,034-record breach-severity dataset.")
 
-add_h2("D. OSINT and Underground Dark Web Monitoring")
-add_body("Systematic extraction of intelligence from illicit digital forums involves distinct operational hurdles. Kühn et al. [6] performed an extensive empirical evaluation of manual and semi-automated dark web collection techniques, contrasting the high intelligence yield of closed chat channels with the severe API and rate-limiting barriers of decentralized platforms. Saleem et al. [15] surveyed the technical topology of hidden services, while Pastor-Galindo et al. [16] reviewed the broader OSINT tooling ecosystem, highlighting that modern threat intelligence platforms must decouple transport adapters from scoring engines to maintain continuous operation when external feeds experience disruption.")
+add_h2("D. OSINT and Dark-Web Threat Intelligence")
+add_body("Kühn et al. [6] provide a recent (2024) systematic evaluation of manual and semi-automated dark-web monitoring methodology, documenting both the intelligence value and the practical collection constraints of forum- and channel-based sources – constraints closely mirrored by BreachShield’s own migration from commercial threat-feed APIs (rate-limited, delayed disclosure) to a direct Telegram-channel scraper, discussed in Section III.")
 
-add_h2("E. Cryptographic Integrity and Blockchain-Backed Logging")
-add_body("Merkle's classic cryptographic hash-tree construction [11] and Crosby and Wallach's append-only history trees [12] provide the foundational basis for tamper-evident data structures that guarantee log consistency with logarithmic proof overhead. Recently, Arabnouri et al. [7] formulated a checkpoint-based blockchain audit architecture that accumulates and batches system access events over configurable intervals before committing state roots to a distributed ledger, substantially amortizing transaction costs. BreachShield implements an analogous hybrid size-and-time Merkle flush mechanism (Section VIII), bridging local cryptographic chaining with on-chain immutability.")
+add_h2("E. Tamper-Evident and Blockchain-Backed Audit Logging")
+add_body("Merkle’s original hash-tree construction [11] and Crosby and Wallach’s history-tree design [12] remain the foundational structures for append-only tamper-evident logging with efficient consistency proofs. Arabnouri et al. [7] recently proposed a checkpoint-based blockchain audit log that batches log entries by time interval to reduce on-chain storage – a design goal directly shared by BreachShield’s own Merkle-batching approach (Section VI), though our implementation anchors batches to a local EVM node rather than a public chain, a trade-off discussed in Section X.")
 
-add_h2("F. Privacy-Preserving Compromise Inquiries")
-add_body("Sweeney's formalization of k-anonymity [8] and its practical adaptations by El Emam and Dankar [13] define the fundamental mathematical framework for query obfuscation. In the domain of credential compromise checking, Li et al. [9] presented a formal cryptanalytic evaluation of prefix-bucket protocols alongside advanced Private Set Intersection (PSI) constructions. Their analysis demonstrated that while prefix disclosure provides robust privacy against passive network eavesdroppers, the operational integration of authentication gates introduces subtle identity-linkage trade-offs (Section IV).")
+add_h2("F. Privacy-Preserving Compromise Checking")
+add_body("Sweeney’s k-anonymity model [8] and its application to health data by El Emam and Dankar [13] establish the general privacy guarantee BreachShield’s search protocol relies on. Li et al. [9] give the first rigorous security analysis of prefix-based compromised-credential-checking protocols of the kind popularised by HIBP Pwned Passwords, and propose stronger private-set-intersection-based alternatives; we discuss why BreachShield retains the simpler prefix-bucket design, and the resulting identity-linkage trade-off introduced by its OTP gate, in Section X.")
 
-add_h2("G. Ensemble Tree Boosting on Tabular Metadata")
-add_body("Chen and Guestrin's XGBoost [10] represents the foundational standard for tree-boosted supervised learning. While deep learning architectures dominate unstructured audio, visual, and sequential natural language processing, extensive empirical benchmarks by Grinsztajn et al. [14] across forty-five diverse datasets established that gradient-boosted decision trees consistently outperform deep neural networks on tabular datasets, owing to their invariance to uninformative features and superior handling of non-smooth decision boundaries.")
+add_h2("G. Gradient-Boosted Classification and Tabular Data")
+add_body("Chen and Guestrin’s XGBoost [10] is the classifier underlying BreachShield’s severity triage. Its strong performance relative to deep architectures on BreachShield’s tabular breach-metadata is consistent with the broader empirical finding of Grinsztajn et al. [14], who show tree-based models remain state-of-the-art on medium-sized tabular datasets (their benchmark spans datasets in a similar order-of-magnitude range to BreachShield’s 1,034 records) due to neural networks’ bias toward overly smooth decision functions and sensitivity to uninformative features – both plausible explanations for the gap observed in Table III.")
 
-add_styled_table("TABLE I: Related Work Summary and Architectural Positioning",
-    ["Area", "Relation to BreachShield"],
+add_styled_table("TABLE I: RELATED WORK SUMMARY AND RELATION TO BREACHSHIELD",
+    ["Area", "Relation to this work"],
     [
-        ["URL / Phishing DL [1], [2]", "Direct inspiration for search-path UrlBERT and 1D-CNN baseline benchmark."],
-        ["Explainable Threat AI [4], [5]", "Mandates multi-factor probability breakdowns over monolithic opaque metrics."],
-        ["Dark Web OSINT [6], [15], [16]", "Motivates decoupled adapter design and mutex-locked asynchronous Telegram scraping."],
-        ["Cryptographic Audit [7], [11], [12]", "Informs hybrid count/time Merkle-batching anchored to Solidity smart contracts."],
-        ["k-Anonymity Protocols [8], [9], [13]", "Establishes mathematical framework for 20-bit SHA-256 prefix range partitioning."],
-        ["Tabular ML vs. DL [10], [14]", "Validates XGBoost superiority over RNN and Transformer models on breach metadata."]
-    ]
-)
-
-add_styled_table("TABLE II: Design Comparison Between BreachShield and Related Works",
-    ["Dimension", "Conventional Approach", "BreachShield Platform"],
-    [
-        ["Query Privacy", "Plaintext target transmitted to API server", "Client-side SHA-256 with 20-bit prefix range query (k-anonymity)"],
-        ["Identity Verification", "Captcha or open unauthenticated access", "Carrier-compliant DLT SMS / SMTP OTP with signed 1-hour JWT session"],
-        ["OSINT Ingestion", "Rigid, synchronous external API bindings", "Pluggable adapter registry with Promise.allSettled concurrency"],
-        ["Severity Triage", "Uncalibrated heuristic rule tables", "XGBoost classifier (89.2% test accuracy) trained on 1,034 curated records"],
-        ["Audit Logging", "Ephemeral database tables or flat files", "Canonical JSON hashing, Merkle-tree batching, and EVM smart-contract anchor"]
+        ["URL/phishing DL [1], [2]", "Motivates BreachShield’s pretrained URL-transformer classifier"],
+        ["Class imbalance [3]", "Directly relevant to BreachShield’s CRITICAL-tier data scarcity (Sec. X)"],
+        ["Explainability [4], [5]", "Motivates per-model probability reporting over a single opaque score"],
+        ["Dark-web OSINT [6]", "Parallels BreachShield’s move to direct channel scraping"],
+        ["Blockchain audit logs [7], [11], [12]", "Foundational structure and a recent, closely related batching design"],
+        ["k-anonymity / CCC [8], [9], [13]", "Direct theoretical basis; protocol-security analysis and stronger alternatives"],
+        ["Tabular ML [10], [14]", "Explains XGBoost’s margin over deep models"]
     ]
 )
 
 # Section III
 add_h1("III. System Architecture")
-add_h2("A. Design Goals and Non-Functional Requirements")
-add_body("The design of BreachShield balances strict security guarantees against practical usability across four primary non-functional requirements:")
-add_bullet("Query Confidentiality: Raw search targets (email addresses, phone numbers, identity credentials) must never be transmitted across the network in plaintext, nor revealed in full hash form to the gateway.")
-add_bullet("Tamper-Evident Accountability: All system queries and security events must generate verifiable, immutable cryptographic proofs anchored to an independent consensus ledger.")
-add_bullet("Graceful Fault Tolerance: Network timeouts, API rate limits, or connectivity failures in individual OSINT threat sources must not interrupt the primary search pipeline or crash the API gateway.")
-add_bullet("Strict Multi-Tenant Access Control: Unauthorized bots and automated mass-harvesting crawlers must be blocked from exhaustively enumerating breach records.")
+add_body("BreachShield is organised as a four-tier monorepo: a React 19 frontend, an Express 5 API gateway, a Python FastAPI OSINT microservice, and an Android Kotlin SMS relay gateway, illustrated in Fig. 1.")
+add_figure("fig_architecture.png", "Fig. 1. Four-tier BreachShield architecture. Solid arrows denote live data paths verified by direct endpoint calls.")
 
-add_h2("B. Four-Tier System Topology")
-add_body("BreachShield is structured as a modular, multi-tier monorepo architecture, illustrated in Fig. 1.")
-add_figure("fig_architecture.png", "Fig. 1. Four-tier BreachShield system architecture: React frontend, Express API gateway, Python OSINT scraper, and Android SMS gateway.")
-add_body("The primary operational tiers comprise:")
-add_bullet("Frontend Web Dashboard (frontend/): Built on React 19, this tier provides a Cyberpunk-styled Heads-Up Display (HUD) terminal interface. It interfaces with the W3C Web Crypto API to execute cryptographic hashing locally before initiating any outbound network traffic.")
-add_bullet("Backend API Gateway (backend/): An Express 5 service running on Node.js that orchestrates identity verification, manages bcrypt-hashed OTP states, issues signed JSON Web Tokens (JWTs), executes dynamic risk evaluation, and coordinates Merkle audit batching. Storage is backed by MySQL 8.0 with an integrated, automatic file-based JSON failover mechanism that maintains continuous local development if database connectivity drops.")
-add_bullet("OSINT Scraper Engine (scraper/): A Python 3.11 service utilizing the FastAPI framework and the Telethon MTProto library to interact directly with Telegram channels and threat disclosure groups. To resolve database locking exceptions during concurrent requests, the client access layer is serialized using an asyncio.Lock synchronization primitive.")
-add_bullet("Android SMS Gateway (android-gateway/): A native Android application written in Kotlin that establishes a persistent, bi-directional WebSocket connection (/ws/gateway) with the API gateway. The app receives pending OTP dispatch events and transmits carrier-compliant SMS messages formatted to satisfy Indian Telecom Distributed Ledger Technology (DLT) template standards.")
+add_h2("A. Frontend Web Dashboard")
+add_body("A React 19 single-page application performs client-side SHA-256 hashing via the W3C Web Crypto API, so that raw search targets never leave the browser in plaintext.")
 
-add_h2("C. Pluggable Breach-Source Registry")
-add_body("The backend defines a unified abstraction, BreachSource, exposing a standardized asynchronous contract: search(T_norm, H_target) -> R_source, where T_norm is the normalized identifier and H_target is the full hash. Four concrete adapters implement this contract:")
-add_bullet("PublicBreachSource: Queries the verified local database of known public breach records.")
-add_bullet("TelegramScraperSource: Interrogates the active MTProto Telegram microservice for recent dark web dumps and threat feed postings.")
-add_bullet("PhishingFeedSource and ThreatIntelSource: Registered adapter interfaces structured for external commercial feeds, currently configured as non-blocking offline stubs (Section X).")
-add_body("When a search query is dispatched, the gateway executes all registered adapters concurrently via Promise.allSettled, ensuring that slow or unresponsive adapters degrade gracefully without impeding operational responses.")
+add_h2("B. API Gateway")
+add_body("An Express 5 service manages dual-channel OTP issuance and verification, JWT session tokens, a pluggable breach-source registry, and MySQL 8 storage with an automatic JSON-file fallback layer.")
+
+add_h2("C. OSINT Microservice")
+add_body("A Python FastAPI service integrates a Telethon-based Telegram scraper. Concurrent access to the underlying session file previously triggered sqlite3.OperationalError: database is locked under simultaneous asynchronous requests; this was resolved with an asyncio.Lock mutex (8.0 s timeout ceiling) serialising access to the Telegram client.")
+
+add_h2("D. Android SMS Gateway")
+add_body("A companion Kotlin application maintains a persistent WebSocket connection to the backend, relaying OTP codes as carrier-compliant SMS in line with Indian telecom Distributed Ledger Technology (DLT) template requirements – a constraint that silently drops non-conforming payloads and required standardising the SMS template format during development.")
 
 # Section IV
 add_h1("IV. Privacy-Preserving Search Protocol")
-add_h2("A. Mathematical Formulation of Range Search")
-add_body("BreachShield enforces mathematical query confidentiality through a prefix-bucket k-anonymity protocol grounded in Sweeney's theoretical model [8]. Let T represent the arbitrary user identifier. The client first applies a canonical normalization function: T' = lowercase(trim(T)).")
-add_body("Using the browser's native Web Crypto API, the client computes the 256-bit cryptographic digest: H = SHA-256(T') in {0, 1}^256. The 64-character hexadecimal representation of H is partitioned into two disjoint segments: H = P || S, where P = H[0:5] is a 5-hex-character (20-bit) prefix, and S = H[5:64] is the residual 59-hex-character (236-bit) suffix.")
-add_body("The client transmits only the 20-bit prefix P to the API gateway. The total number of possible prefix buckets is |B| = 16^5 = 1,048,576. For a global catalog containing N total compromised records, the expected anonymity set size E[k] per prefix query is E[k] = N / 1,048,576. The mutual information disclosed to the server regarding the exact identifier T is strictly upper-bounded by I(T; P) <= log2(16^5) = 20 bits, regardless of catalog magnitude N.")
+add_body("BreachShield’s search protocol follows the k-anonymity range-query construction popularised by HIBP Pwned Passwords [9] and grounded in Sweeney’s original definition [8]. The client normalises the target identifier T and computes H = SHA-256(normalize(T)), partitioning H into a 20-bit (5-hex-character) prefix P and a 236-bit suffix S. Only P is transmitted; the server returns the bucket B(P) = {(Si, Metadatai) : SHA-256(Ti)[0:5] = P}, and the client performs the final suffix match locally.")
 
 add_callout_box("Algorithm 1: Client-Side k-Anonymity Range Query", [
-    "Require: Target identifier T, Authenticated session token tau",
-    "Ensure: Matched breach metadata set R_match",
-    "1:  T_norm <- lowercase(trim(T))",
-    "2:  H <- WebCrypto.SHA256(T_norm)     // In-browser computation",
-    "3:  P <- H[0:5],  S <- H[5:64]        // 20-bit prefix, 236-bit suffix",
-    "4:  Bucket <- HTTP_GET('/api/v1/range/' + P, Bearer tau)",
-    "5:  R_match <- empty_set",
-    "6:  for each (S_i, Metadata_i) in Bucket do",
-    "7:      if S_i == S then",
-    "8:          R_match <- R_match union {Metadata_i}",
+    "Require: Target identifier T, session token tau",
+    "Ensure: Matched breach metadata R",
+    "1:  T' <- ToLower(Trim(T))",
+    "2:  H <- SHA-256(T')  // computed in-browser",
+    "3:  P <- H[0:5],  S <- H[5:64]",
+    "4:  B <- HTTP GET(/api/search/range/P, Bearer tau)",
+    "5:  R <- empty_set",
+    "6:  for (Si, Mi) in B do",
+    "7:      if Si == S then",
+    "8:          R <- R union {Mi}",
     "9:      end if",
     "10: end for",
-    "11: return R_match"
+    "11: return R"
 ])
 
-add_h2("B. Adversary and Threat Model")
-add_body("The security model of BreachShield considers two distinct adversarial profiles:")
-add_bullet("Passive Network Eavesdropper: An adversary monitoring physical transport traffic observes only TLS-encrypted frames conveying a 5-hexadecimal character prefix and a bearer token. The full hash and raw identifier are never transmitted.")
-add_bullet("Honest-but-Curious Server Operator: The gateway administrator operates the matching infrastructure faithfully but attempts to deduce which specific individual is being investigated. Because the server only receives prefix P, it cannot identify which record within the returned bucket corresponds to the user's inquiry.")
+add_body("With 16^5 = 1,048,576 prefix buckets, a corpus of N records yields an expected anonymity set E[k] = N/1,048,576 per prefix, and the information disclosed to the server is bounded by I(T; P) <= log2(16^5) = 20 bits, independent of N.")
 
-add_h2("C. Gating Trade-Off and Identity Linkage")
-add_body("To protect against automated scraping and denial-of-service degradation, access to the range query endpoint is protected by an out-of-band OTP verification gate. This architectural decision introduces an explicit design trade-off identified by Li et al. [9]: because the user must authenticate via an OTP session prior to issuing range queries, the server establishes a session identity binding with the querying client. While the operator remains mathematically blind to which particular identifier within bucket B(P) matched, the server does know the authenticated identity of the inquirer. This represents a conscious engineering compromise favoring access accountability over absolute unlinkability in academic and enterprise environments.")
+add_h2("A. Search-Gating Trade-off")
+add_body("Search endpoints are additionally gated behind OTP-verified JWT authentication (verifyOtpToken middleware) to prevent automated bucket-harvesting. This introduces a trade-off the k-anonymity guarantee alone does not resolve: the server authenticates the requester before serving a prefix bucket, so while the server never learns which target within a bucket the client is interested in, it does learn who is making the query. Li et al.’s analysis of compromised-credential-checking protocols [9] treats exactly this class of trade-off, and proposes private-set-intersection-based constructions that avoid it entirely at the cost of higher protocol complexity. BreachShield retains the simpler, OTP-gated design as a deliberate scope decision for a multi-tenant platform requiring accountable query logs; Section X discusses this explicitly rather than presenting the k-anonymity guarantee as unconditional.")
 
 # Section V
-add_h1("V. Identity Verification and Dynamic Risk Scoring")
-add_h2("A. Out-of-Band Authentication Flow")
-add_body("Prior to executing a breach search, the user initiates identity validation via /api/auth/send-otp. The gateway enforces a strict 30-second cooldown between requests. A cryptographically secure 6-digit numerical token is generated, hashed with bcrypt (work factor 10), and stored with a 5-minute time-to-live (TTL). The plaintext token is dispatched either via Gmail SMTP (for email targets) or relayed over the Android WebSocket gateway to be broadcast as a transactional SMS.")
-add_body("Upon submission to /api/auth/verify-otp, the backend enforces a maximum threshold of five failed attempts. Upon successful verification, the gateway generates a signed HMAC-SHA256 JWT (1-hour validity) containing the claim verifiedTarget, issued both in the JSON payload and as a Secure HTTP-Only cookie.")
+add_h1("V. Machine Learning Severity Triage")
+add_h2("A. Dataset and Split")
+add_body("The severity classifier is trained on 1,034 curated breach records, partitioned with a stratified 70/15/15 split (train 723, validation 154, test 157; seed 42), summarised in Table II.")
 
-add_figure("fig_merkle_anchoring.png", "Fig. 2. End-to-end execution sequence: OTP authentication, concurrent source querying, dynamic risk evaluation, and Merkle-tree audit anchoring.")
-
-add_h2("B. Dynamic Exposure Risk Engine")
-add_body("Unlike systems that rely on static, hardcoded severity constants, BreachShield evaluates exposure severity dynamically across aggregated textual corpora X. The risk engine executes a weighted regular-expression evaluation across five vulnerability categories, accumulating points subject to strict sub-category ceilings:")
-add_bullet("Identity Documents (C_doc): Aadhaar, passport, PAN, and national ID patterns (up to 35 points).")
-add_bullet("Credential Material (C_pwd): Cleartext passwords, salted hashes, and cryptographic tokens (up to 30 points).")
-add_bullet("Physical Locality (C_addr): Residential addresses, postal codes, and geolocation data (up to 20 points).")
-add_bullet("Telecommunication Records (C_phone): Telephone and mobile numbers (up to 15 points).")
-add_bullet("Multi-Source Dispersion (C_multi): Evidence confirmed across multiple distinct OSINT sources (up to 15 points).")
-add_body("In addition, the engine computes a cross-record structural correlation score (kappa <= 15) and integrates live probability signals from the active UrlBERT transformer classifier (P_phish * 30). The raw aggregate score is bounded within the range [20, 100], and subsequently partitioned into four operational tiers: LOW ([20, 40)), MEDIUM ([40, 70)), HIGH ([70, 90)), and CRITICAL ([90, 100]).")
-
-add_callout_box("Algorithm 2: Dynamic Exposure Risk Scoring", [
-    "Require: Aggregated breach corpus X, AI Phishing result A",
-    "Ensure: Risk Score S in [20, 100], Severity Tier T",
-    "1:  S_raw <- 0",
-    "2:  for each category c in {doc, pwd, addr, phone, multi} do",
-    "3:      w_c <- EvaluateRegexMatches(X, c)",
-    "4:      S_raw <- S_raw + min(w_c, cap[c])",
-    "5:  end for",
-    "6:  kappa <- ComputeCrossCorrelation(X)",
-    "7:  S_raw <- S_raw + min(kappa, 15)",
-    "8:  if A is present then",
-    "9:      S_raw <- S_raw + (A.phishingProb * 30)",
-    "10: end if",
-    "11: S <- min(100, max(20, S_raw))",
-    "12: T <- MapTierThresholds(S)",
-    "13: return S, T"
-])
-
-# Section VI
-add_h1("VI. Data Flow Analysis")
-add_body("Table III traces the exact data transformations occurring throughout a complete inquiry cycle, from in-browser normalization to blockchain anchor verification.")
-
-add_styled_table("TABLE III: End-to-End System Data Flow Pipeline",
-    ["Step", "Pipeline Phase", "Operational Data Transformation"],
-    [
-        ["1", "Input Normalization", "Raw string T -> lowercase, whitespace-trimmed T'."],
-        ["2", "Client Cryptography", "T' -> 256-bit SHA-256 digest H via W3C Web Crypto."],
-        ["3", "Hash Partitioning", "H -> 5-character prefix P and 59-character suffix S."],
-        ["4", "Range Dispatch", "Prefix P -> HTTP GET /api/v1/range/{P} with Bearer JWT."],
-        ["5", "Server Filtering", "Prefix P -> Retrieval of candidate bucket B(P) from storage."],
-        ["6", "Local Verification", "Suffix S -> In-browser matching against B(P) without server exposure."],
-        ["7", "Multi-Source Query", "Target T' -> Asynchronous execution of registered OSINT adapters."],
-        ["8", "Dynamic Scoring", "Text corpus X -> Regex evaluation, correlation, and tier assignment."],
-        ["9", "Canonicalization", "Event record -> Sorted-key canonical JSON -> SHA-256 Merkle leaf."],
-        ["10", "Ledger Anchoring", "Merkle leaves -> Root calculation -> Smart contract transaction."]
-    ]
-)
-
-# Section VII
-add_h1("VII. Machine Learning Severity Triage")
-add_h2("A. Curated Dataset and Stratification")
-add_body("To benchmark automated severity triage, an empirical dataset comprising 1,034 verified historical breach disclosures was curated from the Have I Been Pwned catalog and dark web intelligence archives. Features were extracted across 165 dense dimensions encoding compromised attribute types, breach volume, password hashing methodologies, domain classifications, and historical recurrence. The corpus was partitioned using a stratified 70/15/15 split (random seed 42) into 723 training records, 154 validation records, and 157 held-out testing records, as outlined in Table IV.")
-
-add_styled_table("TABLE IV: Dataset Partitioning and Class Distribution",
-    ["Partition", "Total", "LOW", "MEDIUM", "HIGH", "CRITICAL"],
+add_styled_table("TABLE II: DATASET PARTITION AND CLASS DISTRIBUTION",
+    ["Split", "Total", "LOW", "MEDIUM", "HIGH", "CRITICAL"],
     [
         ["Train (70%)", "723", "49", "341", "291", "42"],
         ["Val (15%)", "154", "10", "73", "62", "9"],
-        ["Test (15%)", "157", "11", "74", "63", "9"],
-        ["Full Corpus", "1,034", "70", "488", "416", "60"]
+        ["Test (15%)", "157", "11", "74", "63", "9"]
     ]
 )
 
-add_h2("B. Model Population Distinction")
-add_body("To maintain complete scientific integrity, an explicit distinction is drawn between two model populations present within the repository:")
-add_bullet("Offline Severity Benchmark Population: A set of trained, persistent model artifacts stored on disk. This population contains our trained XGBoost classifier alongside comparative 1D-CNN, RNN, and Transformer checkpoints. Repeated inferences yield deterministic outputs.")
-add_bullet("Demonstration Models: Lightweight interactive demo models embedded within secondary UI exploration screens that generate synthetic outputs for interface prototyping.")
-add_body("All quantitative metrics reported in this section evaluate strictly the persistent, checkpoint-loaded benchmark population.")
+add_h2("B. Two Distinct Model Populations")
+add_body("BreachShield contains two architecturally similar but functionally distinct CNN/RNN/Transformer populations, a distinction established only through direct source inspection and is stated explicitly here to avoid the ambiguity that arose during this project’s own internal verification process:")
+add_bullet("Severity classifiers (severity_classifier.py): CNN, RNN, and Transformer architectures that load real, trained checkpoints from disk via torch.load/load_state_dict, confirmed deterministic across repeated inference calls and across independent class instantiations. These feed the severity_analysis block of the live /api/ai/analyze-threat endpoint.")
+add_bullet("URL comparison models (cnn_model.py, rnn_model.py, transformer_model.py): a separate set feeding the /api/ai/compare demonstration endpoint. These do not load any checkpoint and produce different output on every instantiation – verified directly, not merely assumed.")
+add_body("All ML results in this paper refer exclusively to the first, checkpoint-loaded population.")
 
-add_h2("C. Comparative Experimental Results")
-add_body("We evaluated four competing machine learning architectures on identical feature representations: XGBoost (Ours: max depth 6, lr 0.1, 100 estimators), 1D-CNN (multi-scale kernels k=3,4,5), Recurrent Neural Network (dual-layer GRU with packed padding and gradient clipping), and Transformer Encoder (2 layers, 4 heads).")
+add_h2("C. Comparative Results")
+add_body("XGBoost [10] (max depth=6, lr=0.1) is compared against a 1D-CNN, a BiLSTM-RNN, and a Transformer encoder, all trained on the same 165-dimensional feature representation (163-dim multi-hot DataClasses vector, log-scaled breach volume, verification flag).")
 
-add_styled_table("TABLE V: Comparative Severity Classification Performance (Test Set N=157)",
-    ["Architecture", "Accuracy", "Macro F1", "Weighted F1"],
+add_styled_table("TABLE III: COMPARATIVE BENCHMARK ON TEST SET (N=157)",
+    ["Model", "Accuracy", "Macro F1", "Weighted F1"],
     [
-        ["Majority Baseline (MED)", "47.1%", "16.0%", "30.2%"],
-        ["RNN (Packed + Clipped)", "44.6%", "34.0%", "46.8%"],
-        ["Transformer (2L / 4H)", "48.4%", "42.9%", "50.8%"],
+        ["Naive baseline (predict MED)", "47.1%", "16.0%", "30.2%"],
+        ["BiLSTM-RNN", "44.6%", "34.0%", "46.8%"],
+        ["Transformer (2L/4H)", "48.4%", "42.9%", "50.8%"],
         ["1D-CNN (k=3,4,5)", "66.2%", "57.2%", "65.7%"],
-        ["XGBoost (Ours)", "89.2%", "83.2%", "89.4%"]
+        ["XGBoost", "89.2%", "83.2%", "89.4%"]
     ]
 )
 
-add_figure("fig_model_comparison.png", "Fig. 3. Comparative severity classification performance across models on held-out test set (N=157).")
+add_figure("fig_model_comparison.png", "Fig. 3. Comparative severity classification benchmark across models on held-out test set (N=157).")
 
-add_body("As presented in Table V and visualized in Fig. 3, XGBoost achieved an overall test accuracy of 89.2% and a Macro F1-score of 83.2%, substantially outperforming all neural network architectures. The 1D-CNN emerged as the most resilient deep learning model (66.2% accuracy), while sequential RNN and Transformer architectures suffered from structural overfitting on the tabular feature space.")
-add_body("Table VI details the per-tier precision, recall, and F1 performance for the benchmarked XGBoost model. Performance remains strong across MEDIUM (91.3% F1) and HIGH (91.8% F1) classes, with misclassifications confined strictly to adjacent severity boundaries.")
+add_body("The gap is consistent with Grinsztajn et al.’s finding that tree-based models retain an advantage on medium-sized tabular data [14]: BreachShield’s DataClasses vocabulary is a sparse, unordered categorical space, for which recurrent and attention architectures impose an artificial sequential or positional bias that tree splits do not.")
 
-add_styled_table("TABLE VI: XGBoost Per-Class Performance on Test Set (N=157)",
-    ["Severity Tier", "Precision", "Recall", "F1-Score", "Test Support (n)"],
-    [
-        ["LOW", "64.3%", "81.8%", "72.0%", "11"],
-        ["MEDIUM", "90.7%", "91.9%", "91.3%", "74"],
-        ["HIGH", "94.9%", "88.9%", "91.8%", "63"],
-        ["CRITICAL*", "77.8%", "77.8%", "77.8%", "9"]
-    ]
-)
+add_h2("D. Production Deployment Status")
+add_body("Despite its strong benchmark performance, the checkpoint-loaded XGBoost severity model is not the production search-path scorer. Production risk scoring is computed by a deterministic, explainable rule-based engine (riskEngine.js) evaluating credential-category sensitivity, source reliability, and breach recency – all confirmed, on direct source inspection, to be genuinely computed from record data rather than fixed constants. XGBoost is retained as a validated research artifact because live OSINT feeds do not reliably supply the complete DataClasses, volume, and verification fields the model’s feature contract requires. Separately, a live pretrained URL-transformer classifier (UrlBERT) is deployed on the actual search path and confirmed functioning against a known-phishing test URL with 0.9999 confidence.")
 
-add_figure("fig_per_class_f1.png", "Fig. 4. Per-class F1-scores across severity tiers comparing XGBoost against neural baselines (*CRITICAL tier support n=9).")
+# Section VI
+add_h1("VI. Blockchain Audit Trail")
+add_body("Audit events are canonicalised (sorted-key JSON) and hashed into Merkle leaves, batched by a 16-record or 60-second window, and anchored to AnchorRegistry.sol on a local Hardhat EVM node.")
+add_figure("fig_merkle_anchoring.png", "Fig. 2. Merkle batching and EVM anchoring workflow (illustrative, 4-leaf batch; production batch size is 16).")
 
-add_h2("D. Theoretical Empirical Interpretation")
-add_body("These empirical findings substantiate the theoretical assertions of Grinsztajn et al. [14]: tabular security metadata features exhibit irregular distributions, lack translational spatial invariance, and contain uninformative categorical dimensions that distort gradient-based backpropagation in deep neural networks. Decision tree ensembles naturally accommodate axis-aligned partitions, delivering robust classification boundaries without requiring millions of training instances.")
+add_h2("A. Current Verified Status")
+add_body("Direct testing of a clean local deploy confirms AnchorRegistry.sol compiles successfully. Auto-deployment on node restart currently fails: with ANCHOR_PRIVATE_KEY unset in the local environment, Hardhat’s configured account list is empty, getSigners() returns no deployer, and the deploy script throws at the point it attempts to read the (undefined) deployer’s address. This is a configuration defect, not a design flaw in the batching or anchoring logic itself, and is corrected by supplying the missing credential; we report it as currently unresolved rather than claim a verified deploy that does not presently succeed.")
 
-add_h2("E. Active Search-Path Transformer Classifier")
-add_body("In parallel with offline severity triage, BreachShield incorporates a live pretrained transformer model (UrlBERT) directly onto the active search pathway. When an OSINT record contains linked URLs or domains, the text sequence is evaluated by UrlBERT, yielding a continuous phishing probability. In verification testing against a known malicious credential-harvesting URL, the classifier successfully flagged the link with a confidence score of 0.9999, injecting a corresponding +30 point factor into the dynamic risk scoring engine.")
+# Section VII
+add_h1("VII. Verification Methodology")
+add_body("Because significant portions of BreachShield were built with AI coding-agent assistance, the team adopted a policy that no capability claim would be retained in project reporting without independent, live re-verification, executed in three stages.")
+add_body("Stage 1 – Dual independent audit. Two separately-prompted AI audit agents, without access to each other’s output, each performed an eight-section review of the codebase (architecture, data flow, ML pipeline, blockchain, security, testing, documentation accuracy, data-source honesty).")
+add_body("Stage 2 – Live cross-checking. Disagreements between the two audits were resolved by running direct, live commands against the running system – curl calls to live endpoints, direct source reads, and repeated inference calls to test determinism – rather than by adjudicating between the two reports.")
+add_body("Stage 3 – Independent third-party reproduction. A third party, without access to either prior audit’s conclusions, re-derived results from raw data and raw source in an isolated environment.")
+add_body("This process both confirmed genuine, previously-unverified positive results (Section VIII) and surfaced specific fabricated or broken claims, including: latency figures (round-trip search latency, client-hash timing) that existed only as hardcoded strings inside paper-generation scripts and corresponded to no measurement anywhere in the codebase; and a set of literature citations, discussed in Section II’s predecessor drafts, that were never independently checked before being written into early project documentation. We report this not to discredit the project but because verifying and correcting such claims before publication is, in our view, the more defensible response than omitting the finding.")
 
 # Section VIII
-add_h1("VIII. Blockchain-Anchored Audit Trail")
-add_h2("A. Merkle Batching Construction")
-add_body("To prevent system administrators or compromised servers from retroactively altering audit records, BreachShield implements an append-only cryptographic logging architecture. For each security event E, the payload is canonicalized by sorting keys lexicographically into a deterministic JSON string: J_canon = CanonicalizeJSON(E). The leaf digest is computed as L_i = SHA-256(J_canon). Leaves are appended to an in-memory queue. Flushing to the smart contract occurs under a hybrid size-and-time policy: Trigger = (|Q| >= 100) or (Delta_t >= 60 seconds).")
-add_body("Upon reaching either threshold, a balanced binary Merkle tree is computed over the leaf set {L_1, L_2, ..., L_m}. The resulting root hash R_Merkle = MerkleRoot(L_1, ..., L_m) is submitted to the smart contract.")
-
-add_h2("B. Solidity Smart Contract Implementation")
-add_body("The audit contract, AnchorRegistry.sol, is authored in Solidity (^0.8.20) and deployed to a local Hardhat EVM node. The contract maintains an append-only mapping of anchor events: A(R) = {rootHash, timestamp, blockNumber, batchSize}. Emitted events allow any independent auditing party to verify whether a particular event leaf L_i was included within batch R_Merkle by supplying a logarithmic inclusion proof of length ceil(log2 m).")
-
-add_h2("C. Latency and Exposure Window Trade-Off")
-add_body("Committing every individual lookup event on-chain synchronously would introduce unacceptable transaction costs and execution latency (often exceeding 2–5 seconds per block confirmation). The 60-second hybrid batching window amortizes blockchain overhead efficiently. Within the 60-second accumulation window, uncommitted leaves are protected by local SHA-256 hash chaining; once anchored, the audit proof becomes immutable and globally verifiable.")
-
-# Section IX
-add_h1("IX. System Evaluation and Testing")
-add_h2("A. Comprehensive Testing Verification")
-add_body("The platform was subjected to extensive automated and empirical testing across all architectural tiers. Testing methodologies included:")
-add_bullet("Backend Unit and Integration Suites: 101 automated test cases executed across 26 test suites using Jest and Supertest, verifying API routing, OTP lifecycles, JWT claims, and database fallback operations (101/101 passing, 100% success rate).")
-add_bullet("Frontend Component Suites: 50 automated component test cases verified using Vitest and React Testing Library, testing HUD terminal rendering, client-side Web Crypto hashing, and form validation (50/50 passing, 100% success rate).")
-add_bullet("Live Endpoint and Adversarial Verification: Direct HTTP test vectors executed against the running API gateway to confirm that invalid OTPs trigger lockout thresholds and malformed hashes are rejected.")
-add_bullet("Deterministic Classifier Invariance: Repeated sequential inference calls against the benchmark XGBoost classifier confirmed complete numerical determinism across identical input vectors.")
-
-add_styled_table("TABLE VII: System Subsystem Evaluation Matrix",
-    ["Subsystem Component", "Empirical Verification Methodology", "Operational Status"],
+add_h1("VIII. Results")
+add_styled_table("TABLE IV: VERIFICATION SUMMARY",
+    ["Claim", "Verified status"],
     [
-        ["k-Anonymity Search", "Live client-side hashing; 5-char prefix query", "Verified / Live"],
-        ["XGBoost Severity Triage", "89.2% accuracy on 1,034 records (N=157)", "Benchmark Validated"],
-        ["Backend Automated Tests", "101 unit/integration tests across 26 suites", "101/101 Passing"],
-        ["Frontend Component Tests", "50 component tests across 3 test suites", "50/50 Passing"],
-        ["Dynamic Risk Engine", "Weighted regex pattern matching on live text", "Verified / Live"],
-        ["Live URL Phishing AI", "UrlBERT inference (0.9999 test confidence)", "Verified / Live"],
-        ["Merkle Audit Batching", "Canonical JSON hashing and root construction", "Verified / Live"],
-        ["Blockchain Contract Deploy", "Solidity compilation on local Hardhat node", "Requires Config Fix"],
-        ["OSINT Feed Adapters", "2 live sources (Catalog, Telegram); 2 stubs", "Partially Integrated"]
+        ["k-anonymity search", "Live-tested; correct prefix/bucket round trip"],
+        ["Severity classifier", "89.2% test accuracy; checkpoint-loaded, deterministic"],
+        ["Backend test suite", "101/101 passing, 26 suites (both default and SKIP_OTP=false)"],
+        ["Frontend test suite", "50/50 passing, 3 suites"],
+        ["Risk-scoring engine", "Confirmed genuinely computed (source-inspected)"],
+        ["Live URL classifier", "Confirmed functioning; 0.9999 confidence on test case"],
+        ["Merkle audit batching", "Construction logic verified; contract compiles"],
+        ["Blockchain auto-deploy", "Currently fails – missing deployer credential"],
+        ["System latency benchmarks", "No measurement exists; prior figures were fabricated"]
     ]
 )
 
+# Section IX
+add_h1("IX. Discussion")
+add_body("The pattern underlying Table IV’s unresolved items is consistent: each was a claim that satisfied the surface shape of a requirement (an endpoint exists, a number is quoted, a deploy step runs) without satisfying its substance, and none were caught by the project’s own automated test suite. This is consistent with broader findings on LLM-assisted code and text generation producing plausible but unverified output. For a platform whose core value proposition is trustworthy breach reporting, this has a direct implication: an unverified claim about the platform’s own behaviour is not a cosmetic defect but undermines the specific trust the platform asks users to place in it.")
+
 # Section X
-add_h1("X. Limitations and Remediation Roadmap")
-add_body("In accordance with strict academic standards, this section discloses all verified system constraints and incomplete integrations without fabrication or embellishment:")
-add_h2("A. Blockchain Deployer Credential Defect")
-add_body("While the AnchorRegistry.sol contract compiles cleanly, automatic smart contract deployment upon node restart currently fails due to an unset private-key environment variable in the automated deployment script. The deployment process cannot resolve the default signer address without this variable. This is an operational configuration defect rather than an architectural error in the Merkle batching algorithm.")
-
-add_h2("B. Secondary OSINT Feed Stubs")
-add_body("Of the four registered BreachSource adapters, only PublicBreachSource and TelegramScraperSource actively ingest live external data. PhishingFeedSource and ThreatIntelSource are currently implemented as non-blocking skeleton stubs to validate registry registration and avoid third-party API rate limits during academic demonstration.")
-
-add_h2("C. Class Imbalance in CRITICAL Severity Tier")
-add_body("The curated training corpus contains only 60 total CRITICAL records, resulting in a held-out test support of n = 9. While XGBoost achieved 77.8% precision and recall on this tier, the narrow sample size yields wider statistical confidence intervals. Incorporating SMOTE oversampling [3] is scheduled for future dataset expansion.")
-
-add_h2("D. Prioritized Remediation Plan")
-add_bullet("1. Ledger Deployment Automation: Configure persistent local Hardhat deployment credentials in the server initialization script to enable automated contract deployment upon system reboot.")
-add_bullet("2. Secondary Adapter Ingestion: Wire PhishingFeedSource to open-source threat feeds (such as URLhaus or PhishTank) to ingest live phishing domain updates.")
-add_bullet("3. Resampling for Scarce Tiers: Apply SMOTE oversampling to balance the CRITICAL severity class across training iterations.")
-add_bullet("4. End-to-End Latency Benchmarking: Implement an automated distributed benchmarking harness to record millisecond-level latency percentiles (p50, p95, p99) under simulated concurrent traffic.")
+add_h1("X. Limitations and Threats to Validity")
+add_body("The k-anonymity search protocol uses the standard HIBP-style prefix-bucket construction without the stronger private-set-intersection guarantees Li et al. propose [9]; combined with OTP-gated access, the server can associate a query session with an authenticated identity even though it cannot determine the specific target within a returned bucket – a deliberate accountability/privacy trade-off, not an oversight, but one that should not be understated. The CRITICAL severity class is represented by only 9 test-set records; per-class precision/recall on this tier carries correspondingly wide uncertainty, and the class-imbalance mitigation demonstrated by Alsubaei et al. [3] (83% -> 98% accuracy via SMOTE) is identified here as unapplied future work rather than a completed step. Blockchain anchoring currently targets a local EVM node rather than a public chain, and auto-deployment is presently blocked by a missing credential (Section VI); public verifiability claims are therefore not made. No system-level latency benchmarks exist at the time of writing; per-request inference timings are available (UrlBERT approx. 14–31 ms) but should not be read as aggregate or percentile system performance claims.")
 
 # Section XI
-add_h1("XI. Conclusion")
-add_body("This paper presented BreachShield, a privacy-preserving OSINT breach intelligence and threat detection platform developed at Acharya Institute of Technology. By combining client-side 20-bit SHA-256 prefix range queries (k-anonymity), out-of-band carrier SMS/email OTP gating, and dynamic regex-driven risk scoring, BreachShield allows users to audit digital compromise exposure without revealing plaintext target identifiers to intermediate networks or server operators. Empirical evaluation demonstrates that tree-based gradient boosting (XGBoost) significantly outperforms deep learning architectures on tabular breach metadata, delivering 89.2% accuracy on 1,034 curated breach records. Append-only Merkle-tree batching provides cryptographic audit trails anchored to an EVM smart contract, supported by 101 passing backend tests and 50 passing frontend tests. A transparent accounting of system limitations and scheduled remediations provides a solid foundation for future operational deployment.")
+add_h1("XI. Future Work")
+add_body("Immediate priorities are: supplying the missing deployment credential and re-verifying a clean blockchain auto-deploy; applying SMOTE or an equivalent resampling strategy to the CRITICAL severity tier following Alsubaei et al.’s demonstrated approach [3]; and running a genuine, reproducible latency benchmark suite before any performance claim is made in future reporting. Medium-term work includes evaluating Li et al.’s private-set-intersection protocols [9] as a replacement for the current OTP-gated prefix design, and assessing public-chain anchoring following the batching pattern of Arabnouri et al. [7] once local verification is complete.")
 
+# Section XII
+add_h1("XII. Conclusion")
+add_body("BreachShield demonstrates a privacy-preserving breach intelligence architecture combining a k-anonymity search protocol, a benchmarked and reproducible ML severity classifier, and a Merkle-batched audit log, developed and verified by a final-year undergraduate team. Equally, this paper documents that AI-assisted development of the same codebase introduced specific, fabricated or non-functional claims – concerning an unrelated model population, blockchain deployment status, and unmeasured performance figures – that a three-stage, live-verification methodology was able to identify and correct prior to publication. We offer that methodology, alongside the verified system itself, as this paper’s contribution.")
+
+# Acknowledgment
 add_h1("Acknowledgment")
-add_body("The authors express their gratitude to their project supervisor, Prof. Sushma T. M., Assistant Professor, Department of Information Science and Engineering, Acharya Institute of Technology, for guidance and constructive review throughout the design, implementation, and evaluation of Major Project Phase II (Course Code: BIS786).")
+add_body("The authors thank Prof. Sushma T. M. for guidance throughout Project Phase II (Course Code: BIS786).")
 
+# References
 add_h1("References")
 refs = [
     "[1] A. Aljofey, Q. Jiang, Q. Qu, M. Huang, and J.-P. Niyigena, \"An Effective Phishing Detection Model Based on Character Level Convolutional Neural Network from URL,\" Electronics, vol. 9, no. 9, p. 1514, 2020.",
-    "[2] O. K. Sahingoz, E. Buber, and E. Kugu, \"DEPHIDES: Deep Learning Based Phishing Detection System,\" IEEE Access, vol. 12, pp. 8052-8070, 2024.",
-    "[3] F. S. Alsubaei, A. A. Almazroi, and N. Ayub, \"Enhancing Phishing Detection: A Novel Hybrid Deep Learning Framework for Cybercrime Forensics,\" IEEE Access, vol. 12, pp. 8373-8389, 2024.",
+    "[2] O. K. Sahingoz, E. Buber, and E. Kuğu, \"DEPHIDES: Deep Learning Based Phishing Detection System,\" IEEE Access, vol. 12, pp. 8052–8070, 2024.",
+    "[3] F. S. Alsubaei, A. A. Almazroi, and N. Ayub, \"Enhancing Phishing Detection: A Novel Hybrid Deep Learning Framework for Cybercrime Forensics,\" IEEE Access, vol. 12, pp. 8373–8389, 2024.",
     "[4] B. V. Pavani, D. Mahitha, and B. Uma Maheswari, \"Enhancing Online Safety: Phishing URL Detection Using Machine Learning and Explainable AI,\" in Proc. 2024 15th ICCCNT, IEEE, 2024.",
-    "[5] M. Tawfik, A. A. Abu-Ein, A. H. Abdelhaliem, Y. M. Al-Sharo, and I. S. Fathi, \"Explainable Few-Shot Learning with Modern BERT for Detecting Emerging Phishing Attacks Using XF-PhishBERT,\" Scientific Reports, vol. 15, no. 1, art. 42821, 2025.",
-    "[6] P. Kühn, K. Wittorf, and C. Reuter, \"Navigating the Shadows: Manual and Semi-Automated Evaluation of the Dark Web for Cyber Threat Intelligence,\" IEEE Access, vol. 12, pp. 45210-45228, 2024.",
-    "[7] A. Arabnouri, S. Eissazadeh, and A. Shafieinejad, \"A Secure Auditable Log based on Blockchain,\" Monadi, vol. 13, no. 2, pp. 75-86, 2024.",
-    "[8] L. Sweeney, \"k-Anonymity: A Model for Protecting Privacy,\" Int. J. Uncertainty, Fuzziness Knowl.-Based Syst., vol. 10, no. 5, pp. 557-570, 2002.",
-    "[9] L. Li, B. Pal, J. Ali, N. Sullivan, R. Chatterjee, and T. Ristenpart, \"Protocols for Checking Compromised Credentials,\" in Proc. 2019 ACM CCS, 2019, pp. 1387-1403.",
-    "[10] T. Chen and C. Guestrin, \"XGBoost: A Scalable Tree Boosting System,\" in Proc. 22nd ACM SIGKDD, 2016, pp. 785-794.",
-    "[11] R. C. Merkle, \"A Digital Signature Based on a Conventional Encryption Function,\" in Advances in Cryptology - CRYPTO '87, Springer, 1988, pp. 369-378.",
-    "[12] S. A. Crosby and D. S. Wallach, \"Efficient Data Structures for Tamper-Evident Logging,\" in Proc. 18th USENIX Security Symp., 2009, pp. 317-334.",
-    "[13] K. El Emam and F. K. Dankar, \"Protecting Privacy Using k-Anonymity,\" J. Amer. Med. Inform. Assoc., vol. 15, no. 5, pp. 627-637, 2008.",
-    "[14] L. Grinsztajn, E. Oyallon, and G. Varoquaux, \"Why Do Tree-Based Models Still Outperform Deep Learning on Typical Tabular Data?,\" in Proc. NeurIPS, vol. 35, 2022, pp. 507-520.",
-    "[15] M. Saleem, R. Islam, and M. A. Kabir, \"The Anonymity of the Dark Web: A Survey,\" IEEE Access, vol. 10, pp. 33628-33660, 2022.",
-    "[16] J. Pastor-Galindo, P. Nespoli, F. Gómez Mármol, and G. Martínez Pérez, \"The Not Yet Exploited Goldmine of OSINT: Opportunities, Open Challenges and Future Trends,\" IEEE Access, vol. 8, pp. 10282-10304, 2020.",
-    "[17] IBM Security, \"Cost of a Data Breach Report 2024,\" IBM Corporation, Jul. 2024."
+    "[5] M. Tawfik, A. A. Abu-Ein, A. H. Abdelhaliem, Y. M. Al-Sharo, and I. S. Fathi, \"Explainable Few-Shot Learning with Modern BERT for Detecting Emerging Phishing Attacks Using XF-PhishBERT,\" Scientific Reports, vol. 15, art. 42821, 2025.",
+    "[6] P. Kühn, K. Wittorf, and C. Reuter, \"Navigating the Shadows: Manual and Semi-Automated Evaluation of the Dark Web for Cyber Threat Intelligence,\" IEEE Access, 2024.",
+    "[7] A. Arabnouri, S. Eissazadeh, and A. Shafieinejad, \"A Secure Auditable Log based on Blockchain,\" Monadi, vol. 13, no. 2, pp. 75–86, 2024.",
+    "[8] L. Sweeney, \"k-Anonymity: A Model for Protecting Privacy,\" Int. J. Uncertainty, Fuzziness Knowl.-Based Syst., vol. 10, no. 5, pp. 557–570, 2002.",
+    "[9] L. Li, B. Pal, J. Ali, N. Sullivan, R. Chatterjee, and T. Ristenpart, \"Protocols for Checking Compromised Credentials,\" in Proc. ACM CCS, 2019, pp. 1387–1403.",
+    "[10] T. Chen and C. Guestrin, \"XGBoost: A Scalable Tree Boosting System,\" in Proc. ACM SIGKDD, 2016, pp. 785–794.",
+    "[11] R. C. Merkle, \"A Digital Signature Based on a Conventional Encryption Function,\" in Advances in Cryptology — CRYPTO ’87, Springer, 1988, pp. 369–378.",
+    "[12] S. A. Crosby and D. S. Wallach, \"Efficient Data Structures for Tamper-Evident Logging,\" in Proc. USENIX Security Symp., 2009.",
+    "[13] K. El Emam and F. K. Dankar, \"Protecting Privacy Using k-Anonymity,\" J. Amer. Med. Inform. Assoc., vol. 15, no. 5, pp. 627–637, 2008.",
+    "[14] L. Grinsztajn, E. Oyallon, and G. Varoquaux, \"Why Do Tree-Based Models Still Outperform Deep Learning on Typical Tabular Data?,\" in Proc. NeurIPS, 2022.",
+    "[15] P. Grassi, M. Garcia, and J. Fenton, \"Digital Identity Guidelines: Authentication and Lifecycle Management,\" NIST SP 800-63B, 2020.",
+    "[16] RFC 7519, \"JSON Web Token (JWT),\" IETF, 2015."
 ]
 
 for ref in refs:

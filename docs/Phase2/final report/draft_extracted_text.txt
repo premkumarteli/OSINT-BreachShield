@@ -1,0 +1,948 @@
+P1: VISVESVARAYA TECHNOLOGICAL UNIVERSITY
+
+P2: "Jnana Sangama", Belagavi-590 018
+
+P3: A Major Project Phase-II Report on
+
+P4: "BreachShield: AI Powered OSINT Breach Detection & Dark Web Protection"
+
+P5: A Dissertation work submitted in partial fulfillment of the requirement for the award of the degree
+
+P6: Bachelor of Engineering
+
+P7: in
+
+P8: Information Science and Engineering
+
+P9: Submitted by
+
+P10: ARVIND D H	1AY24IS400
+
+P11: GIRISHKUMAR N M	1AY24IS404
+
+P12: MANOJ	1AY24IS406
+
+P13: PREMKUMAR TELI	1AY24IS407
+
+P15: Under the Guidance of
+
+P16: Prof. Sushma T M
+
+P17: Assistant Professor
+
+P18: DEPARTMENT OF INFORMATION SCIENCE AND ENGINEERING
+
+P19: ACHARYA INSTITUTE OF TECHNOLOGY
+
+P20: (AFFILIATED TO VISVESVARAYA TECHNOLOGICAL UNIVERSITY, BELAGAVI. ACCREDITED BY NAAC, RECOGNISED BY AICTE, NEW DELHI)
+
+P21: Acharya Dr. Sarvepalli Radhakrishnan Road, Soldevanahalli, Bengaluru - 560107
+
+P22: 2026-2027
+
+P24: DEPARTMENT OF INFORMATION SCIENCE & ENGINEERING
+
+P25: ACHARYA INSTITUTE OF TECHNOLOGY
+
+P26: (Affiliated to Visvesvaraya Technological University, Belagavi, Recognized by NAAC, New Delhi)
+
+P27: Acharya Dr. Sarvepalli Radhakrishnan Road, Soldevanahalli, Bengaluru-560107
+
+P28: 2026-2027
+
+P29: Certificate
+
+P30: This is to certify that the Major Project Phase-II (BIS786) entitled "BreachShield: AI Powered OSINT Breach Detection & Dark Web Protection" carried out by Arvind D H (1AY24IS400), Girishkumar N M (1AY24IS404), Manoj (1AY24IS406), and Premkumar Teli (1AY24IS407), are bonafide students of Acharya Institute of Technology, Bengaluru in partial fulfillment for the award of the degree of Bachelor of Engineering in Information Science and Engineering of the Visvesvaraya Technological University, Belagavi during the year 2026-27. It is certified that all corrections/suggestions indicated for Internal Assessment have been incorporated in the report deposited in the departmental library. The Major Project Phase-II report has been approved as it satisfies the academic requirements in respect of Major Project Phase-II (BIS786) prescribed for the said degree.
+
+P36: Signature of the Guide	Signature of the HOD	Signature of Principal
+
+P37: Prof. Sushma T M	Prof. Mithuna H R	Dr. C. K Marigowda
+
+P38: Name of the Examiner:	Signature with Date
+
+P39: 1.
+
+P40: 2.
+
+P42: DECLARATION
+
+P43: ARVIND D H (1AY24IS400), GIRISHKUMAR N M (1AY24IS404), MANOJ (1AY24IS406) and PREMKUMAR TELI (1AY24IS407), students of B.E. Information Science and Engineering, Acharya Institute of Technology, Bangalore, hereby declare that the Major Project Phase-II entitled "BREACHSHIELD: AI POWERED OSINT BREACH DETECTION & DARK WEB PROTECTION" is an authentic work carried out under the supervision and guidance of Prof. Sushma T M, Assistant Professor, Department of Information Science and Engineering, Acharya Institute of Technology, Bangalore. We have not submitted the matter embodied to any other university or institution for the award of any other degree.
+
+P45: Place:
+
+P46: Date:
+
+P47: Name	USN	Signature
+
+P48: Arvind D H	1AY24IS400	……………………
+
+P49: Girishkumar N M	1AY24IS404	……………………
+
+P50: Manoj	1AY24IS406	……………………
+
+P51: Premkumar Teli	1AY24IS407	……………………
+
+P53: ACKNOWLEDGEMENT
+
+P54: The satisfaction that accompanies the successful completion of the Major Project Phase-II (BIS786) report would be incomplete without mentioning the people who made it possible through their constant guidance and encouragement.
+
+P55: We take this opportunity to express our gratitude to Sri. B. Premnath Reddy, Founder Chairman, Acharya Institutes, and Dr. C K Marigowda, Principal, Acharya Institute of Technology, for providing the infrastructure needed to complete this project.
+
+P56: We wish to express our deepest gratitude to Prof. Mithuna H R, Head of the Department, Information Science and Engineering, and we thank the Project Coordinators, Prof. Yogesh N and Dr. Pankaj Kumar, for their constant support.
+
+P57: We sincerely thank our guide, Prof. Sushma T M, Assistant Professor, Department of Information Science and Engineering, for guiding us from time to time and for reviewing our work at every stage.
+
+P58: We also thank all the faculty of the Department of Information Science and Engineering for their views and suggestions. We acknowledge the open-source software used in this project, including React, Express, FastAPI, Telethon, Hardhat, XGBoost, PyTorch and the Hugging Face Transformers library.
+
+P60: Arvind D H (1AY24IS400)
+
+P61: Girishkumar N M (1AY24IS404)
+
+P62: Manoj (1AY24IS406)
+
+P63: Premkumar Teli (1AY24IS407)
+
+P65: ABSTRACT
+
+P66: BreachShield is a breach-intelligence platform that lets a user find out whether an email address or phone number appears in known breach data without handing that identifier to the server. The browser hashes the identifier with SHA-256 and sends only the first five hexadecimal characters; the server returns the matching bucket and the browser completes the comparison locally. Access is gated by a one-time password delivered by email, or by SMS through a companion Android gateway, and a signed JWT carries the verified session.
+
+P67: A search is dispatched to a pluggable set of source adapters. A local breach catalog and a Telegram channel scraper are live; two further adapters are registered but are placeholders. The combined result text is scored by a regex-based exposure risk engine, and a pretrained URL-transformer classifier contributes to the score when URLs are present. A separate XGBoost severity classifier, trained on 1,034 breach records, reaches 89.2% test accuracy against 66.2% for a 1D-CNN, 48.4% for a Transformer and 44.6% for an RNN; it is kept as a research artefact and is not part of the production risk score.
+
+P68: Every search is recorded in an audit log whose entries are hashed into Merkle batches of up to 100 entries or 60 seconds and anchored by a smart contract on a local Ethereum-compatible chain. The backend and frontend test suites pass (101/101 and 50/50). The report also states what does not work yet: automatic contract deployment needs a deployer key, two of the four source adapters make no network calls, and the CRITICAL severity class has only nine test records.
+
+P70: TABLE OF CONTENTS
+
+P71: Acknowledgement	i
+
+P72: Abstract	ii
+
+P73: Table of Contents	iii
+
+P74: 1  INTRODUCTION	1
+
+P75: 1.1  Overview	1
+
+P76: 1.2  Motivation	1
+
+P77: 1.3  Objectives	2
+
+P78: 1.4  Scope	2
+
+P79: 1.5  Existing System	2
+
+P80: 1.6  Proposed System	3
+
+P81: 2  PROBLEM STATEMENT	4
+
+P82: 2.1  Problem Statement	4
+
+P83: 2.2  Motivation	4
+
+P84: 2.3  Objectives	4
+
+P85: 3  DETAILED SURVEY	5
+
+P86: 4  SURVEY SUMMARY TABLE	8
+
+P87: 5  SYSTEM REQUIREMENT SPECIFICATION	9
+
+P88: 5.1  Functional Requirements	9
+
+P89: 5.2  Non-functional Requirements	9
+
+P90: 5.3  Hardware Requirements	10
+
+P91: 5.4  Software Requirements	10
+
+P92: 6  SYSTEM DESIGN	11
+
+P93: 6.1  System Design	11
+
+P94: 6.1.1  System Architecture	11
+
+P95: 6.1.2  Module Design	11
+
+P96: 6.2  Detailed Design	12
+
+P97: 6.2.1  Class Diagram	12
+
+P98: 6.2.2  Activity Diagram	12
+
+P99: 6.2.3  Use Case Diagram	13
+
+P100: 6.2.4  Data Flow and Sequence	14
+
+P101: 6.2.5  Scenarios	14
+
+P102: 7  IMPLEMENTATION	16
+
+P103: 7.1  Repository Layout	16
+
+P104: 7.2  Client-Side k-Anonymity Search	16
+
+P105: 7.3  Authentication and OTP	16
+
+P106: 7.4  Breach-Source Registry	17
+
+P107: 7.5  Telegram OSINT Service	17
+
+P108: 7.6  Risk-Scoring Engine	17
+
+P109: 7.7  URL Phishing Classifier (UrlBERT)	18
+
+P110: 7.8  Breach-Severity Classifier	18
+
+P111: 7.9  Merkle Audit Log and Blockchain Anchoring	18
+
+P112: 7.10  Android SMS Gateway	19
+
+P113: 7.11  Web Dashboard	19
+
+P114: 8  TESTING	20
+
+P115: 8.1  Approach	20
+
+P116: 8.2  Test Environment	20
+
+P117: 8.3  Verification Methods	20
+
+P118: 8.4  Results Summary	20
+
+P119: 8.5  What Testing Did Not Cover	21
+
+P120: 9  TEST CASES AND RESULTS (SNAPSHOTS)	22
+
+P121: 9.1  Test Cases	22
+
+P122: 9.2  Severity Classifier Results	22
+
+P123: 9.3  Application Screenshots	23
+
+P124: CONCLUSION AND FUTURE ENHANCEMENTS	26
+
+P125: BIBLIOGRAPHY	27
+
+P126: 10  OUTCOME (RESEARCH PAPER)	28
+
+P127: APPENDIX A: LIST OF FIGURES	29
+
+P128: APPENDIX B: LIST OF TABLES	30
+
+P129: LIST OF FIGURES
+
+P130: 6.1	System architecture of BreachShield	11
+
+P131: 6.2	Class diagram of the API gateway	12
+
+P132: 6.3	Activity: OTP login	13
+
+P133: 6.4	Activity: private lookup, source dispatch and scoring	13
+
+P134: 6.5	Activity: audit logging and anchoring	13
+
+P135: 6.6	Use case diagram	13
+
+P136: 6.7	Data flow diagram: search, k-anonymity lookup and audit flow	14
+
+P137: 6.8	Sequence diagram: OTP login, search and Merkle anchoring	14
+
+P138: 9.1	Accuracy and macro F1 of each model on the test set	23
+
+P139: 9.2	OTP request and verification screen	24
+
+P140: 9.3	Search page	24
+
+P141: 9.4	Network request showing only the 5-character prefix	24
+
+P142: 9.5	Results page with risk score and factors	24
+
+P143: 9.6	Automated test results	25
+
+P144: 9.7	Merkle batch and anchor record	25
+
+P145: LIST OF TABLES
+
+P146: 4.1	Survey summary	8
+
+P147: 4.2	Comparison of design choices	8
+
+P148: 5.1	Functional requirements	9
+
+P149: 5.2	Non-functional requirements	9
+
+P150: 5.3	Hardware requirements	10
+
+P151: 5.4	Software requirements	10
+
+P152: 6.1	Modules and responsibilities	11
+
+P153: 9.1	Test cases and outcomes	22
+
+P154: 9.2	Comparison on the test set (N = 157)	22
+
+P155: 9.3	XGBoost per-class results on the test set	23
+
+P156: 10.1	Publication details	28
+
+P158: CHAPTER 1
+
+P159: INTRODUCTION
+
+P160: 1.1  Overview
+
+P161: BreachShield is a web platform that tells a user whether an email address or phone number appears in known data-breach records. Its main design rule is that the identifier itself should not be sent to the server. The browser computes a SHA-256 hash of the identifier, sends only the first five hexadecimal characters of that hash, receives the stored records whose hashes start with those five characters, and checks for an exact match on its own side. This is the range-query idea used by public password-checking services, which rests on the k-anonymity model [2], [3].
+
+P162: Around this search the system provides one-time-password (OTP) login by email or SMS, a registry of breach-source adapters (a local breach catalog and a Telegram channel scraper are live), an exposure risk score, a pretrained URL-transformer classifier for phishing links found in results, and an audit log. The audit log is hashed into Merkle trees in batches and the tree roots are anchored by a smart contract on a local Ethereum-compatible chain, so that later changes to logged events can be detected.
+
+P163: The project is built as four tiers: a React 19 frontend, an Express 5 API gateway in Node.js, a Python FastAPI microservice for Telegram collection and machine-learning inference, and an Android (Kotlin) application that relays OTP messages as SMS. A separate XGBoost model classifies breach severity. It was trained and benchmarked against three neural models, but it is not used in the production risk score (Section 7.8).
+
+P164: Project Phase 1 proposed a wider suite: a browser extension, a vulnerability scanner, continuous dark-web crawling and cloud deployment. During Phase 2 we narrowed the work to the parts we could build and verify. Section 1.4 lists exactly what is and is not included.
+
+P165: 1.2  Motivation
+
+P166: Credential leaks are common and expensive. IBM’s 2024 Cost of a Data Breach report puts the global average cost of a breach at USD 4.88 million and names stolen or compromised credentials as the most frequent initial attack vector, at 16% of the breaches studied [1]. Most people find out that their data was exposed only after something goes wrong.
+
+P167: Checking whether an account has been exposed creates its own privacy problem. A typical breach-lookup service asks the user to type the full email address or phone number into a third-party server. That server then holds a list of identifiers that someone was worried about, which is itself sensitive. We wanted to see how far a breach-checking service could go in avoiding this, while still giving the user a useful answer.
+
+P168: Breach information is also scattered. Some of it sits in public breach catalogs; some appears first in Telegram channels. A single tool that queries several sources and gives one consolidated, explainable answer is more useful than separate manual checks. Finally, a service that records who searched for what should itself be accountable. A tamper-evident audit trail was therefore part of the design from the start.
+
+P169: 1.3  Objectives
+
+P170: 1.	To design a breach-search protocol in which the raw identifier never leaves the browser and the server sees only a 20-bit hash prefix.
+
+P171: 2.	To authenticate users with an OTP sent by email or SMS and to bind the search session to the verified identity.
+
+P172: 3.	To query more than one breach source through a common adapter interface and to keep the search working when one source fails.
+
+P173: 4.	To compute an explainable exposure risk score from the aggregated results, and to flag phishing URLs with a pretrained classifier.
+
+P174: 5.	To train and honestly benchmark a breach-severity classifier, comparing a tree-based model with neural models on the same data.
+
+P175: 6.	To record every search in a tamper-evident audit log anchored on a blockchain.
+
+P176: 7.	To test the system and to report verified results and known limitations separately from planned work.
+
+P177: 1.4  Scope
+
+P178: Included in this report. Client-side SHA-256 hashing and range-query search; OTP login with email and SMS delivery; JWT sessions; a local breach store; a Telegram scraper source; regex-based exposure risk scoring; UrlBERT phishing-URL classification; an XGBoost severity classifier and its benchmark; Merkle-batched audit logging with a Solidity anchor contract on a local Hardhat chain; an Android SMS gateway; and the web dashboard.
+
+P179: Not included. The browser extension, the website vulnerability scanner, continuous crawling of dark-web forums beyond one Telegram channel, and cloud deployment, all of which were proposed in Phase 1. The two source adapters for phishing feeds and threat intelligence are registered in the code but do not yet make network calls. The system is a prototype and has not been load-tested or deployed publicly.
+
+P180: 1.5  Existing System
+
+P181: Public breach-notification services let users search by email address, and the search request carries the full address to the service. Services for checking passwords improved on this by using a prefix range query, in which only part of a password hash is sent [3]. The same idea is not generally offered for email and phone lookups, and prefix-based checking has known limits that have been analysed in the literature [3].
+
+P182: Threat-intelligence tools, on the other hand, are written for security analysts. They collect feeds, dark-web posts and indicators of compromise, but they do not give an ordinary user a private way to ask a simple question. Neither category usually provides an audit trail that the operator cannot quietly edit. Most logs are ordinary database rows or text files that anyone with write access can change.
+
+P183: 1.6  Proposed System
+
+P184: BreachShield combines the missing pieces into one prototype. The browser hashes the identifier and sends a five-character prefix. The gateway authenticates the user, queries the registered sources in parallel, and tolerates failure of any one of them. A risk engine converts the aggregated text into a score between 20 and 100 and a four-level label (LOW, MEDIUM, HIGH, CRITICAL). A pretrained transformer checks any URLs found in the results for phishing.
+
+P185: Each search is written to an audit log. Log entries are canonicalised and hashed, grouped into Merkle trees of up to 100 entries or 60 seconds, and the root of each tree is stored by a smart contract. Changing an anchored entry later would change its tree root and would no longer match the stored value. Chapter 6 describes the design in detail and the Conclusion lists the open limitations. In particular, the anchoring runs on a local development chain, so the roots are not publicly verifiable.
+
+P186: CHAPTER 2
+
+P187: PROBLEM STATEMENT
+
+P188: 2.1  Problem Statement
+
+P189: Checking whether a personal identifier has been exposed in a data breach normally requires the user to submit that identifier to a third-party server. This turns a protective action into a privacy risk, and it discourages people from checking at all. At the same time, breach information is spread across catalogs and Telegram channels, results are reported without any explanation of how serious they are, and the services that operate these lookups usually keep logs that the operator could alter without detection.
+
+P190: The problem addressed by this project is therefore to build a breach-lookup service in which (a) the raw identifier is never sent to the server, (b) access is limited to verified users, (c) results from several sources are combined into one explainable risk assessment, and (d) every search is recorded in a log whose later modification can be detected.
+
+P191: 2.2  Motivation
+
+P192: Two things motivated the narrower Phase 2 problem. First, the privacy argument above: a lookup service should not learn what the user is looking for. Second, our own audits showed how easy it is for a security project to claim more than it does. Parts of the first prototype presented placeholder code as working features. We decided that the Phase 2 system, and this report, should state plainly which parts are verified and which are not, and that the evaluation should be reproducible from the repository.
+
+P193: 2.3  Objectives
+
+P194: Hide the identifier from the server during search, leaking at most a 20-bit hash prefix.
+
+P195: Gate search by OTP-verified identity, with rate limits and hashed OTP storage.
+
+P196: Query multiple sources through one adapter interface and keep working when a source or the AI service is unavailable.
+
+P197: Produce an explainable score from the combined results, with each contributing factor visible.
+
+P198: Compare tree-based and neural classifiers for breach severity on one dataset, and report the result whether or not the model is deployed.
+
+P199: Make the audit log tamper-evident using Merkle batching and an on-chain anchor.
+
+P200: Verify each claim by running the code, and report open problems as findings.
+
+P201: CHAPTER 3
+
+P202: DETAILED SURVEY
+
+P203: The Phase 1 survey listed ten references, several with incomplete or unverifiable publication details, so we replaced it for this report. Every paper below was looked up, and each summary says what we took from it. Reference numbering follows the order of first citation in the report, so the numbering starts at [2] here; reference [1], the IBM report, is cited in Chapter 1.
+
+P204: [2]  L. Sweeney, "k-Anonymity: A Model for Protecting Privacy," Int. J. Uncertainty, Fuzziness and Knowledge-Based Systems, 2002.
+
+P205: Problem: Releasing records without identifying individuals. Approach: Defines k-anonymity: each released record must be indistinguishable from at least k−1 others with respect to identifying attributes. What we took from it: The hash-prefix bucket plays the role of the anonymity set in our search protocol. We use the idea, not the full formal model.
+
+P206: [3]  L. Li, B. Pal, J. Ali, N. Sullivan, R. Chatterjee and T. Ristenpart, "Protocols for Checking Compromised Credentials," ACM CCS, 2019.
+
+P207: Problem: Privacy of services that check whether credentials appear in breaches. Approach: Analyses hash-prefix checking protocols as deployed and proposes stronger alternatives with higher cost. What we took from it: Our protocol follows the simpler prefix design. The paper tells us what that design does not protect, which we list as a limitation.
+
+P208: [4]  K. El Emam and F. K. Dankar, "Protecting Privacy Using k-Anonymity," J. Am. Med. Inform. Assoc., 2008.
+
+P209: Problem: Choosing k and measuring re-identification risk for health data. Approach: Discusses how the strength of k-anonymity depends on the data and on the chosen k. What we took from it: Reminds us that the privacy of a bucket depends on how many identifiers can share a prefix, not only on the prefix length.
+
+P210: [5]  R. C. Merkle, "A Digital Signature Based on a Conventional Encryption Function," CRYPTO ’87, 1988.
+
+P211: Problem: Authenticating many values with one short value. Approach: Introduces the hash tree: leaves are hashed and combined pairwise up to a single root. What we took from it: Basis of our audit batching. One anchored root commits to up to 100 log entries.
+
+P212: [6]  S. A. Crosby and D. S. Wallach, "Efficient Data Structures for Tamper-Evident Logging," USENIX Security, 2009.
+
+P213: Problem: Detecting tampering in append-only logs. Approach: Proposes a history tree that supports efficient membership and consistency proofs. What we took from it: Shows what a stronger audit log offers. Ours does not yet provide consistency proofs between batches.
+
+P214: [7]  A. Arabnouri, S. Eissazadeh and A. Shafieinejad, "A Secure Auditable Log Based on Blockchain," Monadi, vol. 13, no. 2, 2024.
+
+P215: Problem: Storing audit logs on a blockchain without the scalability cost of writing every entry. Approach: Groups logs into time intervals, chains entries with message authentication codes, and writes each interval as a batch at a checkpoint. What we took from it: Supports our decision to batch entries instead of writing each to the chain.
+
+P216: [8]  T. Chen and C. Guestrin, "XGBoost: A Scalable Tree Boosting System," ACM SIGKDD, 2016.
+
+P217: Problem: Scalable gradient-boosted decision trees. Approach: Regularised tree boosting with efficient handling of sparse data. What we took from it: The model we use for breach-severity classification.
+
+P218: [9]  L. Grinsztajn, E. Oyallon and G. Varoquaux, "Why Do Tree-Based Models Still Outperform Deep Learning on Typical Tabular Data?," NeurIPS, 2022.
+
+P219: Problem: Which model family works best on tabular data. Approach: Benchmarks tree-based and neural models on many tabular datasets and finds trees ahead on medium-sized data. What we took from it: Matches what we saw: XGBoost beat the CNN, Transformer and RNN on our 1,034 records.
+
+P220: [10]  A. Aljofey, Q. Jiang, Q. Qu, M. Huang and J.-P. Niyigena, "An Effective Phishing Detection Model Based on Character Level Convolutional Neural Network from URL," Electronics, 2020.
+
+P221: Problem: Detecting phishing from the URL alone. Approach: A character-level CNN reads the raw URL string, avoiding hand-built features. What we took from it: Background for using a learned URL classifier on links found in breach results.
+
+P222: [11]  O. K. Sahingoz, E. Buber and E. Kugu, "DEPHIDES: Deep Learning Based Phishing Detection System," IEEE Access, 2024.
+
+P223: Problem: Phishing detection with deep learning on large URL datasets. Approach: Compares several deep architectures on a large URL dataset. What we took from it: Further support for deep models on URL text. Our deployed classifier is a pretrained transformer for the same task.
+
+P224: [12]  B. V. Pavani, D. Mahitha and B. Uma Maheswari, "Enhancing Online Safety: Phishing URL Detection Using Machine Learning and Explainable AI," ICCCNT, 2024.
+
+P225: Problem: Explaining why a URL was flagged. Approach: Combines machine-learning classifiers with explainability methods. What we took from it: Motivates showing the factors behind a score rather than a single number.
+
+P226: [13]  P. Kühn, K. Wittorf and C. Reuter, "Navigating the Shadows: Manual and Semi-Automated Evaluation of the Dark Web for Cyber Threat Intelligence," IEEE Access, 2024.
+
+P227: Problem: Practical value and difficulty of collecting threat intelligence from the dark web. Approach: Evaluates manual and semi-automated collection methods. What we took from it: Explains why we limited dark-web collection to one Telegram source instead of broad crawling.
+
+P228: [14]  M. Saleem, R. Islam and M. A. Kabir, "The Anonymity of the Dark Web: A Survey," IEEE Access, 2022.
+
+P229: Problem: How anonymity works on the dark web. Approach: Surveys anonymity networks and the techniques used to study them. What we took from it: Background for the OSINT problem area.
+
+P230: [15]  J. Pastor-Galindo, P. Nespoli, F. Gómez Mármol and G. Martínez Pérez, "The Not Yet Exploited Goldmine of OSINT," IEEE Access, 2020.
+
+P231: Problem: Open-source intelligence tools, uses and open problems. Approach: Surveys OSINT sources, techniques and challenges. What we took from it: Places our pluggable source-registry design in the wider OSINT landscape.
+
+P232: CHAPTER 4
+
+P233: SURVEY SUMMARY TABLE
+
+P234: Table 4.1 summarises the surveyed work by area, and Table 4.2 compares BreachShield with the closest approaches on the points where our design differs.
+
+P235: Table 4.1  Survey summary
+
+P237: Table 4.2  Comparison of design choices
+
+P239: CHAPTER 5
+
+P240: SYSTEM REQUIREMENT SPECIFICATION
+
+P241: 5.1  Functional Requirements
+
+P242: Table 5.1  Functional requirements
+
+P244: 5.2  Non-functional Requirements
+
+P245: Table 5.2  Non-functional requirements
+
+P247: 5.3  Hardware Requirements
+
+P248: Table 5.3  Hardware requirements
+
+P250: 5.4  Software Requirements
+
+P251: Table 5.4  Software requirements
+
+P253: CHAPTER 6
+
+P254: SYSTEM DESIGN
+
+P255: 6.1  System Design
+
+P256: 6.1.1  System Architecture
+
+P257: BreachShield is organised as a monorepo with four tiers (Fig. 6.1). The React frontend does all hashing and prefix handling. The Express gateway owns authentication, the source registry, the risk engine and audit logging. The FastAPI service hosts the Telegram scraper and the machine-learning models. The Android application only relays OTP messages. MySQL (with a JSON-file fallback) stores OTP and session data, the k-anonymity store holds the breach records, and the AnchorRegistry contract on a local Hardhat chain stores Merkle roots.
+
+P259: Fig. 6.1  System architecture of BreachShield
+
+P260: Two design decisions shape the rest of the system. First, hashing happens in the browser, so no later component ever sees the raw identifier for search purposes. Second, the gateway treats every external dependency (a source adapter, the AI service, the database, the chain) as something that can fail, and degrades instead of stopping.
+
+P261: 6.1.2  Module Design
+
+P262: Table 6.1  Modules and responsibilities
+
+P264: 6.2  Detailed Design
+
+P265: 6.2.1  Class Diagram
+
+P266: Fig. 6.2 shows the main classes of the gateway. SearchService depends on the abstract BreachSource, which is implemented by four adapters. PublicBreachSource and TelegramScraperSource return data; PhishingFeedSource and ThreatIntelSource are registered but make no network call. SearchService scores results with RiskEngine, calls the AI service, and writes each event to AuditLogger, which hands leaves to MerkleBatcher and finally AnchorClient.
+
+P268: Fig. 6.2  Class diagram of the API gateway
+
+P269: 6.2.2  Activity Diagram
+
+P270: The activity of one search is shown in three parts: login (Fig. 6.3), private lookup and scoring (Fig. 6.4), and audit logging (Fig. 6.5).
+
+P272: Fig. 6.3  Activity: OTP login
+
+P274: Fig. 6.4  Activity: private lookup, source dispatch and scoring
+
+P276: Fig. 6.5  Activity: audit logging and anchoring
+
+P277: 6.2.3  Use Case Diagram
+
+P278: Fig. 6.6 shows the actors. A user requests and verifies an OTP, searches, and reads the risk report. An administrator manages users and gateway devices and reviews the audit log. The Android gateway delivers OTPs by SMS, and the Telegram channel is an external data source.
+
+P280: Fig. 6.6  Use case diagram
+
+P281: 6.2.4  Data Flow and Sequence
+
+P282: Fig. 6.7 gives the data flow between the user, the services and the stores for one search. Fig. 6.8 shows the same search as a sequence of calls between the frontend, the Express backend, the search service, the audit logger and the anchor client.
+
+P284: Fig. 6.7  Data flow diagram: search, k-anonymity lookup and audit flow
+
+P286: Fig. 6.8  Sequence diagram: OTP login, search and Merkle anchoring
+
+P287: 6.2.5  Scenarios
+
+P288: Scenario 1: normal search. The user verifies an OTP, enters an email address, and the browser sends a 5-character prefix. The gateway returns the bucket, the browser finds a matching suffix, the sources are queried in parallel, the risk engine scores the combined text, and the event is queued for the audit log. The user sees the matched breaches, the score and the contributing factors.
+
+P289: Scenario 2: no match. The bucket contains no entry whose suffix matches. The browser reports no known exposure in the local store, while the live Telegram source may still return text that is scored. The event is still logged.
+
+P290: Scenario 3: a dependency fails. The AI service is unreachable or the Telegram source times out. Promise.allSettled lets the other sources finish. The gateway logs a warning, sets the AI result to null, and returns the remaining results. We tested the AI-service case directly (Chapter 9).
+
+P291: Scenario 4: anchoring fails. The chain call for a batch fails. The batch is moved to a dead-letter queue and recovered on the next start; the user-facing search is unaffected. Automatic deployment of the contract on restart currently fails when the deployer key is not set (Section 7.9).
+
+P292: CHAPTER 7
+
+P293: IMPLEMENTATION
+
+P294: 7.1  Repository Layout
+
+P295: The code is a four-part monorepo: the React frontend, the Express gateway with its tests and blockchain modules, the Python scraper and AI service, and the Android gateway. The Solidity contract and its Hardhat configuration live in a separate contracts directory. This chapter describes each module and states how it was verified.
+
+P296: 7.2  Client-Side k-Anonymity Search
+
+P297: The frontend trims and lowercases the identifier, computes SHA-256 with the Web Crypto API, and splits the 64-character hexadecimal digest into a 5-character prefix P and a 59-character suffix S. Only P is sent, in a request to /api/v1/range/P with the session token. The server returns the stored suffixes in that bucket along with their breach metadata, and the browser keeps the records whose suffix equals S. Algorithm 7.1 gives the procedure.
+
+P298: Algorithm 7.1  Client-side range query
+
+P299: Input : identifier T, session token tau
+
+P300: Output: matched breach metadata R
+
+P301: 1  T' <- toLowerCase(trim(T))
+
+P302: 2  H  <- SHA-256(T')             # computed in the browser
+
+P303: 3  P  <- H[0:5];  S <- H[5:64]
+
+P304: 4  B  <- GET /api/v1/range/P  (Bearer tau)
+
+P305: 5  R  <- empty set
+
+P306: 6  for each (S_i, M_i) in B:
+
+P307: 7      if S_i == S: add M_i to R
+
+P308: 8  return R
+
+P309: There are 16^5 = 1,048,576 possible prefixes, so the prefix discloses at most 20 bits about the identifier. The anonymity of a particular lookup comes from how many possible identifiers share the same prefix, which grows with the population of identifiers and not with the number of records we store. Two limits apply and are stated in the Conclusion: because search is login-gated, the server knows who is searching even though it does not know which identifier in the bucket is being checked [3]; and the quality of the match depends on the browser normalising the identifier exactly as the server did when the record was stored.
+
+P310: Verification: a live round trip (hash, prefix query, suffix match, ingest and lookup) works for email identifiers, where client and server normalisation agree. CONFIRM before submission: in the September 2026 audit, phone-number identifiers typed with spaces, dashes or without the +91 prefix were normalised differently in the browser and on the server and so did not match. State here whether this has been fixed and re-tested.
+
+P311: 7.3  Authentication and OTP
+
+P312: On send-otp the gateway checks a 30-second resend cooldown, generates a six-digit code from a cryptographically secure random integer, hashes it with bcrypt (cost factor 10) and stores the hash with a five-minute expiry. Storage is in MySQL with an automatic fall-back to a JSON file if the database is unavailable. The code is sent by email or, for a phone target, as a DLT-templated SMS relayed through the Android gateway. On verify-otp the stored hash is compared, with at most five attempts in the validity window. Success issues a JWT [16] valid for one hour, carrying the target and a verified flag, returned in the response and set as an HTTP-only cookie. A development flag that skips OTP checks exists in the code and must be off in any real deployment; the backend tests were run with it both on and off.
+
+P313: 7.4  Breach-Source Registry
+
+P314: BreachSource is an abstract class with one method, search(normalizedTarget, targetHash). SearchService holds the list of registered sources and calls all of them with Promise.allSettled, so one failure does not cancel the others. Four adapters are registered. PublicBreachSource reads the local catalog through the k-anonymity store. TelegramScraperSource calls the Python service. PhishingFeedSource and ThreatIntelSource are placeholders that do not call any external feed; they are listed as planned work and not counted as working sources.
+
+P315: 7.5  Telegram OSINT Service
+
+P316: The Python FastAPI service uses Telethon to read configured Telegram channels and return matching text to the gateway. Under simultaneous requests the Telethon session file raised a database-locked error; this was fixed by serialising access to the client with an asyncio lock. Telegram credentials are read from environment variables.
+
+P317: 7.6  Risk-Scoring Engine
+
+P318: The risk engine works on the combined text from all sources. It applies regular expressions for passwords or hashes, phone numbers, email addresses, document numbers, physical addresses and named relations, and adds capped points per category: documents up to 35, password or hash material up to 30, address up to 20, phone up to 15, and multiple independent sources up to 15. A correlation score across records and, when the AI service returns a result, a phishing contribution of up to 30 points (probability times 30) are added. The total is limited to the range 20–100 and mapped to LOW, MEDIUM, HIGH or CRITICAL. Source reliability and recency are computed from the text and not fixed. The factors are returned to the user with the score.
+
+P319: Algorithm 7.2  Exposure risk scoring
+
+P320: Input : aggregated result text X, AI result A
+
+P321: Output: score in [20,100], tier
+
+P322: 1  score <- 0
+
+P323: 2  for c in {doc, password, address, phone, multi-source}:
+
+P324: 3      score <- score + min(match(X, c), cap[c])
+
+P325: 4  score <- score + correlate(X)            # up to 15
+
+P326: 5  if A is present: score <- score + A.phishProb * 30
+
+P327: 6  score <- clamp(score, 20, 100)
+
+P328: 7  return score, threshold(score)
+
+P329: This engine is a transparent rule set, not a trained model. Earlier in the project, three fields in its output were fixed constants presented as computed values. They are now computed from the data, and the source was checked.
+
+P330: 7.7  URL Phishing Classifier (UrlBERT)
+
+P331: When results contain URLs, the gateway calls the FastAPI endpoint /api/ai/analyze-threat, which runs a pretrained Hugging Face URL-transformer classifier. On a known phishing test URL it returned the PHISHING class with probability 0.9999 in about 31 ms. When the text contains no URL the phishing probability is 0 by construction, because the model only scores URLs. A scoping bug in the first version (torch was imported inside a function) made every call fail; it was fixed by moving the import to module level and re-tested against the running service.
+
+P332: 7.8  Breach-Severity Classifier
+
+P333: We trained classifiers to predict the severity tier of a breach from its metadata. The dataset has 1,034 breach records collected from a public breach catalog, split 70/15/15 with a fixed seed into 723 training, 154 validation and 157 test records. Each record is a 165-dimensional feature vector. XGBoost (maximum depth 6, learning rate 0.1) was compared with a 1D-CNN, a Transformer encoder (2 layers, 4 heads) and an RNN, which was retrained with packed sequences and gradient clipping after the first run performed below the naive baseline. Results are in Chapter 9.
+
+P334: The code has two groups of neural models and they must not be confused. The severity models load trained checkpoints from disk and give identical output on repeated calls; they feed the severity block of the analyze-threat endpoint. A separate group of URL-comparison models behind a demonstration endpoint does not load any checkpoint and gives different output on every instantiation. Only the first group is reported here. The XGBoost model is not used in the production risk score, because live sources do not reliably provide the features it was trained on.
+
+P335: 7.9  Merkle Audit Log and Blockchain Anchoring
+
+P336: Each search produces an audit event. The event is canonicalised as sorted-key JSON, hashed with SHA-256 into a leaf, and queued. When the queue reaches 100 leaves or 60 seconds pass, whichever is first, the batch is built into a Merkle tree and the root is sent to the AnchorRegistry smart contract (Solidity 0.8.20) on a local Hardhat chain through ethers.js. Failed batches are moved to a dead-letter queue and recovered on restart. Batching limits the number of chain transactions; in the interval before a batch is anchored, tampering would not yet be caught by the on-chain root.
+
+P337: Current status. The contract compiles. Automatic deployment on restart fails when the deployer private-key environment variable is not set, because the account list is then empty and the deploy script cannot find a deployer address. This is a configuration fault and not a design fault, but until it is fixed the anchoring cannot be shown end to end. The chain is a local development node, so the anchored roots are not publicly verifiable.
+
+P338: 7.10  Android SMS Gateway
+
+P339: The Kotlin application keeps a WebSocket connection to the backend. When the gateway needs to send an OTP to a phone number, it sends a job over the socket and the app sends the SMS using a registered DLT template, as required for commercial SMS in India. Devices are registered by an administrator and authenticated with signed JWTs.
+
+P340: 7.11  Web Dashboard
+
+P341: The frontend is a React 19 single-page application with OTP login, a search page, and a results page that shows matched records, the risk score with its factors, and the AI analysis when present. Hashing runs entirely in the browser.
+
+P342: CHAPTER 8
+
+P343: TESTING
+
+P344: 8.1  Approach
+
+P345: We tested at three levels. Unit tests cover single functions, such as OTP handling, hashing and Merkle tree construction. Integration tests run several modules together, for example the full request path from OTP verification through search, scoring and audit logging. System checks run the real services and send real HTTP requests to them. Because earlier versions of the project reported features that did not work, we added a rule: a result counts only if we saw the raw output of running it, and an endpoint response is cross-checked against the source code.
+
+P346: 8.2  Test Environment
+
+P347: Tests ran on a development machine and, independently, in a clean Linux environment built from an exported copy of the repository. Backend tests use the Node.js test runner and frontend tests use Jest. The Python service was run under FastAPI and called with curl.
+
+P348: 8.3  Verification Methods
+
+P349: Automated suites. The backend suite and the frontend suite were run to completion. The backend suite was run both with and without the development OTP bypass.
+
+P350: Live HTTP checks. Search, OTP and AI endpoints were called on the running services, and the matching and scoring logic was then read in the source to confirm the behaviour.
+
+P351: Determinism check. The severity classifier was called repeatedly with the same input and also re-instantiated; identical output confirmed that trained weights are loaded.
+
+P352: Independent reproduction. The XGBoost accuracy was recomputed from the raw test data in a separate environment and gave 89.17%, against the 89.2% reported.
+
+P353: Failure injection. The AI service was stopped during a search to confirm the gateway degrades instead of failing.
+
+P354: Deployment check. The contract was compiled and deployed on a clean local chain, which is how the missing-deployer-key fault was found.
+
+P355: 8.4  Results Summary
+
+P356: The backend suite passes 101 of 101 tests in 26 suites and the frontend suite passes 50 of 50 in 3 suites. All live checks in Chapter 9 passed except automatic contract deployment. A report of what was tested and how is more useful than a pass count, so Chapter 9 lists each case with its type, input, expected result and outcome.
+
+P357: 8.5  What Testing Did Not Cover
+
+P358: No load test or system-level latency benchmark was run, so this report makes no throughput or latency claim; the 31 ms figure for UrlBERT is a single-call inference time. The OTP rate limits were not tested under adversarial request volume. Only email identifiers were included in the end-to-end privacy check (see Section 7.2 for phone numbers).
+
+P359: CHAPTER 9
+
+P360: TEST CASES AND RESULTS (SNAPSHOTS)
+
+P361: 9.1  Test Cases
+
+P362: Table 9.1 lists the test cases. Types are U (unit), I (integration) and S (system).
+
+P363: Table 9.1  Test cases and outcomes
+
+P365: 9.2  Severity Classifier Results
+
+P366: Table 9.2 and Fig. 9.1 compare the four models and a naive baseline that always predicts MEDIUM, on the same 157 test records. XGBoost is clearly ahead. The RNN was below the naive baseline in accuracy after retraining, and its macro-F1 is better only because the baseline never predicts three of the four classes.
+
+P367: Table 9.2  Comparison on the test set (N = 157)
+
+P370: Fig. 9.1  Accuracy and macro F1 of each model on the test set
+
+P371: Table 9.3  XGBoost per-class results on the test set
+
+P373: The CRITICAL class has only nine test records, so its figures have wide uncertainty and should not be over-read. Most XGBoost errors fall between adjacent severity levels. Oversampling the rare classes is planned but has not been tried.
+
+P374: 9.3  Application Screenshots
+
+P375: The screenshots below show the working application. Insert your own screenshots in the boxes; a short caption line stays below each.
+
+P376: Fig. 9.2  OTP request and verification screen
+
+P377: Fig. 9.3  Search page
+
+P378: Fig. 9.4  Network request showing only the 5-character prefix
+
+P379: Fig. 9.5  Results page with risk score and factors
+
+P380: Fig. 9.6  Automated test results
+
+P381: Fig. 9.7  Merkle batch and anchor record
+
+P382: CONCLUSION AND FUTURE ENHANCEMENTS
+
+P383: BreachShield shows that a breach-lookup service can avoid receiving the identifier it is asked about. The browser hashes the identifier, the server sees a 20-bit prefix, and access is limited to OTP-verified users. Around that core, the prototype combines several sources, an explainable risk score, a pretrained URL classifier and a Merkle-batched audit log anchored by a smart contract. The backend and frontend test suites pass (101/101 and 50/50). In the severity benchmark, XGBoost reached 89.2% accuracy on 157 test records, ahead of the CNN (66.2%), Transformer (48.4%) and RNN (44.6%). This agrees with published findings that trees remain strong on medium-sized tabular data [9].
+
+P384: Limitations. These are open in the current code and are stated here so the results above are not over-read.
+
+P385: Automatic deployment of the anchor contract fails when no deployer private key is set, so end-to-end anchoring is not demonstrated in a clean run. The chain is local, so roots are not publicly verifiable.
+
+P386: Two of the four source adapters (phishing feeds, threat intelligence) make no network calls. Only the local catalog and the Telegram source return real data.
+
+P387: Because search needs login, the server learns who is searching, although not which identifier in a bucket. Stronger protocols exist but cost more [3].
+
+P388: The CRITICAL severity class has nine test records. The XGBoost model is not part of the production score.
+
+P389: No system-level latency or load benchmark was run. OTP limits were not tested under adversarial load.
+
+P390: CONFIRM before submission: (a) whether phone-number normalisation now matches between browser and server; (b) whether raw identifiers or phone numbers are still written to local JSON files (sessions, OTP records, audit logs, per-record files), which would contradict a privacy claim; (c) whether the Telegram source stores the raw target. Edit this list to match the current code.
+
+P391: Future enhancements. In priority order: (1) supply the deployer key and re-verify a clean automatic deployment; (2) connect at least one placeholder adapter to a real feed; (3) apply oversampling or class weighting to the rare severity classes and re-benchmark; (4) run a reproducible latency benchmark before making any performance claim; (5) evaluate private-set-intersection protocols as a replacement for the prefix design [3]; and (6) consider anchoring on a public test network, following the batching approach in [7], once local verification is complete.
+
+P392: BIBLIOGRAPHY
+
+P393: [1]	IBM Security, "Cost of a Data Breach Report 2024," IBM Corporation, Jul. 2024.
+
+P394: [2]	L. Sweeney, "k-Anonymity: A model for protecting privacy," Int. J. Uncertainty, Fuzziness Knowl.-Based Syst., vol. 10, no. 5, pp. 557–570, 2002.
+
+P395: [3]	L. Li, B. Pal, J. Ali, N. Sullivan, R. Chatterjee, and T. Ristenpart, "Protocols for checking compromised credentials," in Proc. ACM CCS, 2019, pp. 1387–1403.
+
+P396: [4]	K. El Emam and F. K. Dankar, "Protecting privacy using k-anonymity," J. Amer. Med. Inform. Assoc., vol. 15, no. 5, pp. 627–637, 2008.
+
+P397: [5]	R. C. Merkle, "A digital signature based on a conventional encryption function," in Advances in Cryptology — CRYPTO ’87, Springer, 1988, pp. 369–378.
+
+P398: [6]	S. A. Crosby and D. S. Wallach, "Efficient data structures for tamper-evident logging," in Proc. USENIX Security Symp., 2009.
+
+P399: [7]	A. Arabnouri, S. Eissazadeh, and A. Shafieinejad, "A secure auditable log based on blockchain," Monadi, vol. 13, no. 2, pp. 75–86, 2024.
+
+P400: [8]	T. Chen and C. Guestrin, "XGBoost: A scalable tree boosting system," in Proc. ACM SIGKDD, 2016, pp. 785–794.
+
+P401: [9]	L. Grinsztajn, E. Oyallon, and G. Varoquaux, "Why do tree-based models still outperform deep learning on typical tabular data?," in Proc. NeurIPS, 2022.
+
+P402: [10]	A. Aljofey, Q. Jiang, Q. Qu, M. Huang, and J.-P. Niyigena, "An effective phishing detection model based on character level convolutional neural network from URL," Electronics, vol. 9, no. 9, p. 1514, 2020.
+
+P403: [11]	O. K. Sahingoz, E. Buber, and E. Kugu, "DEPHIDES: Deep learning based phishing detection system," IEEE Access, vol. 12, pp. 8052–8070, 2024.
+
+P404: [12]	B. V. Pavani, D. Mahitha, and B. Uma Maheswari, "Enhancing online safety: Phishing URL detection using machine learning and explainable AI," in Proc. 15th ICCCNT, IEEE, 2024.
+
+P405: [13]	P. Kühn, K. Wittorf, and C. Reuter, "Navigating the shadows: Manual and semi-automated evaluation of the dark web for cyber threat intelligence," IEEE Access, 2024.
+
+P406: [14]	M. Saleem, R. Islam, and M. A. Kabir, "The anonymity of the dark web: A survey," IEEE Access, vol. 10, pp. 33628–33660, 2022.
+
+P407: [15]	J. Pastor-Galindo, P. Nespoli, F. Gómez Mármol, and G. Martínez Pérez, "The not yet exploited goldmine of OSINT: Opportunities, open challenges and future trends," IEEE Access, vol. 8, pp. 10282–10304, 2020.
+
+P408: [16]	M. Jones, J. Bradley, and N. Sakimura, "JSON Web Token (JWT)," RFC 7519, IETF, 2015.
+
+P409: CHAPTER 10
+
+P410: OUTCOME (RESEARCH PAPER)
+
+P411: The department requires a research paper accepted by an IEEE conference, with the acceptance email as proof.
+
+P412: Table 10.1  Publication details
+
+P414: Place the acceptance email (or, if the paper is not yet accepted, the submission acknowledgement) on the following page and confirm with the project coordinator which proof is acceptable at the report deadline.
+
+P415: APPENDIX A: LIST OF FIGURES
+
+P416: 6.1	System architecture of BreachShield	11
+
+P417: 6.2	Class diagram of the API gateway	12
+
+P418: 6.3	Activity: OTP login	13
+
+P419: 6.4	Activity: private lookup, source dispatch and scoring	13
+
+P420: 6.5	Activity: audit logging and anchoring	13
+
+P421: 6.6	Use case diagram	13
+
+P422: 6.7	Data flow diagram: search, k-anonymity lookup and audit flow	14
+
+P423: 6.8	Sequence diagram: OTP login, search and Merkle anchoring	14
+
+P424: 9.1	Accuracy and macro F1 of each model on the test set	23
+
+P425: 9.2	OTP request and verification screen	24
+
+P426: 9.3	Search page	24
+
+P427: 9.4	Network request showing only the 5-character prefix	24
+
+P428: 9.5	Results page with risk score and factors	24
+
+P429: 9.6	Automated test results	25
+
+P430: 9.7	Merkle batch and anchor record	25
+
+P431: APPENDIX B: LIST OF TABLES
+
+P432: 4.1	Survey summary	8
+
+P433: 4.2	Comparison of design choices	8
+
+P434: 5.1	Functional requirements	9
+
+P435: 5.2	Non-functional requirements	9
+
+P436: 5.3	Hardware requirements	10
+
+P437: 5.4	Software requirements	10
+
+P438: 6.1	Modules and responsibilities	11
+
+P439: 9.1	Test cases and outcomes	22
+
+P440: 9.2	Comparison on the test set (N = 157)	22
+
+P441: 9.3	XGBoost per-class results on the test set	23
+
+P442: 10.1	Publication details	28
+
+
+================================================================================
+TABLES:
+================================================================================
+
+--- TABLE 1 (Rows: 7, Cols: 4) ---
+  R1: Ref. | Area | Problem addressed | Approach and result
+  R2: [2], [4] | k-anonymity | Privacy of released records | Indistinguishability within a group of k records; effectiveness depends on data and choice of k
+  R3: [3] | Credential checking | Privacy of breach-checking protocols | Analysis of hash-prefix protocols and stronger alternatives
+  R4: [5], [6], [7] | Tamper-evident logging | Detecting modification of logs | Hash trees, history trees, and interval-batched blockchain anchoring
+  R5: [8], [9] | Tabular classification | Choosing a model for tabular data | Gradient-boosted trees remain strong on medium-sized tabular data
+  R6: [10], [11], [12] | Phishing URL detection | Detecting malicious URLs | Deep learning on URL text; explainability for flagged URLs
+  R7: [13], [14], [15] | OSINT and dark web | Collecting and understanding threat intelligence | Evaluation of collection methods; surveys of anonymity networks and OSINT tooling
+
+--- TABLE 2 (Rows: 5, Cols: 3) ---
+  R1: Dimension | Related approach | BreachShield
+  R2: Query privacy | Hash-prefix range query, with weaknesses analysed in [3] | Same prefix design. OTP login means the server knows who is asking, though not which identifier in the bucket
+  R3: Audit anchoring | Time-interval batches written at checkpoints [7] | Batches of 100 entries or 60 s, anchored on a local chain (not public)
+  R4: Severity model | Deep models favoured for URL text [10], [11] | Tree-based XGBoost for tabular breach metadata, in line with [9]
+  R5: Log proofs | History trees give consistency proofs [6] | Merkle root per batch; no consistency proof between batches
+
+--- TABLE 3 (Rows: 10, Cols: 3) ---
+  R1: ID | Requirement | Description
+  R2: FR1 | OTP authentication | Send a six-digit OTP by email or, for phone targets, by SMS through the Android gateway; verify it and issue a JWT session token.
+  R3: FR2 | Private search | Hash the identifier in the browser, send only a 5-character prefix, and match the suffix locally against the returned bucket.
+  R4: FR3 | Multi-source query | Query every registered breach source through a common interface, in parallel, and merge the results.
+  R5: FR4 | Fault tolerance | Continue and return partial results if a source or the AI service fails.
+  R6: FR5 | Risk scoring | Compute an exposure score (20–100) and a LOW / MEDIUM / HIGH / CRITICAL label from the combined results, with the contributing factors.
+  R7: FR6 | URL check | Classify URLs found in results as phishing or benign using a pretrained transformer.
+  R8: FR7 | Audit logging | Record each search as an audit event, batch events into Merkle trees, and anchor each root on-chain.
+  R9: FR8 | Administration | Allow an administrator to manage users and registered SMS-gateway devices.
+  R10: FR9 | Severity research model | Train and evaluate a breach-severity classifier and report its benchmark. This is not part of the live score.
+
+--- TABLE 4 (Rows: 8, Cols: 2) ---
+  R1: Attribute | Requirement
+  R2: Privacy | The server must not receive the raw identifier for a search; information disclosed is limited to the 20-bit prefix.
+  R3: Integrity | Modification of a logged audit event must be detectable by recomputing its Merkle root.
+  R4: Security | OTPs stored hashed with bcrypt; resend cooldown and attempt limits; short-lived JWTs; secrets read from environment variables.
+  R5: Availability | A failing source adapter or an unreachable AI service must not crash the search path.
+  R6: Maintainability | New sources are added by implementing one adapter class; the backend and frontend each have an automated test suite.
+  R7: Honesty of reporting | Every capability stated in this report must have been run and observed; limitations are listed separately.
+  R8: Performance | Interactive response for a single search. No system-level latency benchmark has been run, so no figure is claimed.
+
+--- TABLE 5 (Rows: 6, Cols: 2) ---
+  R1: Component | Specification
+  R2: Development machine | Intel Core i5 / AMD Ryzen 5 or higher
+  R3: Memory | 8 GB minimum; 16 GB recommended for local model training
+  R4: Storage | 10 GB free (datasets, trained model checkpoints, local blockchain state)
+  R5: Network | Internet access for Telegram polling and package installation
+  R6: Android device (optional) | Android 8.0 or later, to run the SMS-gateway application
+
+--- TABLE 6 (Rows: 10, Cols: 2) ---
+  R1: Component | Specification
+  R2: Frontend | React 19 (Create React App), Web Crypto API for SHA-256
+  R3: API gateway | Node.js, Express 5, JWT [16], bcrypt, Nodemailer
+  R4: OSINT / AI service | Python 3.13, FastAPI, Telethon, Hugging Face Transformers, PyTorch, XGBoost
+  R5: Database | MySQL 8.0, with a JSON-file fallback layer
+  R6: Blockchain | Hardhat (local EVM node), Solidity 0.8.20, ethers.js v6
+  R7: Android gateway | Kotlin application, persistent WebSocket to the backend
+  R8: Testing tools | Jest (frontend), Node.js test runner (backend)
+  R9: Other tools | Git, npm, pip, VS Code
+  R10: Operating system | Windows 10/11 or Linux
+
+--- TABLE 7 (Rows: 10, Cols: 2) ---
+  R1: Module | Responsibility
+  R2: Client search module | Normalise and hash the identifier, send the 5-character prefix, match the returned bucket locally.
+  R3: Authentication module | OTP generation and verification, bcrypt hashing, resend cooldown, attempt limits, JWT issue and verification.
+  R4: Source registry | Abstract BreachSource contract and four adapters; parallel dispatch with Promise.allSettled.
+  R5: k-anonymity store | Local breach records indexed by hash prefix; range-query endpoint.
+  R6: OSINT service | Telethon-based Telegram scraper in a FastAPI service; serialised by an asyncio lock.
+  R7: Risk engine | Regex-based category scoring plus correlation and phishing contribution; maps score to a label.
+  R8: AI module | UrlBERT URL classifier on the live path; severity classifier (XGBoost, CNN, RNN, Transformer) as a benchmarked artefact.
+  R9: Audit and anchoring | Canonical event hashing, Merkle batching (100 entries or 60 s), dead-letter queue, anchor client for the contract.
+  R10: SMS gateway | Android app that receives OTP jobs over WebSocket and sends DLT-compliant SMS.
+
+--- TABLE 8 (Rows: 15, Cols: 6) ---
+  R1: ID | Module | Type | Input / action | Expected result | Result
+  R2: TC-01 | Client hashing | I | Email target "User@Example.com " hashed in browser and by server normaliser | Both produce the same 5-character prefix | Pass
+  R3: TC-02 | k-anonymity store | I | Ingest a record, query its prefix, match suffix | Record returned only for the correct suffix | Pass
+  R4: TC-03 | Client hashing (phone) | I | Phone typed as 9876543210 or +91 98765 43210 | Same hash as canonical +91 form | Failed in Sept 2026 audit. Re-run and update.
+  R5: TC-04 | OTP login | S | send-otp, then verify-otp with correct code | JWT issued; search allowed | Pass
+  R6: TC-05 | OTP login | U | Wrong code, more than 5 attempts, expired code | Request rejected | Pass (backend suite, bypass off)
+  R7: TC-06 | Search pipeline | S | Authenticated search for a known target | Risk score returned; audit event logged with anchorStatus "enqueued" | Pass
+  R8: TC-07 | Fault tolerance | I | Stop AI service, run a search | Search returns; aiAnalysis is null; warning logged | Pass
+  R9: TC-08 | UrlBERT | I | Known phishing URL to /api/ai/analyze-threat | Class PHISHING, high probability | Pass (0.9999)
+  R10: TC-09 | UrlBERT | I | Text with no URL | Phishing probability 0 (by construction) | Pass
+  R11: TC-10 | Severity classifier | U | Same input twice; new instance | Identical output (checkpoint loaded) | Pass
+  R12: TC-11 | XGBoost | U | Evaluate on 157-record test split | Accuracy about 89.2% | Pass (89.17%, reproduced)
+  R13: TC-12 | Merkle batching | U | Queue leaves; flush at 100 or 60 s | Correct root; dead-letter on failure | Pass
+  R14: TC-13 | Automated suites | S | Run backend and frontend suites | All tests pass | Pass (101/101, 50/50)
+  R15: TC-14 | Chain deployment | S | Restart with no deployer key set | Contract auto-deployed | Fail. Known issue: no deployer account
+
+--- TABLE 9 (Rows: 6, Cols: 4) ---
+  R1: Model | Accuracy | Macro F1 | Weighted F1
+  R2: Naive baseline (predict MEDIUM) | 47.1% | 16.0% | 30.2%
+  R3: RNN (retrained, packed sequences, gradient clipping) | 44.6% | 34.0% | 46.8%
+  R4: Transformer (2 layers, 4 heads) | 48.4% | 42.9% | 50.8%
+  R5: 1D-CNN (kernel sizes 3, 4, 5) | 66.2% | 57.2% | 65.7%
+  R6: XGBoost | 89.2% | 83.2% | 89.4%
+
+--- TABLE 10 (Rows: 5, Cols: 4) ---
+  R1: Class (test records) | Precision | Recall | F1
+  R2: LOW (11) | 64.3% | 81.8% | 72.0%
+  R3: MEDIUM (74) | 90.7% | 91.9% | 91.3%
+  R4: HIGH (63) | 94.9% | 88.9% | 91.8%
+  R5: CRITICAL (9) | 77.8% | 77.8% | 77.8%
+
+--- TABLE 11 (Rows: 1, Cols: 1) ---
+  R1: [Insert screenshot here] Capture: login page after entering an email, and the OTP entry step
+
+--- TABLE 12 (Rows: 1, Cols: 1) ---
+  R1: [Insert screenshot here] Capture: search page with an identifier entered
+
+--- TABLE 13 (Rows: 1, Cols: 1) ---
+  R1: [Insert screenshot here] Capture: browser developer tools, Network tab, request to /api/v1/range/XXXXX
+
+--- TABLE 14 (Rows: 1, Cols: 1) ---
+  R1: [Insert screenshot here] Capture: results page with score, label and contributing factors
+
+--- TABLE 15 (Rows: 1, Cols: 1) ---
+  R1: [Insert screenshot here] Capture: terminal output showing backend 101/101 and frontend 50/50
+
+--- TABLE 16 (Rows: 1, Cols: 1) ---
+  R1: [Insert screenshot here] Capture: audit log entry with batch root and anchor status (or the failing deploy error, if not yet fixed)
+
+--- TABLE 17 (Rows: 6, Cols: 2) ---
+  R1: Item | Details
+  R2: Paper title | Enter final paper title
+  R3: Authors | Arvind D H, Girishkumar N M, Manoj, Premkumar Teli; guide: Prof. Sushma T M
+  R4: Conference / journal | Name, indexing (Scopus / UGC-CARE / IEEE Xplore)
+  R5: Submission date and status | Submitted on ... / under review / accepted on ...
+  R6: Proof attached | Acceptance email or submission acknowledgement, printed after this page
