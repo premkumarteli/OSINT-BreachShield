@@ -16,12 +16,12 @@
   pointer-events: none;
 }
 
-/* Layer 1: Clean Dark Obsidian-Navy Background */
+/* Layer 1: Clean Dark Navy Background without decorative grid */
 .intro-overlay-bg {
   position: fixed;
   inset: 0;
   z-index: 1;
-  background: radial-gradient(circle at 50% 50%, #06090e 0%, #04121F 75%);
+  background-color: #04121F;
   pointer-events: auto;
 }
 
@@ -86,34 +86,6 @@
   filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.55));
 }
 
-/* Video Layer: Reference Video showing exact stroke drawing and data fragments */
-.intro-video-container {
-  position: absolute;
-  inset: 0;
-  width: 140px;
-  height: 140px;
-  z-index: 3;
-  pointer-events: none;
-  overflow: visible;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  will-change: opacity;
-}
-
-.intro-logo-video {
-  position: absolute;
-  width: 342.64px;
-  height: 192.73px;
-  left: -119.92px;
-  top: -19.54px;
-  max-width: none;
-  max-height: none;
-  object-fit: fill;
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
-
 /* Sequential Vector Fingerprint */
 .intro-fingerprint-svg {
   position: absolute;
@@ -141,6 +113,9 @@
 }
 
 .intro-ridge-path {
+  stroke-width: 14px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   will-change: stroke-dashoffset, opacity;
   animation: drawRidgeStroke var(--ridge-dur, 0.45s) cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: var(--ridge-delay, 0s);

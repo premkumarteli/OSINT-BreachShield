@@ -39,7 +39,6 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
   const [isReady] = useState(true);
   const isSkippedRef = useRef(false);
   const initialWidthRef = useRef(typeof window !== 'undefined' ? window.innerWidth : 0);
-  const videoRef = useRef(null);
   const [scope, animate] = useAnimate();
 
   const slowFactor = getSlowMoFactor();
@@ -118,16 +117,6 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     } catch (_) {}
   }, []);
 
-  // Initialize and play intro video matching reference video
-  useEffect(() => {
-    if (videoRef.current) {
-      try {
-        videoRef.current.playbackRate = 1.15 / slowFactor;
-        videoRef.current.play().catch(() => {});
-      } catch (_) {}
-    }
-  }, [slowFactor]);
-
   // Single Timeline Sequence driven by Framer Motion useAnimate
   useEffect(() => {
     if (!isReady || shouldReduceMotion) return;
@@ -148,22 +137,16 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         setStep('fingerprint');
 
         // =========================================================================
-        // Phase A: Sequential Fingerprint Ridge Drawing (0.0s -> ~2.7s)
-        // High-fidelity video & vector tracer paths draw each ridge one by one
+        // Phase A: Sequential Fingerprint Ridge Construction (0.0s -> ~2.2s)
+        // Authentic stroke-by-stroke sequential drawing along exact logo contours
         // =========================================================================
         if (scope.current) {
-          if (videoRef.current) {
-            try {
-              videoRef.current.playbackRate = 1.15 / slowFactor;
-              videoRef.current.play().catch(() => {});
-            } catch (_) {}
-          }
-          const drawDurationMs = Math.round(2700 * slowFactor);
+          const drawDurationMs = Math.round((FINGERPRINT_RIDGES.length * 0.08 + 0.5) * 1000 * slowFactor);
           await new Promise((resolve) => setTimeout(resolve, drawDurationMs));
         }
 
         // =========================================================================
-        // Phase B: Controlled Fragmentation / Cube Materialization (~2.7s -> ~3.6s)
+        // Phase B: Controlled Fragmentation / Cube Materialization (~2.2s -> ~2.8s)
         // Right-side geometric data cubes & fragments form with dynamic cyan lighting
         // =========================================================================
         if (isSkippedRef.current || isCancelled) return;
@@ -173,36 +156,29 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
           await Promise.all([
             animate(
               '.intro-ridge-wave-0, .intro-ridge-wave-1',
-              { opacity: [1, 0.9] },
+              { opacity: [1, 0.95] },
               { duration: 0.45 * slowFactor, ease: 'easeOut' }
             ),
             animate(
               '.intro-ridge-wave-3',
-              { opacity: [1, 0.35] },
+              { opacity: [1, 0.45] },
               { duration: 0.40 * slowFactor, ease: 'easeOut' }
             ),
             animate(
               '.intro-fragment-path',
               { opacity: [0, 0.95], scale: [0.85, 1] },
               { duration: 0.45 * slowFactor, ease: [0.16, 1, 0.3, 1] }
-            ),
-            new Promise((resolve) => setTimeout(resolve, Math.round(850 * slowFactor)))
+            )
           ]);
         }
 
         // =========================================================================
-        // Phase C: Video & Vector Handoff into Solid Brand Mark (~3.6s -> ~4.1s)
-        // Video cleanly solidifies into identical /logo-icon-mark.png asset
+        // Phase C: Fragments Float & Crossfade to Solid Brand Mark (~2.8s -> ~3.4s)
+        // Precision-fitted vector strokes seamlessly dissolve into /logo-icon-mark.png
         // =========================================================================
         if (isSkippedRef.current || isCancelled) return;
 
         if (scope.current) {
-          const videoFadePromise = animate(
-            '.intro-video-container',
-            { opacity: [1, 0] },
-            { duration: 0.50 * slowFactor, ease: 'easeInOut' }
-          );
-
           const fragmentsRisePromise = animate(
             '.intro-fragment-path',
             {
@@ -227,7 +203,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             { duration: 0.50 * slowFactor, ease: 'easeInOut' }
           );
 
-          await Promise.all([videoFadePromise, fragmentsRisePromise, ridgesDissolvePromise, markSolidifyPromise]);
+          await Promise.all([fragmentsRisePromise, ridgesDissolvePromise, markSolidifyPromise]);
         }
 
         // =========================================================================
@@ -399,20 +375,6 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
             {/* Unclipped glow wrapper */}
             <div className="intro-logo-glow-wrapper">
-              {/* Reference Video: Exact drawing of fingerprint ridges and data fragments */}
-              <div className="intro-video-container" aria-hidden="true">
-                <video
-                  ref={videoRef}
-                  className="intro-logo-video"
-                  src="/intro-logo-animation.mp4"
-                  autoPlay
-                  muted
-                  playsInline
-                  preload="auto"
-                  aria-hidden="true"
-                />
-              </div>
-
               {/* Sequential Vector Fingerprint Construction & Fragments */}
               <svg
                 className="intro-fingerprint-svg"
@@ -422,13 +384,14 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                 aria-hidden="true"
               >
                 <defs>
-                  <linearGradient id="introRidgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#00F0FF" />
-                    <stop offset="50%" stopColor="#22D3EE" />
-                    <stop offset="100%" stopColor="#0080FF" />
+                  <linearGradient id="introRidgeGrad" x1="10%" y1="0%" x2="90%" y2="100%">
+                    <stop offset="0%" stopColor="#FFFFFF" />
+                    <stop offset="18%" stopColor="#00F0FF" />
+                    <stop offset="65%" stopColor="#0099FF" />
+                    <stop offset="100%" stopColor="#0055FF" />
                   </linearGradient>
-                  <filter id="introRidgeGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="2.5" result="blur" />
+                  <filter id="introRidgeGlow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
                     <feMerge>
                       <feMergeNode in="blur" />
                       <feMergeNode in="SourceGraphic" />
@@ -444,7 +407,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                       id={ridge.id}
                       d={ridge.d}
                       fill="none"
-                      stroke="#00F0FF"
+                      stroke="url(#introRidgeGrad)"
                       strokeWidth="6"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -453,8 +416,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                         strokeDasharray: ridge.length,
                         strokeDashoffset: ridge.length,
                         '--ridge-len': ridge.length,
-                        '--ridge-delay': `${idx * 0.075 * slowFactor}s`,
-                        '--ridge-dur': `${0.45 * slowFactor}s`,
+                        '--ridge-delay': `${idx * 0.08 * slowFactor}s`,
+                        '--ridge-dur': `${0.5 * slowFactor}s`,
                         opacity: 0
                       }}
                     />
