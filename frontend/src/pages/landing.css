@@ -506,9 +506,85 @@ html.landing-page-root {
   flex-wrap: wrap;
 }
 
+/* Project Details Section */
+.project-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.project-detail-card {
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-detail-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #22D3EE;
+  margin: 0 0 10px 0;
+  letter-spacing: 0.04em;
+}
+
+.project-detail-desc {
+  font-size: 14px;
+  color: #B8C7DB;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Guide / Mentorship Card */
+.guide-card-box {
+  max-width: 680px;
+  margin: 0 auto 32px auto;
+  padding: 26px 24px;
+  text-align: center;
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.guide-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 9999px;
+  color: #22D3EE;
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.guide-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.guide-role {
+  font-size: 14px;
+  color: #22D3EE;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.guide-dept {
+  font-size: 13px;
+  color: #B8C7DB;
+  margin: 0;
+  line-height: 1.5;
+}
+
 /* Responsive Media Queries (down to 375px) */
 @media (max-width: 768px) {
-  .steps-grid {
+  .steps-grid,
+  .project-details-grid {
     grid-template-columns: 1fr;
   }
   .landing-section {
@@ -519,7 +595,8 @@ html.landing-page-root {
   }
   .sample-card-wrapper,
   .about-card-box,
-  .contact-card-box {
+  .contact-card-box,
+  .guide-card-box {
     padding: 22px 16px;
   }
 }

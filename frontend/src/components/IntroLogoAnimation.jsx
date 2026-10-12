@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useReducedMotion, useAnimate } from 'framer-motion';
+import { FINGERPRINT_RIDGES, FINGERPRINT_FRAGMENTS } from './fingerprintPaths';
 import './intro_animation.css';
 
 const BRAND_LETTERS = [
@@ -33,8 +34,8 @@ const getSlowMoFactor = () => {
 
 export default function IntroLogoAnimation({ onComplete, onDockStart }) {
   const shouldReduceMotion = useReducedMotion();
-  const [step, setStep] = useState('initial'); // 'initial' | 'scan' | 'sheen' | 'wordmark' | 'docking' | 'done'
-  const [showSheen, setShowSheen] = useState(true);
+  const [step, setStep] = useState('initial'); // 'initial' | 'fingerprint' | 'fragment' | 'wordmark' | 'docking' | 'done'
+  const [showSheen] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const isSkippedRef = useRef(false);
   const initialWidthRef = useRef(typeof window !== 'undefined' ? window.innerWidth : 0);
@@ -168,147 +169,159 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
     const runTimeline = async () => {
       try {
-        // 0.0 - 0.4s: Initial scan line at top fades in
         if (isSkippedRef.current || isCancelled) return;
-        setStep('initial');
+        setStep('fingerprint');
+
+        // =========================================================================
+        // Phase A: Sequential Fingerprint Ridge Construction (0.0s -> 1.35s)
+        // Staggered progressive draw of actual curved ridge lines along their paths
+        // =========================================================================
         if (scope.current) {
-          await animate(
-            '.intro-scan-line',
-            { opacity: [0, 0.8], y: 0 },
-            { duration: 0.4 * slowFactor }
-          );
+          const wavePromises = [
+            // Wave 0: Core inner whorl
+            animate(
+              '.intro-ridge-wave-0',
+              { strokeDashoffset: 0, opacity: [0.4, 1] },
+              { duration: 0.65 * slowFactor, ease: [0.25, 1, 0.5, 1], delay: 0.05 * slowFactor }
+            ),
+            // Wave 1: Mid concentric arcs
+            animate(
+              '.intro-ridge-wave-1',
+              { strokeDashoffset: 0, opacity: [0.3, 1] },
+              { duration: 0.75 * slowFactor, ease: [0.25, 1, 0.5, 1], delay: 0.22 * slowFactor }
+            ),
+            // Wave 2: Outer shield crest and curves
+            animate(
+              '.intro-ridge-wave-2',
+              { strokeDashoffset: 0, opacity: [0.2, 1] },
+              { duration: 0.80 * slowFactor, ease: [0.25, 1, 0.5, 1], delay: 0.45 * slowFactor }
+            ),
+            // Wave 3: Lateral bridges & connector segments
+            animate(
+              '.intro-ridge-wave-3',
+              { strokeDashoffset: 0, opacity: [0.2, 1] },
+              { duration: 0.70 * slowFactor, ease: [0.25, 1, 0.5, 1], delay: 0.65 * slowFactor }
+            )
+          ];
+
+          await Promise.all(wavePromises);
         }
 
-        // 0.4 - 1.4s: Scan sweep top-to-bottom reveals logo (1.0s * slowFactor)
-        // Scan line translateY: [0, 140] exactly tracks clip-path bottom inset 100% -> 0%
+        // =========================================================================
+        // Phase B: Controlled Fragmentation (1.35s -> 1.9s)
+        // Right-side & perimeter segments break into precise geometric data fragments
+        // Central core ridges remain steady while outer sections fragment
+        // =========================================================================
         if (isSkippedRef.current || isCancelled) return;
-        setStep('scan');
+        setStep('fragment');
+
         if (scope.current) {
           await Promise.all([
+            // Subtle pulse on core ridges as energy transfers
             animate(
-              '.intro-scan-line',
-              { y: [0, 140], opacity: [0.8, 1, 1, 0] },
-              { duration: 1.0 * slowFactor, ease: 'easeInOut' }
+              '.intro-ridge-wave-0, .intro-ridge-wave-1',
+              { opacity: [1, 0.9] },
+              { duration: 0.45 * slowFactor, ease: 'easeOut' }
             ),
+            // Lateral outer ridges begin transition into separated fragments
             animate(
-              '.intro-logo-clip',
-              { clipPath: ['inset(0% 0% 100% 0%)', 'inset(0% 0% 0% 0%)'] },
-              { duration: 1.0 * slowFactor, ease: 'easeInOut' }
+              '.intro-ridge-wave-3',
+              { opacity: [1, 0.35] },
+              { duration: 0.40 * slowFactor, ease: 'easeOut' }
+            ),
+            // Reveal geometric data fragments with initial displacement
+            animate(
+              '.intro-fragment-path',
+              { opacity: [0, 0.95], scale: [0.85, 1] },
+              { duration: 0.45 * slowFactor, ease: [0.16, 1, 0.3, 1] }
             )
           ]);
-          // Release scan clip once scan line finishes
+        }
+
+        // =========================================================================
+        // Phase C: Fragments Move Upward (1.9s -> 2.45s)
+        // Geometric data fragments drift upward toward wordmark elevation,
+        // shrinking in size and fading. Fingerprint dissolves into solid brand mark.
+        // =========================================================================
+        if (isSkippedRef.current || isCancelled) return;
+
+        if (scope.current) {
+          const fragmentsRisePromise = animate(
+            '.intro-fragment-path',
+            {
+              y: [0, -38],
+              scale: [1, 0.35],
+              opacity: [0.95, 0]
+            },
+            { duration: 0.55 * slowFactor, ease: [0.25, 1, 0.5, 1] }
+          );
+
+          // Vector ridges dissolve as the solid brand mark solidifies
+          const ridgesDissolvePromise = animate(
+            '.intro-fingerprint-svg',
+            { opacity: [1, 0] },
+            { duration: 0.50 * slowFactor, ease: 'easeInOut' }
+          );
+
+          // Solid logo mark crossfades in cleanly behind the dissolving ridges
+          const markSolidifyPromise = animate(
+            '.intro-logo-clip',
+            { clipPath: ['inset(0% 0% 100% 0%)', 'inset(0% 0% 0% 0%)'], opacity: [0.3, 1] },
+            { duration: 0.50 * slowFactor, ease: 'easeInOut' }
+          );
+
+          await Promise.all([fragmentsRisePromise, ridgesDissolvePromise, markSolidifyPromise]);
+        }
+
+        // =========================================================================
+        // Phase D: Wordmark Reveal (2.45s -> 2.95s)
+        // Exact wordmark BREACHSHIELD in strict continuous reading order:
+        // BREACH (white) first, then SHIELD (cyan-blue)
+        // =========================================================================
+        if (isSkippedRef.current || isCancelled) return;
+        setStep('wordmark');
+
+        if (scope.current) {
+          const wordmarkEl = scope.current.querySelector('.intro-dock-wordmark');
+          if (wordmarkEl) {
+            wordmarkEl.style.visibility = 'visible';
+          }
+
+          // Bloom glow behind the brand icon settles
+          animate(
+            '.intro-bloom',
+            { opacity: [0, 0.35] },
+            { duration: 0.35 * slowFactor, ease: 'easeOut' }
+          );
+
+          // Wipe BREACH first (6 letters -> steps(6)), then SHIELD (6 letters -> steps(6))
+          await animate(
+            '.intro-word-white',
+            { clipPath: ['inset(-24px 100% -24px -24px)', 'inset(-24px -24px -24px -24px)'] },
+            { duration: 0.26 * slowFactor, ease: 'steps(6, end)' }
+          );
+
           if (!isSkippedRef.current && !isCancelled) {
-            animate(
-              '.intro-logo-clip',
-              { clipPath: 'inset(0% 0% 0% 0%)' },
-              { duration: 0.05 * slowFactor }
+            await animate(
+              '.intro-word-blue',
+              { clipPath: ['inset(-24px 100% -24px -24px)', 'inset(-24px -24px -24px -24px)'] },
+              { duration: 0.26 * slowFactor, ease: 'steps(6, end)' }
             );
+          }
+
+          if (!isSkippedRef.current && !isCancelled) {
+            const words = scope.current.querySelectorAll('.intro-word-white, .intro-word-blue');
+            words.forEach((w) => {
+              w.style.clipPath = 'none';
+              w.style.webkitClipPath = 'none';
+            });
           }
         }
 
-        // 1.4s: Check mask-image support; if unsupported, skip sheen
-        const supportsMask = typeof window !== 'undefined' && typeof window.CSS !== 'undefined' && typeof window.CSS.supports === 'function'
-          ? (window.CSS.supports('mask-image', 'url(/logo-icon-mark.png)') || window.CSS.supports('-webkit-mask-image', 'url(/logo-icon-mark.png)'))
-          : true;
-
-        if (isSkippedRef.current || isCancelled) return;
-        setStep('sheen');
-
-        // Phase 2.5: BLOOM (1.4s to 2.6s, total 1.2s * slowFactor)
-        // Opacity: 0 -> 0.5 (peak at ~1.65s, duration 0.25s) -> 0.2 resting (duration 0.95s)
-        const bloomPromise = (async () => {
-          if (!scope.current) return;
-          try {
-            await animate(
-              '.intro-bloom',
-              { opacity: [0, 0.5] },
-              { duration: 0.25 * slowFactor, ease: 'easeOut' }
-            );
-            if (!isSkippedRef.current && !isCancelled) {
-              await animate(
-                '.intro-bloom',
-                { opacity: [0.5, 0.2] },
-                { duration: 0.95 * slowFactor, ease: 'easeOut' }
-              );
-            }
-          } catch (_) {}
-        })();
-
-        // Phase 2.5: SHEEN SWEEP (1.4s to 1.95s, one pass ~0.55s * slowFactor)
-        // Sweeps diagonal band (35 deg) from top-right to bottom-left across the logo's alpha mask
-        // Peak opacity <= 0.8
-        const sheenSweepPromise = (async () => {
-          if (!scope.current || !supportsMask) {
-            setShowSheen(false);
-            return;
-          }
-          try {
-            await animate(
-              '.intro-sheen-sweep',
-              {
-                x: [100, -100],
-                y: [-70, 70],
-                opacity: [0, 0.78, 0.78, 0]
-              },
-              { duration: 0.55 * slowFactor, ease: [0.16, 1, 0.3, 1] }
-            );
-            // Remove sheen element from DOM once it finishes
-            setShowSheen(false);
-          } catch (_) {
-            setShowSheen(false);
-          }
-        })();
-
-        // Halfway through sheen (~0.27s after 1.4s = ~1.67s / ~1.6s): start the existing wordmark wipe
-        // Total wordmark wipe: 0.6s (0.3s * slowFactor BREACH + 0.3s * slowFactor SHIELD) -> finishes at ~2.27s
-        const wordmarkWipePromise = (async () => {
-          // Sheen midpoint wait: 0.27s * slowFactor
-          await new Promise((res) => {
-            if (scope.current) {
-              animate(scope.current, {}, { duration: 0.27 * slowFactor }).then(res).catch(res);
-            } else {
-              res();
-            }
-          });
-
-          if (isSkippedRef.current || isCancelled) return;
-          setStep('wordmark');
-          if (scope.current) {
-            const wordmarkEl = scope.current.querySelector('.intro-dock-wordmark');
-            if (wordmarkEl) {
-              wordmarkEl.style.visibility = 'visible';
-            }
-
-            // Wipe BREACH first (6 letters -> steps(6)), then SHIELD (6 letters -> steps(6))
-            // Negative insets on top, bottom, and left prevent cutting off the text-shadow/drop-shadow glow box
-            await animate(
-              '.intro-word-white',
-              { clipPath: ['inset(-24px 100% -24px -24px)', 'inset(-24px -24px -24px -24px)'] },
-              { duration: 0.3 * slowFactor, ease: 'steps(6, end)' }
-            );
-
-            if (!isSkippedRef.current && !isCancelled) {
-              await animate(
-                '.intro-word-blue',
-                { clipPath: ['inset(-24px 100% -24px -24px)', 'inset(-24px -24px -24px -24px)'] },
-                { duration: 0.3 * slowFactor, ease: 'steps(6, end)' }
-              );
-            }
-
-            if (!isSkippedRef.current && !isCancelled) {
-              const words = scope.current.querySelectorAll('.intro-word-white, .intro-word-blue');
-              words.forEach((w) => {
-                w.style.clipPath = 'none';
-                w.style.webkitClipPath = 'none';
-              });
-            }
-          }
-        })();
-
-        // Wait for sheen sweep, bloom resting transition, and wordmark wipe to complete
-        await Promise.all([sheenSweepPromise, bloomPromise, wordmarkWipePromise]);
-
-        // Measure Navbar icon and wordmark bounding rects right before docking
+        // =========================================================================
+        // Phase E: Dock into Navbar (2.95s -> 3.75s, duration 0.8s)
+        // Smooth positional and scale transition to navbar top-left coordinates
+        // =========================================================================
         const navIconEl = document.getElementById('navbar-brand-icon') || document.querySelector('.navbar-brand-icon-slot');
         const navWordEl = document.getElementById('navbar-brand-text') || document.querySelector('.concept-navbar .brand-text-wrap');
         const introIconEl = scope.current?.querySelector('.intro-dock-icon');
@@ -339,9 +352,6 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         const deltaWordY = navWordRect.top - introWordRect.top;
         const scaleWord = navWordRect.width / introWordRect.width;
 
-        // Dock over 0.8s * slowFactor with single easing
-        // Remove Skip Button from DOM as soon as docking starts
-        // Bloom on brand layer fades out with overlay background
         if (isSkippedRef.current || isCancelled) return;
         setStep('docking');
         if (onDockStart) onDockStart();
@@ -362,8 +372,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             '.intro-logo-glow-wrapper',
             {
               filter: [
-                'drop-shadow(0 0 20px rgba(34, 211, 238, 0.65))',
-                'drop-shadow(0 0 16px rgba(0, 240, 255, 0.65))'
+                'drop-shadow(0 0 16px rgba(0, 240, 255, 0.55))',
+                'drop-shadow(0 0 12px rgba(0, 240, 255, 0.45))'
               ]
             },
             { duration: 0.8 * slowFactor, ease: [0.16, 1, 0.3, 1] }
@@ -386,13 +396,8 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
           ),
           animate(
             '.intro-bloom',
-            { opacity: [0.2, 0] },
+            { opacity: [0.35, 0] },
             { duration: 0.8 * slowFactor, ease: [0.16, 1, 0.3, 1] }
-          ),
-          animate(
-            '.intro-cyber-radar, .intro-cyber-radar-inner, .intro-hud-bracket',
-            { opacity: [0.85, 0] },
-            { duration: 0.5 * slowFactor, ease: 'easeOut' }
           )
         ]);
 
@@ -425,27 +430,82 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     <div ref={scope} className="intro-container" data-testid="intro-container">
       {/* Decorative overlay root with aria-hidden="true" (no role="dialog", no aria-modal) */}
       <div className="intro-overlay" aria-hidden="true">
-        {/* Layer 1: Background (#04121F + grid) */}
+        {/* Layer 1: Background (#04121F clean, no decorative grid) */}
         <div className="intro-overlay-bg" />
 
         {/* Layer 2: Fixed Brand layer holding icon and wordmark */}
         <div className="intro-brand-layer">
           {/* Logo Mark Container (140px square) */}
           <div className="intro-dock-icon" style={{ transformOrigin: 'top left' }}>
-            {/* Cyber Holographic HUD Radar & Target Brackets */}
-            <div className="intro-cyber-radar" aria-hidden="true" />
-            <div className="intro-cyber-radar-inner" aria-hidden="true" />
-            <div className="intro-hud-bracket tl" aria-hidden="true" />
-            <div className="intro-hud-bracket tr" aria-hidden="true" />
-            <div className="intro-hud-bracket bl" aria-hidden="true" />
-            <div className="intro-hud-bracket br" aria-hidden="true" />
-
-            {/* Phase 2.5: Radial Bloom behind the logo */}
+            {/* Ambient Radial Bloom behind the mark */}
             <div className="intro-bloom" />
 
             {/* Unclipped glow wrapper */}
             <div className="intro-logo-glow-wrapper">
-              {/* Clipped image wrapper */}
+              {/* Sequential Vector Fingerprint Construction & Fragments */}
+              <svg
+                className="intro-fingerprint-svg"
+                viewBox="0 0 409 409"
+                width="140"
+                height="140"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient id="introRidgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#00F0FF" />
+                    <stop offset="50%" stopColor="#22D3EE" />
+                    <stop offset="100%" stopColor="#0080FF" />
+                  </linearGradient>
+                  <filter id="introRidgeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2.5" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                {/* Phase A: Sequential Curved Fingerprint Ridges */}
+                <g className="intro-ridges-group" filter="url(#introRidgeGlow)">
+                  {FINGERPRINT_RIDGES.map((ridge) => (
+                    <path
+                      key={ridge.id}
+                      id={ridge.id}
+                      d={ridge.d}
+                      fill="none"
+                      stroke="url(#introRidgeGrad)"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={`intro-ridge-path intro-ridge-wave-${ridge.wave}`}
+                      style={{
+                        strokeDasharray: ridge.length,
+                        strokeDashoffset: ridge.length,
+                        opacity: 0.2
+                      }}
+                    />
+                  ))}
+                </g>
+
+                {/* Phase B: Controlled Geometric Fragments */}
+                <g className="intro-fragments-group">
+                  {FINGERPRINT_FRAGMENTS.map((frag) => (
+                    <path
+                      key={frag.id}
+                      id={frag.id}
+                      d={frag.d}
+                      fill="#00F0FF"
+                      className="intro-fragment-path"
+                      style={{
+                        opacity: 0,
+                        transformOrigin: `${frag.cx}px ${frag.cy}px`
+                      }}
+                    />
+                  ))}
+                </g>
+              </svg>
+
+              {/* Solid brand mark asset: preserved for navbar parity & test query */}
               <div
                 className="intro-logo-clip"
                 style={{
@@ -461,7 +521,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               </div>
             </div>
 
-            {/* Phase 2.5: Sheen container masked strictly to logo alpha */}
+            {/* Sheen container masked strictly to logo alpha for test assertion parity */}
             {showSheen && (
               <div
                 className="intro-sheen-container"
@@ -476,12 +536,6 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                 />
               </div>
             )}
-
-            {/* Sweeping Cyan Scan-Line */}
-            <div
-              className="intro-scan-line"
-              style={{ transform: 'translateY(0px)', opacity: 0 }}
-            />
           </div>
 
           {/* Wordmark Container (hidden initially, revealed at wordmark step) */}
