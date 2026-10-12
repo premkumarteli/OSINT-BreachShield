@@ -39,6 +39,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
   const [isReady] = useState(true);
   const isSkippedRef = useRef(false);
   const initialWidthRef = useRef(typeof window !== 'undefined' ? window.innerWidth : 0);
+  const videoRef = useRef(null);
   const [scope, animate] = useAnimate();
 
   const slowFactor = getSlowMoFactor();
@@ -117,6 +118,16 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     } catch (_) {}
   }, []);
 
+  // Initialize and play intro video matching reference video
+  useEffect(() => {
+    if (videoRef.current) {
+      try {
+        videoRef.current.playbackRate = 1.15 / slowFactor;
+        videoRef.current.play().catch(() => {});
+      } catch (_) {}
+    }
+  }, [slowFactor]);
+
   // Single Timeline Sequence driven by Framer Motion useAnimate
   useEffect(() => {
     if (!isReady || shouldReduceMotion) return;
@@ -137,54 +148,61 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         setStep('fingerprint');
 
         // =========================================================================
-        // Phase A: Sequential Fingerprint Ridge Construction (0.0s -> 1.35s)
-        // Staggered progressive draw of actual curved ridge lines along their paths
+        // Phase A: Sequential Fingerprint Ridge Drawing (0.0s -> ~2.7s)
+        // High-fidelity video & vector tracer paths draw each ridge one by one
         // =========================================================================
         if (scope.current) {
-          // Allow the hardware-accelerated sequential stroke drawing of all curved ridges to complete
-          const drawDurationMs = Math.round((FINGERPRINT_RIDGES.length * 0.075 + 0.45) * 1000 * slowFactor);
+          if (videoRef.current) {
+            try {
+              videoRef.current.playbackRate = 1.15 / slowFactor;
+              videoRef.current.play().catch(() => {});
+            } catch (_) {}
+          }
+          const drawDurationMs = Math.round(2700 * slowFactor);
           await new Promise((resolve) => setTimeout(resolve, drawDurationMs));
         }
 
         // =========================================================================
-        // Phase B: Controlled Fragmentation (1.35s -> 1.9s)
-        // Right-side & perimeter segments break into precise geometric data fragments
-        // Central core ridges remain steady while outer sections fragment
+        // Phase B: Controlled Fragmentation / Cube Materialization (~2.7s -> ~3.6s)
+        // Right-side geometric data cubes & fragments form with dynamic cyan lighting
         // =========================================================================
         if (isSkippedRef.current || isCancelled) return;
         setStep('fragment');
 
         if (scope.current) {
           await Promise.all([
-            // Subtle pulse on core ridges as energy transfers
             animate(
               '.intro-ridge-wave-0, .intro-ridge-wave-1',
               { opacity: [1, 0.9] },
               { duration: 0.45 * slowFactor, ease: 'easeOut' }
             ),
-            // Lateral outer ridges begin transition into separated fragments
             animate(
               '.intro-ridge-wave-3',
               { opacity: [1, 0.35] },
               { duration: 0.40 * slowFactor, ease: 'easeOut' }
             ),
-            // Reveal geometric data fragments with initial displacement
             animate(
               '.intro-fragment-path',
               { opacity: [0, 0.95], scale: [0.85, 1] },
               { duration: 0.45 * slowFactor, ease: [0.16, 1, 0.3, 1] }
-            )
+            ),
+            new Promise((resolve) => setTimeout(resolve, Math.round(850 * slowFactor)))
           ]);
         }
 
         // =========================================================================
-        // Phase C: Fragments Move Upward (1.9s -> 2.45s)
-        // Geometric data fragments drift upward toward wordmark elevation,
-        // shrinking in size and fading. Fingerprint dissolves into solid brand mark.
+        // Phase C: Video & Vector Handoff into Solid Brand Mark (~3.6s -> ~4.1s)
+        // Video cleanly solidifies into identical /logo-icon-mark.png asset
         // =========================================================================
         if (isSkippedRef.current || isCancelled) return;
 
         if (scope.current) {
+          const videoFadePromise = animate(
+            '.intro-video-container',
+            { opacity: [1, 0] },
+            { duration: 0.50 * slowFactor, ease: 'easeInOut' }
+          );
+
           const fragmentsRisePromise = animate(
             '.intro-fragment-path',
             {
@@ -192,7 +210,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               scale: [1, 0.35],
               opacity: [0.95, 0]
             },
-            { duration: 0.55 * slowFactor, ease: [0.25, 1, 0.5, 1] }
+            { duration: 0.50 * slowFactor, ease: [0.25, 1, 0.5, 1] }
           );
 
           // Vector ridges dissolve as the solid brand mark solidifies
@@ -202,14 +220,14 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             { duration: 0.50 * slowFactor, ease: 'easeInOut' }
           );
 
-          // Solid logo mark crossfades in cleanly behind the dissolving ridges with pure opacity (no vertical wipe)
+          // Solid logo mark crossfades in cleanly with 100% pixel parity
           const markSolidifyPromise = animate(
             '.intro-logo-clip',
             { opacity: [0, 1] },
             { duration: 0.50 * slowFactor, ease: 'easeInOut' }
           );
 
-          await Promise.all([fragmentsRisePromise, ridgesDissolvePromise, markSolidifyPromise]);
+          await Promise.all([videoFadePromise, fragmentsRisePromise, ridgesDissolvePromise, markSolidifyPromise]);
         }
 
         // =========================================================================
@@ -381,6 +399,20 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
             {/* Unclipped glow wrapper */}
             <div className="intro-logo-glow-wrapper">
+              {/* Reference Video: Exact drawing of fingerprint ridges and data fragments */}
+              <div className="intro-video-container" aria-hidden="true">
+                <video
+                  ref={videoRef}
+                  className="intro-logo-video"
+                  src="/intro-logo-animation.mp4"
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="auto"
+                  aria-hidden="true"
+                />
+              </div>
+
               {/* Sequential Vector Fingerprint Construction & Fragments */}
               <svg
                 className="intro-fingerprint-svg"
