@@ -70,7 +70,11 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
       return;
     }
     try {
-      if (sessionStorage.getItem('breachshield_intro_seen')) {
+      const isReplayRequested = typeof window !== 'undefined' && (
+        new URLSearchParams(window.location.search).has('replay') ||
+        new URLSearchParams(window.location.search).has('intro')
+      );
+      if (sessionStorage.getItem('breachshield_intro_seen') && !isReplayRequested) {
         handleSkip();
         return;
       }
@@ -162,7 +166,11 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     if (!isReady || shouldReduceMotion) return;
 
     try {
-      if (sessionStorage.getItem('breachshield_intro_seen')) return;
+      const isReplayRequested = typeof window !== 'undefined' && (
+        new URLSearchParams(window.location.search).has('replay') ||
+        new URLSearchParams(window.location.search).has('intro')
+      );
+      if (sessionStorage.getItem('breachshield_intro_seen') && !isReplayRequested) return;
     } catch (_) {}
 
     let isCancelled = false;
@@ -177,34 +185,20 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         // Staggered progressive draw of actual curved ridge lines along their paths
         // =========================================================================
         if (scope.current) {
-          const wavePromises = [
-            // Wave 0: Core inner whorl
-            animate(
-              '.intro-ridge-wave-0',
-              { strokeDashoffset: 0, opacity: [0.4, 1] },
-              { duration: 0.65 * slowFactor, ease: [0.25, 1, 0.5, 1], delay: 0.05 * slowFactor }
-            ),
-            // Wave 1: Mid concentric arcs
-            animate(
-              '.intro-ridge-wave-1',
-              { strokeDashoffset: 0, opacity: [0.3, 1] },
-              { duration: 0.75 * slowFactor, ease: [0.25, 1, 0.5, 1], delay: 0.22 * slowFactor }
-            ),
-            // Wave 2: Outer shield crest and curves
-            animate(
-              '.intro-ridge-wave-2',
-              { strokeDashoffset: 0, opacity: [0.2, 1] },
-              { duration: 0.80 * slowFactor, ease: [0.25, 1, 0.5, 1], delay: 0.45 * slowFactor }
-            ),
-            // Wave 3: Lateral bridges & connector segments
-            animate(
-              '.intro-ridge-wave-3',
-              { strokeDashoffset: 0, opacity: [0.2, 1] },
-              { duration: 0.70 * slowFactor, ease: [0.25, 1, 0.5, 1], delay: 0.65 * slowFactor }
-            )
-          ];
+          // Draw each individual curved fingerprint ridge stroke sequentially, one by one
+          const ridgePromises = FINGERPRINT_RIDGES.map((ridge, idx) => {
+            return animate(
+              `#${ridge.id}`,
+              { strokeDashoffset: [ridge.length, 0], opacity: [0, 1] },
+              {
+                duration: 0.32 * slowFactor,
+                ease: [0.22, 1, 0.36, 1],
+                delay: idx * 0.055 * slowFactor
+              }
+            );
+          });
 
-          await Promise.all(wavePromises);
+          await Promise.all(ridgePromises);
         }
 
         // =========================================================================
@@ -263,10 +257,10 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
             { duration: 0.50 * slowFactor, ease: 'easeInOut' }
           );
 
-          // Solid logo mark crossfades in cleanly behind the dissolving ridges
+          // Solid logo mark crossfades in cleanly behind the dissolving ridges with pure opacity (no vertical wipe)
           const markSolidifyPromise = animate(
             '.intro-logo-clip',
-            { clipPath: ['inset(0% 0% 100% 0%)', 'inset(0% 0% 0% 0%)'], opacity: [0.3, 1] },
+            { opacity: [0, 1] },
             { duration: 0.50 * slowFactor, ease: 'easeInOut' }
           );
 
@@ -481,7 +475,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                       style={{
                         strokeDasharray: ridge.length,
                         strokeDashoffset: ridge.length,
-                        opacity: 0.2
+                        opacity: 0
                       }}
                     />
                   ))}
@@ -509,8 +503,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
               <div
                 className="intro-logo-clip"
                 style={{
-                  clipPath: 'inset(0% 0% 100% 0%)',
-                  WebkitClipPath: 'inset(0% 0% 100% 0%)'
+                  opacity: 0
                 }}
               >
                 <img

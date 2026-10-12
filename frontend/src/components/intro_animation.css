@@ -100,10 +100,12 @@
 
 .intro-ridge-path {
   will-change: stroke-dashoffset, opacity;
+  filter: drop-shadow(0 0 3.5px rgba(0, 240, 255, 0.65));
 }
 
 .intro-fragment-path {
   will-change: transform, opacity;
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.75));
 }
 
 .intro-logo-clip {
@@ -115,6 +117,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1;
+  will-change: opacity;
 }
 
 .intro-logo-img {

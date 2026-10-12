@@ -81,6 +81,11 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
   const [introActive, setIntroActive] = useState(() => {
     if (typeof window === 'undefined') return false;
     try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('replay') || params.has('intro')) {
+        sessionStorage.removeItem('breachshield_intro_seen');
+        return true;
+      }
       return !sessionStorage.getItem('breachshield_intro_seen');
     } catch (_) {
       return false;
@@ -214,6 +219,7 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: introActive ? 0 : 1, y: introActive ? 16 : 0 }}
             transition={{ duration: 0.6, delay: introActive ? 0 : 0.15, ease: 'easeOut' }}
+            style={{ display: 'flex', gap: '14px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}
           >
             <Link
               to="/search"
@@ -222,6 +228,25 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
             >
               Check my exposure →
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  sessionStorage.removeItem('breachshield_intro_seen');
+                } catch (_) {}
+                setIntroActive(true);
+              }}
+              className="landing-cta-btn landing-replay-btn"
+              style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(34, 211, 238, 0.35)',
+                color: '#22d3ee',
+                cursor: 'pointer'
+              }}
+              aria-label="Replay Intro Animation"
+            >
+              Replay Intro ↺
+            </button>
           </motion.div>
         </main>
 
