@@ -1,5 +1,6 @@
 /* ==========================================================================
    BreachShield - Intro Logo Animation Overlay Styles
+   Sequential Fingerprint Construction & Fragmentation Transition
    ========================================================================== */
 
 .intro-container {
@@ -15,15 +16,12 @@
   pointer-events: none;
 }
 
+/* Layer 1: Clean Dark Navy Background without decorative grid */
 .intro-overlay-bg {
   position: fixed;
   inset: 0;
   z-index: 1;
   background-color: #04121F;
-  background-image: 
-    linear-gradient(rgba(34, 211, 238, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 211, 238, 0.04) 1px, transparent 1px);
-  background-size: 32px 32px;
   pointer-events: auto;
 }
 
@@ -78,15 +76,6 @@
   will-change: transform;
 }
 
-.intro-logo-container {
-  position: relative;
-  width: 140px;
-  height: 140px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .intro-logo-glow-wrapper {
   position: relative;
   width: 140px;
@@ -94,15 +83,38 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.55));
+  filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.55));
+}
+
+/* Sequential Vector Fingerprint */
+.intro-fingerprint-svg {
+  position: absolute;
+  inset: 0;
+  width: 140px;
+  height: 140px;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+  will-change: opacity, transform;
+}
+
+.intro-ridge-path {
+  will-change: stroke-dashoffset, opacity;
+}
+
+.intro-fragment-path {
+  will-change: transform, opacity;
 }
 
 .intro-logo-clip {
+  position: absolute;
+  inset: 0;
   width: 140px;
   height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1;
 }
 
 .intro-logo-img {
@@ -112,22 +124,6 @@
   display: block;
 }
 
-.intro-scan-line {
-  position: absolute;
-  top: 0;
-  left: -12px;
-  right: -12px;
-  height: 2px;
-  background: #22D3EE;
-  box-shadow: 
-    0 0 10px 2px #22D3EE, 
-    0 0 24px 4px rgba(34, 211, 238, 0.6);
-  border-radius: 2px;
-  pointer-events: none;
-  transform: translateY(0);
-  will-change: transform;
-}
-
 .intro-dock-wordmark {
   display: flex;
   align-items: center;
@@ -135,12 +131,6 @@
   transform-origin: 0 0;
   will-change: transform;
   visibility: hidden;
-}
-
-.intro-wordmark-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .intro-brand-name {
@@ -167,7 +157,7 @@
   display: inline-block;
 }
 
-/* Phase 2.5: Bloom & Sheen */
+/* Radial Bloom behind the mark */
 .intro-bloom {
   position: absolute;
   top: 50%;
@@ -177,7 +167,7 @@
   margin-top: -140px;
   margin-left: -140px;
   border-radius: 50%;
-  background: radial-gradient(circle, #0284c7 0%, rgba(2, 132, 199, 0.4) 35%, rgba(2, 132, 199, 0) 70%);
+  background: radial-gradient(circle, #0284c7 0%, rgba(2, 132, 199, 0.35) 35%, rgba(2, 132, 199, 0) 70%);
   pointer-events: none;
   z-index: 0;
   opacity: 0;
@@ -219,5 +209,3 @@
   pointer-events: none;
   will-change: transform, opacity;
 }
-
-

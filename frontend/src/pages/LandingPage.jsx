@@ -10,9 +10,36 @@ const bgVideo1 = '/bg1.mp4';
 
 export const DEFAULT_TEAM = [
   {
+    name: "Arvind D H",
+    role: "Project Member",
+    bio: "Dept. of Information Science and Engineering (USN: 1AY24IS400)",
+    links: {
+      github: "",
+      linkedin: ""
+    }
+  },
+  {
+    name: "Girishkumar N M",
+    role: "Project Member",
+    bio: "Dept. of Information Science and Engineering (USN: 1AY24IS404)",
+    links: {
+      github: "",
+      linkedin: ""
+    }
+  },
+  {
+    name: "Manoj",
+    role: "Project Member",
+    bio: "Dept. of Information Science and Engineering (USN: 1AY24IS406)",
+    links: {
+      github: "",
+      linkedin: ""
+    }
+  },
+  {
     name: "Premkumar Teli",
-    role: "[TODO: Role]",
-    bio: "[TODO: Bio]",
+    role: "Project Member",
+    bio: "Dept. of Information Science and Engineering (USN: 1AY24IS407)",
     links: {
       github: "",
       linkedin: ""
@@ -22,8 +49,13 @@ export const DEFAULT_TEAM = [
 
 export const DEFAULT_CONTACT = {
   heading: "Contact",
-  note: "[TODO: Contact information and inquiries, to be written by the project author]",
+  note: "[TODO: Project contact and institutional inquiries]",
   items: [
+    { label: "Institution", value: "Acharya Institute of Technology, Bengaluru" },
+    { label: "Department", value: "Department of Information Science and Engineering" },
+    { label: "Project Title", value: "BreachShield: AI Powered OSINT Breach Detection & Dark Web Protection" },
+    { label: "Project Guide", value: "Prof. Sushma T. M., Assistant Professor" },
+    { label: "Batch / Group", value: "Batch 05 (2026)" },
     { label: "Security Contact", value: "[TODO: Security contact to be provided]" },
     { label: "General Inquiries", value: "[TODO: General inquiries contact to be provided]" }
   ],
@@ -93,7 +125,7 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  // Reset scroll to top on mount when intro is active
+  // Reset scroll to top on mount when intro is active, or scroll to hash if present
   useEffect(() => {
     if (introActive && typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
       try {
@@ -101,6 +133,14 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
           window.scrollTo(0, 0);
         }
       } catch (_) {}
+    } else if (!introActive && typeof window !== 'undefined' && window.location.hash) {
+      const targetId = window.location.hash.replace('#', '');
+      const el = document.getElementById(targetId);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
     }
   }, [introActive]);
 
@@ -131,11 +171,7 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
           muted
           loop
           playsInline
-          onEnded={(e) => {
-            e.target.currentTime = 0;
-            e.target.play().catch(() => {});
-          }}
-          aria-hidden
+          aria-hidden="true"
         />
 
         {/* Atmospheric Depth Tint */}
@@ -146,14 +182,33 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
 
         {/* Hero Section */}
         <main className="landing-hero-container">
+          <motion.div
+            className="landing-hero-badge"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: introActive ? 0 : 1, y: introActive ? -8 : 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+          >
+            <span className="landing-badge-pulse" />
+            <span>OSINT BREACH INTELLIGENCE & DARK WEB PROTECTION</span>
+          </motion.div>
+
           <motion.h1
             className="landing-headline"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: introActive ? 0 : 1, y: introActive ? 16 : 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            Check whether your email or phone appears in known breaches. [TODO]
+            Check whether your email or phone appears in known breaches.
           </motion.h1>
+
+          <motion.p
+            className="landing-subheadline"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: introActive ? 0 : 1, y: introActive ? 16 : 0 }}
+            transition={{ duration: 0.6, delay: introActive ? 0 : 0.08, ease: 'easeOut' }}
+          >
+            Privacy-preserving exposure lookup across documented breach datasets with OTP-based verification and cryptographic k-anonymity partitioning.
+          </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -183,32 +238,32 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
           <div className="landing-section-header">
             <h2 className="landing-section-title">How It Works</h2>
             <p className="landing-section-subtitle">
-              Verify compromise exposure in three straightforward steps.
+              Verify compromise exposure through a structured three-step workflow.
             </p>
           </div>
 
           <div className="steps-grid">
             <div className="step-card">
               <span className="step-number">01</span>
-              <h3 className="step-title">Enter your email or phone</h3>
+              <h3 className="step-title">Enter Identifier</h3>
               <p className="step-desc">
-                Provide your identifier to cross-reference against known public breach datasets.
+                Provide an email address or phone number to initiate an exposure inquiry across documented breach archives.
               </p>
             </div>
 
             <div className="step-card">
               <span className="step-number">02</span>
-              <h3 className="step-title">Verify with a one-time code</h3>
+              <h3 className="step-title">OTP Ownership Verification</h3>
               <p className="step-desc">
-                Confirm your ownership of the target identifier before threat results are revealed.
+                Confirm ownership with a time-limited one-time password to ensure breach results are accessed only by authorized owners.
               </p>
             </div>
 
             <div className="step-card">
               <span className="step-number">03</span>
-              <h3 className="step-title">See your exposure</h3>
+              <h3 className="step-title">Privacy-Aware Lookup & Remediation</h3>
               <p className="step-desc">
-                Inspect correlated breach occurrences, exposed credential types, and protective actions.
+                Review heuristic exposure indicators, matched compromised records, and recommended remediation steps.
               </p>
             </div>
           </div>
@@ -283,13 +338,64 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
           </div>
 
           <div className="glass-vignette-card about-card-box">
-            <p className="todo-text-line">[TODO: About paragraph 1, to be written by the project author]</p>
-            <p className="todo-text-line">[TODO: About paragraph 2, to be written by the project author]</p>
-            <p className="todo-text-line">[TODO: About paragraph 3, to be written by the project author]</p>
+            <p className="about-text-line">
+              BreachShield: AI Powered OSINT Breach Detection & Dark Web Protection is an academic cybersecurity project developed in the Department of Information Science and Engineering at Acharya Institute of Technology, Bengaluru (Batch 05, 2026).
+            </p>
+            <p className="about-text-line">
+              The platform assists users in checking whether an email address or phone number appears in documented data breach records and public leak archives. Using k-anonymity search protocols and multi-factor ownership verification, BreachShield evaluates compromise exposure while minimizing cleartext identifier transmission.
+            </p>
+            <p className="about-text-line">
+              Through deterministic cryptographic logging and structured threat correlation, BreachShield provides actionable security guidance and exposure summaries to help individuals safeguard their digital identity.
+            </p>
           </div>
         </motion.section>
 
-        {/* Section (d): Team */}
+        {/* Section: Project Details */}
+        <motion.section
+          id="project-details"
+          className="landing-section"
+          variants={sectionMotionVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-40px' }}
+          aria-label="Project Details"
+        >
+          <div className="landing-section-header">
+            <h2 className="landing-section-title">Project Details</h2>
+            <p className="landing-section-subtitle">
+              Academic research scope, security architecture, and documented workflows.
+            </p>
+          </div>
+
+          <div className="project-details-grid">
+            <div className="glass-vignette-card project-detail-card">
+              <h3 className="project-detail-title">Objective & Domain</h3>
+              <p className="project-detail-desc">
+                Engineered as an academic OSINT cybersecurity project in Information Science and Engineering. Enables users to verify whether an email or phone number is present in known breach databases without exposing cleartext credentials.
+              </p>
+            </div>
+            <div className="glass-vignette-card project-detail-card">
+              <h3 className="project-detail-title">Verification Workflow</h3>
+              <p className="project-detail-desc">
+                Enforces time-limited one-time password (OTP) verification before releasing correlated exposure details, preventing unauthorized reconnaissance queries on arbitrary identifiers.
+              </p>
+            </div>
+            <div className="glass-vignette-card project-detail-card">
+              <h3 className="project-detail-title">Privacy & k-Anonymity</h3>
+              <p className="project-detail-desc">
+                Applies client-side SHA-256 prefix partitioning (k-anonymity) so the server queries partitioned buckets without storing or indexing raw search terms.
+              </p>
+            </div>
+            <div className="glass-vignette-card project-detail-card">
+              <h3 className="project-detail-title">Audit Logging & Research ML</h3>
+              <p className="project-detail-desc">
+                Features Merkle-tree cryptographic audit logging with local smart-contract anchoring. A machine-learning risk classification model (XGBoost) was developed and evaluated on benchmark datasets as an offline research artifact.
+              </p>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Section (d): Team & Guide */}
         <motion.section
           id="team"
           className="landing-section"
@@ -300,9 +406,19 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
           aria-label="Team"
         >
           <div className="landing-section-header">
-            <h2 className="landing-section-title">Team</h2>
+            <h2 className="landing-section-title">Team & Mentorship</h2>
             <p className="landing-section-subtitle">
-              The builders behind the platform.
+              Department of Information Science and Engineering, Acharya Institute of Technology.
+            </p>
+          </div>
+
+          {/* Project Mentorship / Guide Card */}
+          <div className="glass-vignette-card guide-card-box">
+            <div className="guide-badge">Project Guide & Mentorship</div>
+            <h3 className="guide-name">Prof. Sushma T. M.</h3>
+            <div className="guide-role">Assistant Professor</div>
+            <p className="guide-dept">
+              Department of Information Science and Engineering, Acharya Institute of Technology, Bengaluru
             </p>
           </div>
 
@@ -383,7 +499,7 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
                     ) : item.value.includes('@') ? (
                       <a href={`mailto:${item.value}`} className="team-link-item">{item.value}</a>
                     ) : (
-                      <a href={item.value} target="_blank" rel="noopener noreferrer" className="team-link-item">{item.value}</a>
+                      <span className="contact-item-plain">{item.value}</span>
                     )}
                   </div>
                 ))}
@@ -418,7 +534,7 @@ export default function LandingPage({ team = DEFAULT_TEAM, contact = DEFAULT_CON
               <span className="brand-text-blue">SHIELD</span>
             </span>
             <span className="footer-divider">•</span>
-            <span className="footer-copyright">© 2026 BreachShield. All rights reserved.</span>
+            <span className="footer-copyright">© 2026 BreachShield • Acharya Institute of Technology</span>
           </div>
 
           <div className="footer-links">
