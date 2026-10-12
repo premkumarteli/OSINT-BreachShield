@@ -98,9 +98,25 @@
   will-change: opacity, transform;
 }
 
+@keyframes drawRidgeStroke {
+  0% {
+    stroke-dashoffset: var(--ridge-len, 300);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
 .intro-ridge-path {
   will-change: stroke-dashoffset, opacity;
-  filter: drop-shadow(0 0 3.5px rgba(0, 240, 255, 0.65));
+  animation: drawRidgeStroke var(--ridge-dur, 0.45s) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--ridge-delay, 0s);
+  filter: drop-shadow(0 0 4px #00F0FF) drop-shadow(0 0 8px rgba(0, 240, 255, 0.8));
 }
 
 .intro-fragment-path {

@@ -141,22 +141,9 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         // Staggered progressive draw of actual curved ridge lines along their paths
         // =========================================================================
         if (scope.current) {
-          // Draw each individual curved fingerprint ridge stroke sequentially, one by one
-          const ridgeElements = scope.current.querySelectorAll('.intro-ridge-path');
-          const ridgePromises = Array.from(ridgeElements).map((el, idx) => {
-            const len = FINGERPRINT_RIDGES[idx]?.length || 200;
-            return animate(
-              el,
-              { strokeDashoffset: [len, 0], opacity: [0, 1] },
-              {
-                duration: 0.42 * slowFactor,
-                ease: [0.22, 1, 0.36, 1],
-                delay: idx * 0.075 * slowFactor
-              }
-            );
-          });
-
-          await Promise.all(ridgePromises);
+          // Allow the hardware-accelerated sequential stroke drawing of all curved ridges to complete
+          const drawDurationMs = Math.round((FINGERPRINT_RIDGES.length * 0.075 + 0.45) * 1000 * slowFactor);
+          await new Promise((resolve) => setTimeout(resolve, drawDurationMs));
         }
 
         // =========================================================================
@@ -418,14 +405,14 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                 </defs>
 
                 {/* Phase A: Sequential Curved Fingerprint Ridges */}
-                <g className="intro-ridges-group" filter="url(#introRidgeGlow)">
-                  {FINGERPRINT_RIDGES.map((ridge) => (
+                <g className="intro-ridges-group">
+                  {FINGERPRINT_RIDGES.map((ridge, idx) => (
                     <path
                       key={ridge.id}
                       id={ridge.id}
                       d={ridge.d}
                       fill="none"
-                      stroke="url(#introRidgeGrad)"
+                      stroke="#00F0FF"
                       strokeWidth="6"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -433,6 +420,9 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
                       style={{
                         strokeDasharray: ridge.length,
                         strokeDashoffset: ridge.length,
+                        '--ridge-len': ridge.length,
+                        '--ridge-delay': `${idx * 0.075 * slowFactor}s`,
+                        '--ridge-dur': `${0.45 * slowFactor}s`,
                         opacity: 0
                       }}
                     />
