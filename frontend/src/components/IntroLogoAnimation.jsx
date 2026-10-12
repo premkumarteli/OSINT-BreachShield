@@ -36,7 +36,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
   const shouldReduceMotion = useReducedMotion();
   const [step, setStep] = useState('initial'); // 'initial' | 'fingerprint' | 'fragment' | 'wordmark' | 'docking' | 'done'
   const [showSheen] = useState(true);
-  const [isReady, setIsReady] = useState(false);
+  const [isReady] = useState(true);
   const isSkippedRef = useRef(false);
   const initialWidthRef = useRef(typeof window !== 'undefined' ? window.innerWidth : 0);
   const [scope, animate] = useAnimate();
@@ -105,60 +105,16 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
     };
   }, [handleSkip]);
 
-  // Start Clean: decode logo image AND preload Orbitron fonts under single 1500ms max-wait timeout
+  // Preload logo image and Orbitron fonts in background without blocking animation start
   useEffect(() => {
-    let isMounted = true;
-    let maxWaitTimer = null;
-
-    if (typeof window === 'undefined') {
-      setIsReady(true);
-      return;
-    }
-
-    const markReady = () => {
-      if (isMounted) {
-        if (maxWaitTimer) clearTimeout(maxWaitTimer);
-        setIsReady(true);
-      }
-    };
-
-    // Shared 1500ms max-wait timeout ensures gate never hangs
-    maxWaitTimer = setTimeout(markReady, 1500);
-
-    const imagePromise = new Promise((resolve) => {
-      try {
-        const img = new Image();
-        img.src = '/logo-icon-mark.png';
-        if (typeof img.decode === 'function') {
-          img.decode().then(resolve).catch(resolve);
-        } else if (img.complete) {
-          resolve();
-        } else {
-          img.onload = resolve;
-          img.onerror = resolve;
-        }
-      } catch (_) {
-        resolve();
-      }
-    });
-
-    const fontPromise = (async () => {
+    try {
+      const img = new Image();
+      img.src = '/logo-icon-mark.png';
       if (typeof document !== 'undefined' && document.fonts && typeof document.fonts.load === 'function') {
-        try {
-          await Promise.all([
-            document.fonts.load('900 2rem Orbitron'),
-            document.fonts.load('900 1.03rem Orbitron')
-          ]);
-        } catch (_) {}
+        document.fonts.load('900 2rem Orbitron').catch(() => {});
+        document.fonts.load('900 1.03rem Orbitron').catch(() => {});
       }
-    })();
-
-    Promise.all([imagePromise, fontPromise]).then(markReady).catch(markReady);
-
-    return () => {
-      isMounted = false;
-      if (maxWaitTimer) clearTimeout(maxWaitTimer);
-    };
+    } catch (_) {}
   }, []);
 
   // Single Timeline Sequence driven by Framer Motion useAnimate
@@ -186,14 +142,16 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         // =========================================================================
         if (scope.current) {
           // Draw each individual curved fingerprint ridge stroke sequentially, one by one
-          const ridgePromises = FINGERPRINT_RIDGES.map((ridge, idx) => {
+          const ridgeElements = scope.current.querySelectorAll('.intro-ridge-path');
+          const ridgePromises = Array.from(ridgeElements).map((el, idx) => {
+            const len = FINGERPRINT_RIDGES[idx]?.length || 200;
             return animate(
-              `#${ridge.id}`,
-              { strokeDashoffset: [ridge.length, 0], opacity: [0, 1] },
+              el,
+              { strokeDashoffset: [len, 0], opacity: [0, 1] },
               {
-                duration: 0.32 * slowFactor,
+                duration: 0.42 * slowFactor,
                 ease: [0.22, 1, 0.36, 1],
-                delay: idx * 0.055 * slowFactor
+                delay: idx * 0.075 * slowFactor
               }
             );
           });

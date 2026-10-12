@@ -1,37 +1,57 @@
-// Extracted vector ridge curves and geometric data fragments from BreachShield logo identity
-// Precision-derived from logo-icon-mark.png (viewBox 0 0 409 409)
+// High-fidelity vector ridge curves and geometric data fragments for BreachShield logo identity
+// Precision-matched to logo-icon-mark.png (viewBox 0 0 409 409)
 
 export const FINGERPRINT_RIDGES = [
-  // Core & Inner Whorl (Wave 0: Stagger delay ~0.0s - 0.3s)
-  { id: "ridge-core-1", d: "M 235 187 L 228 202 L 218 221 L 209 251 L 202 274 L 192 291", length: 158.1, cx: 214.0, cy: 237.7, wave: 0 },
-  { id: "ridge-core-2", d: "M 200 173 L 188 178 L 165 184 L 148 188", length: 57.5, cx: 175.2, cy: 180.8, wave: 0 },
-  { id: "ridge-core-3", d: "M 163 132 L 168 137 L 212 138", length: 51.1, cx: 181.0, cy: 135.7, wave: 0 },
-  { id: "ridge-core-4", d: "M 169 210 L 176 211 L 195 212 L 210 213", length: 59.2, cx: 187.5, cy: 211.5, wave: 0 },
-  { id: "ridge-core-5", d: "M 177 252 L 172 258 L 165 272 L 161 284", length: 99.3, cx: 168.8, cy: 266.5, wave: 0 },
+  // 1. Central 'B' Upper Spine & Bar
+  { id: 'ridge-b-bar1', d: 'M 160 190 Q 185 190 215 190', length: 55.0, cx: 187, cy: 190, wave: 0 },
+  // 2. Central 'B' Upper Loop
+  { id: 'ridge-b-loop1', d: 'M 215 190 C 248 190 252 210 246 222 C 240 234 225 235 200 235', length: 95.0, cx: 230, cy: 212, wave: 0 },
+  // 3. Central 'B' Mid Connecting Bar
+  { id: 'ridge-b-bar2', d: 'M 200 235 Q 180 235 160 235', length: 40.0, cx: 180, cy: 235, wave: 0 },
+  // 4. Central 'B' Lower Loop
+  { id: 'ridge-b-loop2', d: 'M 200 235 C 235 235 258 250 254 275 C 250 298 230 305 195 305', length: 120.0, cx: 235, cy: 270, wave: 0 },
+  // 5. Central 'B' Lower Stem & Curve
+  { id: 'ridge-b-stem', d: 'M 195 305 Q 175 305 175 335 Q 175 365 198 375', length: 105.0, cx: 182, cy: 340, wave: 0 },
 
-  // Mid Concentric Arcs (Wave 1: Stagger delay ~0.25s - 0.6s)
-  { id: "ridge-mid-1", d: "M 124 239 L 110 263 L 95 284 L 83 299", length: 73.0, cx: 103.0, cy: 271.2, wave: 1 },
-  { id: "ridge-mid-2", d: "M 105 203 L 98 214 L 89 231 L 83 244", length: 46.5, cx: 93.8, cy: 223.0, wave: 1 },
-  { id: "ridge-mid-3", d: "M 111 137 L 103 148 L 94 163 L 86 175", length: 45.5, cx: 98.5, cy: 155.8, wave: 1 },
-  { id: "ridge-mid-4", d: "M 126 168 L 123 173 L 116 186 L 108 197", length: 38.0, cx: 118.2, cy: 181.0, wave: 1 },
-  { id: "ridge-mid-5", d: "M 135 251 L 133 262 L 131 278 L 129 290", length: 39.5, cx: 132.0, cy: 270.2, wave: 1 },
-  { id: "ridge-mid-6", d: "M 128 292 L 121 306 L 109 322 L 98 333", length: 51.1, cx: 114.0, cy: 313.2, wave: 1 },
+  // 6. Inner Core Ridge 1
+  { id: 'ridge-inner-1', d: 'M 188 165 C 168 170 152 188 150 215 C 148 240 158 268 168 285', length: 135.0, cx: 162, cy: 225, wave: 0 },
+  // 7. Inner Core Ridge 2
+  { id: 'ridge-inner-2', d: 'M 160 145 C 140 155 128 178 126 210', length: 75.0, cx: 140, cy: 175, wave: 0 },
 
-  // Outer Shield Curve & Crest (Wave 2: Stagger delay ~0.5s - 0.85s)
-  { id: "ridge-outer-1", d: "M 191 68 L 166 70 L 144 76 L 122 84 L 108 95", length: 92.4, cx: 146.2, cy: 78.6, wave: 2 },
-  { id: "ridge-outer-2", d: "M 64 113 L 53 126 L 44 141 L 38 150", length: 63.4, cx: 49.8, cy: 132.5, wave: 2 },
-  { id: "ridge-outer-3", d: "M 62 160 L 51 176 L 43 194", length: 39.0, cx: 52.0, cy: 176.7, wave: 2 },
-  { id: "ridge-outer-4", d: "M 81 362 L 105 369 L 135 374 L 165 378 L 191 381", length: 120.2, cx: 135.4, cy: 372.8, wave: 2 },
-  { id: "ridge-outer-5", d: "M 230 324 L 222 338 L 210 351 L 202 360", length: 42.1, cx: 216.0, cy: 343.2, wave: 2 },
+  // 8. Mid Concentric Arch 3 - Top
+  { id: 'ridge-mid3-top', d: 'M 205 152 Q 175 155 150 172 Q 132 192 125 225', length: 110.0, cx: 162, cy: 180, wave: 1 },
+  // 9. Mid Concentric Arch 3 - Bottom
+  { id: 'ridge-mid3-bot', d: 'M 125 225 C 120 260 126 295 150 326', length: 105.0, cx: 132, cy: 275, wave: 1 },
 
-  // Lateral Connecting Bridges & Right Segments (Wave 3: Stagger delay ~0.75s - 1.1s)
-  { id: "ridge-lat-1", d: "M 284 270 L 278 284 L 271 296 L 268 303", length: 39.0, cx: 275.2, cy: 288.2, wave: 3 },
-  { id: "ridge-lat-2", d: "M 278 197 L 275 206 L 273 222 L 271 236", length: 41.2, cx: 274.2, cy: 215.2, wave: 3 },
-  { id: "ridge-lat-3", d: "M 282 59 L 276 65 L 269 60 L 272 69", length: 28.6, cx: 274.6, cy: 63.6, wave: 3 },
-  { id: "ridge-lat-4", d: "M 348 71 L 338 81 L 332 76 L 331 90", length: 44.3, cx: 335.8, cy: 82.2, wave: 3 },
-  { id: "ridge-lat-5", d: "M 339 166 L 334 172 L 328 178 L 322 186", length: 32.5, cx: 330.8, cy: 175.5, wave: 3 },
-  { id: "ridge-lat-6", d: "M 375 129 L 382 136 L 392 147", length: 56.0, cx: 383.0, cy: 137.3, wave: 3 },
-  { id: "ridge-lat-7", d: "M 374 225 L 366 233 L 358 241 L 352 248", length: 34.0, cx: 362.5, cy: 236.8, wave: 3 }
+  // 10. Mid Concentric Arch 2 - Top
+  { id: 'ridge-mid2-top', d: 'M 220 118 Q 185 120 148 140 Q 115 168 102 205', length: 140.0, cx: 160, cy: 150, wave: 1 },
+  // 11. Mid Concentric Arch 2 - Bottom
+  { id: 'ridge-mid2-bot', d: 'M 102 205 C 92 245 98 285 122 330 Q 138 352 158 368', length: 175.0, cx: 118, cy: 275, wave: 1 },
+
+  // 12. Outer Shield Arch 1 - Upper Crest
+  { id: 'ridge-arch1-crest', d: 'M 228 82 Q 185 84 138 108 Q 98 140 76 185', length: 180.0, cx: 150, cy: 125, wave: 2 },
+  // 13. Outer Shield Arch 1 - Mid Arc
+  { id: 'ridge-arch1-mid', 'd': 'M 76 185 C 64 225 66 265 88 312', length: 130.0, cx: 74, cy: 248, wave: 2 },
+  // 14. Outer Shield Arch 1 - Lower Swoop
+  { id: 'ridge-arch1-low', d: 'M 88 312 C 105 348 140 378 185 396', length: 135.0, cx: 135, cy: 355, wave: 2 },
+
+  // 15. Outermost Boundary 0 - Top Crest
+  { id: 'ridge-arch0-crest', d: 'M 230 48 Q 175 52 122 75 Q 72 110 50 162', length: 210.0, cx: 140, cy: 100, wave: 2 },
+  // 16. Outermost Boundary 0 - Lateral Arc
+  { id: 'ridge-arch0-mid', d: 'M 50 162 C 38 205 38 252 64 308', length: 150.0, cx: 46, cy: 235, wave: 2 },
+  // 17. Outermost Boundary 0 - Bottom Arc
+  { id: 'ridge-arch0-low', d: 'M 64 308 C 85 352 120 382 165 402', length: 140.0, cx: 115, cy: 365, wave: 2 },
+
+  // 18. Bottom Detail Accents
+  { id: 'ridge-accent-1', d: 'M 190 398 Q 202 388 208 376', length: 32.0, cx: 200, cy: 386, wave: 3 },
+  { id: 'ridge-accent-2', d: 'M 225 342 Q 236 348 245 352', length: 28.0, cx: 235, cy: 347, wave: 3 },
+  { id: 'ridge-accent-3', d: 'M 245 315 Q 256 322 265 328', length: 28.0, cx: 255, cy: 322, wave: 3 },
+
+  // 19. Lateral Connecting Bridges
+  { id: 'ridge-lat-1', d: 'M 276 195 Q 274 216 270 238', length: 44.0, cx: 274, cy: 216, wave: 3 },
+  { id: 'ridge-lat-2', d: 'M 282 268 Q 276 285 268 302', length: 38.0, cx: 275, cy: 285, wave: 3 },
+  { id: 'ridge-lat-3', d: 'M 338 166 Q 330 176 322 186', length: 32.0, cx: 330, cy: 176, wave: 3 },
+  { id: 'ridge-lat-4', d: 'M 368 225 Q 360 236 352 248', length: 34.0, cx: 360, cy: 236, wave: 3 }
 ];
 
 export const FINGERPRINT_FRAGMENTS = [
