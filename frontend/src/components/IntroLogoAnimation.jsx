@@ -366,6 +366,20 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         {/* Layer 1: Background (#04121F clean, no decorative grid) */}
         <div className="intro-overlay-bg" />
 
+        {/* Layer 1.5: High-Definition Zero-Gravity Logo Animation Video */}
+        <div className="intro-video-wrapper">
+          <video
+            className="intro-video-element"
+            src="/logo_animation.mp4"
+            autoPlay
+            muted
+            playsInline
+            preload="auto"
+            onEnded={handleSkip}
+            aria-hidden="true"
+          />
+        </div>
+
         {/* Layer 2: Fixed Brand layer holding icon and wordmark */}
         <div className="intro-brand-layer">
           {/* Logo Mark Container (140px square) */}
