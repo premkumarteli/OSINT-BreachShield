@@ -27,6 +27,7 @@ export default function ResultsPage() {
 
   const [viewMode, setViewMode] = useState('timeline');
   const [copied, setCopied] = useState(false);
+  const [selectedPageIndex, setSelectedPageIndex] = useState('all');
 
   // Explicitly ensure page scrolling is unblocked on mount
   useEffect(() => {
@@ -153,7 +154,14 @@ export default function ResultsPage() {
   };
 
   const handleCopyTerminal = () => {
-    const text = sanitizeRecordContent(packets.map(p => p.info || '').join('\n\n'), verifiedTarget, maskedTarget);
+    let textToCopy = '';
+    if (selectedPageIndex === 'all') {
+      textToCopy = packets.map((p, idx) => `=== [ PAGE ${p.page || idx + 1} OF ${p.totalPages || packets.length} ] ===\n${p.info || ''}`).join('\n\n');
+    } else {
+      const pkt = packets[selectedPageIndex];
+      textToCopy = pkt ? pkt.info || '' : '';
+    }
+    const text = sanitizeRecordContent(textToCopy, verifiedTarget, maskedTarget);
     navigator.clipboard?.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -280,7 +288,7 @@ export default function ResultsPage() {
               )}
             </div>
 
-            {/* View Navigation Switcher: Only Timeline, Data (dev only), and New Search (Pure Text, No Icons) */}
+            {/* View Navigation Switcher: Timeline, Data (Full Intelligence Stream), and New Search */}
             <div className="view-nav">
               <button
                 className={`view-nav-btn ${viewMode === 'timeline' ? 'active' : ''}`}
@@ -289,15 +297,13 @@ export default function ResultsPage() {
               >
                 <span className="nav-label">Timeline</span>
               </button>
-              {process.env.NODE_ENV !== 'production' && (
-                <button
-                  className={`view-nav-btn ${viewMode === 'terminal' ? 'active' : ''}`}
-                  onClick={() => setViewMode('terminal')}
-                  aria-label="terminal-view"
-                >
-                  <span className="nav-label">Data</span>
-                </button>
-              )}
+              <button
+                className={`view-nav-btn ${viewMode === 'terminal' ? 'active' : ''}`}
+                onClick={() => setViewMode('terminal')}
+                aria-label="terminal-view"
+              >
+                <span className="nav-label">Data {packets.length > 1 ? `(${packets.length} Pages)` : ''}</span>
+              </button>
               <button
                 className="view-nav-btn new-search"
                 aria-label="new-search"
@@ -551,8 +557,8 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Terminal View (only rendered when not in production) */}
-            {viewMode === 'terminal' && process.env.NODE_ENV !== 'production' && (
+            {/* Terminal / Raw Intelligence View (Available in all environments) */}
+            {viewMode === 'terminal' && (
               <div className="terminal-section">
                 <div className="terminal-header">
                   <div className="terminal-dots">
@@ -560,18 +566,68 @@ export default function ResultsPage() {
                     <span className="dot yellow"></span>
                     <span className="dot green"></span>
                   </div>
-                  <span className="terminal-title">breach_intel@osint ~ $</span>
+                  <span className="terminal-title">
+                    breach_intel@osint ~ $ {packets.length > 1 ? `[ALL ${packets.length} PAGES CAPTURED]` : '[STREAM OK]'}
+                  </span>
                   <button className="copy-btn" onClick={handleCopyTerminal}>
-                    {copied ? 'Copied' : 'Copy'}
+                    {copied ? 'Copied' : (selectedPageIndex === 'all' ? 'Copy All' : 'Copy Page')}
                   </button>
                 </div>
+
+                {/* Multi-Page Navigation Toolbar */}
+                {packets.length > 1 && (
+                  <div className="terminal-page-toolbar">
+                    <div className="terminal-page-info">
+                      <span className="terminal-telemetry-badge">
+                        MULTI-PAGE DATA: {packets.length} OF {packets[0]?.totalPages || packets.length} PAGES INGESTED
+                      </span>
+                    </div>
+                    <div className="terminal-page-tabs">
+                      <button
+                        className={`terminal-page-tab ${selectedPageIndex === 'all' ? 'active' : ''}`}
+                        onClick={() => setSelectedPageIndex('all')}
+                      >
+                        All Pages ({packets.length})
+                      </button>
+                      {packets.map((pkt, idx) => (
+                        <button
+                          key={idx}
+                          className={`terminal-page-tab ${selectedPageIndex === idx ? 'active' : ''}`}
+                          onClick={() => setSelectedPageIndex(idx)}
+                        >
+                          Page {pkt.page || idx + 1}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="terminal-body">
-                  {packets.map((pkt, pIdx) => (
-                    <pre key={pIdx} className="terminal-output">
-                      {pkt.isSimulated && <span className="simulated-badge">SIMULATED</span>}
-                      {pkt.info || 'No breach details available.'}
-                    </pre>
-                  ))}
+                  {selectedPageIndex === 'all' ? (
+                    packets.map((pkt, pIdx) => (
+                      <div key={pIdx} className="terminal-page-block">
+                        {packets.length > 1 && (
+                          <div className="terminal-page-divider">
+                            <span>--- PAGE {pkt.page || pIdx + 1} OF {pkt.totalPages || packets.length} ---</span>
+                          </div>
+                        )}
+                        <pre className="terminal-output">
+                          {pkt.isSimulated && <span className="simulated-badge">SIMULATED</span>}
+                          {pkt.info || 'No breach details available for this page.'}
+                        </pre>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="terminal-page-block">
+                      <div className="terminal-page-divider">
+                        <span>--- PAGE {(packets[selectedPageIndex]?.page) || (selectedPageIndex + 1)} OF {packets[selectedPageIndex]?.totalPages || packets.length} ---</span>
+                      </div>
+                      <pre className="terminal-output">
+                        {packets[selectedPageIndex]?.isSimulated && <span className="simulated-badge">SIMULATED</span>}
+                        {packets[selectedPageIndex]?.info || 'No breach details available for this page.'}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

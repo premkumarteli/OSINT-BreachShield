@@ -374,21 +374,34 @@ async def send_query(q: Query):
                 # Reset pagination state
                 pagination_state.update({'current': None, 'total': None, 'last_text_hash': None, 'last_msg_id': None, 'seen_hashes': set()})
                 
+                # Robust target normalization for phone numbers and emails
                 clean_target = q.query.strip()
-                if re.match(r'^[6-9]\d{9}$', clean_target):
-                    clean_target = f"+91{clean_target}"
+                if '@' not in clean_target:
+                    digits = re.sub(r'[\s\-\(\)\.]', '', clean_target)
+                    if re.match(r'^[6-9]\d{9}$', digits):
+                        clean_target = f"+91{digits}"
+                    elif re.match(r'^0[6-9]\d{9}$', digits):
+                        clean_target = f"+91{digits[1:]}"
+                    elif re.match(r'^91[6-9]\d{9}$', digits):
+                        clean_target = f"+{digits}"
+                    elif digits.startswith('+') and len(digits) >= 10:
+                        clean_target = digits
+
+                print(f"[OSINT Query] Dispatching target to Telegram bot: {clean_target}", flush=True)
 
                 try:
                     sent_msg = await client.send_message(bot_username, clean_target)
-                except Exception:
+                except Exception as send_err:
+                    print(f"[OSINT Query Error] Failed to send message to bot: {send_err}", flush=True)
                     return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
 
                 messages = []
                 has_leak_card = False
                 try:
-                    # Wait for bot response messages (up to 22.0s for deep database lookups)
+                    # Wait for bot response messages (up to 24.0s for deep database lookups)
                     start_t = asyncio.get_event_loop().time()
-                    while (asyncio.get_event_loop().time() - start_t) < 22.0:
+                    last_msg_time = None
+                    while (asyncio.get_event_loop().time() - start_t) < 24.0:
                         try:
                             msg_txt = await asyncio.wait_for(queue.get(), timeout=3.5)
                             # If it's just a placeholder like 'searching...', wait for next edit/message
@@ -396,29 +409,37 @@ async def send_query(q: Query):
                                 continue
                             if msg_txt not in messages:
                                 messages.append(msg_txt)
-
-                            # If we received the actual leak data card, record and break early
-                            if any(kw in msg_txt for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'Passport number:', 'Adres:', 'Full name:', 'Region:']):
-                                has_leak_card = True
-                                break
+                                last_msg_time = asyncio.get_event_loop().time()
 
                             # If bot explicitly reports clean / no results
                             if any(kw in msg_txt.lower() for kw in ['no results found', '🤷', 'number of results: 0', 'the number of leaks: 0']):
                                 break
 
+                            # Check for leak card keywords
+                            if any(kw in msg_txt for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'Passport number:', 'Adres:', 'Full name:', 'Region:', 'BigBasket']):
+                                has_leak_card = True
+                                # Give a 1.2s window to catch immediate split/companion messages instead of abrupt break
+                                try:
+                                    companion = await asyncio.wait_for(queue.get(), timeout=1.2)
+                                    if companion and companion not in messages and not any(p in companion.lower() for p in ['searching', 'please wait']):
+                                        messages.append(companion)
+                                except asyncio.TimeoutError:
+                                    pass
+                                break
+
                             # If we received the summary header indicating leaks exist, continue waiting for the payload
-                            if any(kw in msg_txt.lower() for kw in ['request:', 'subjects made:', 'the number of leaks:', 'number of results:']) and len(messages) < 2:
+                            if any(kw in msg_txt.lower() for kw in ['request:', 'subjects made:', 'the number of leaks:', 'number of results:']):
                                 continue
                         except asyncio.TimeoutError:
                             # Poll recent messages in case event was already delivered to client session
                             try:
                                 bot_entity = await client.get_entity(bot_username)
-                                recent_msgs = await client.get_messages(bot_entity, limit=6)
+                                recent_msgs = await client.get_messages(bot_entity, limit=8)
                                 for rm in recent_msgs:
                                     if not rm.out and rm.id > sent_msg.id and rm.text and not any(p in rm.text.lower() for p in ['searching', 'please wait']):
                                         if rm.text not in messages:
                                             messages.append(rm.text)
-                                        if any(kw in rm.text for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'Passport number:', 'Adres:', 'Full name:', 'Region:']):
+                                        if any(kw in rm.text for kw in ['💾', '📞', 'Telephone:', 'Document number:', 'Passport number:', 'Adres:', 'Full name:', 'Region:', 'BigBasket']):
                                             has_leak_card = True
                                             break
                                 if has_leak_card:
@@ -429,11 +450,11 @@ async def send_query(q: Query):
                     # If no specific message was captured, collect whatever arrived in queue
                     while not queue.empty():
                         extra = await queue.get()
-                        if extra not in messages:
+                        if extra not in messages and not any(p in extra.lower() for p in ['searching', 'please wait']):
                             messages.append(extra)
 
                 except Exception as ex:
-                    print(f"[Query collector warning] {ex}")
+                    print(f"[Query collector warning] {ex}", flush=True)
                 finally:
                     try:
                         client.remove_event_handler(handler_new)
@@ -445,10 +466,10 @@ async def send_query(q: Query):
                 if not has_leak_card:
                     try:
                         bot_entity = await client.get_entity(bot_username)
-                        recent_msgs = await client.get_messages(bot_entity, limit=6)
+                        recent_msgs = await client.get_messages(bot_entity, limit=8)
                         for rm in recent_msgs:
                             if not rm.out and rm.text and rm.id > sent_msg.id:
-                                if rm.text not in messages:
+                                if rm.text not in messages and not any(p in rm.text.lower() for p in ['searching', 'please wait']):
                                     messages.append(rm.text)
                     except Exception:
                         pass
@@ -456,25 +477,124 @@ async def send_query(q: Query):
                 if not messages:
                     return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
 
-                # Filter out paywall notices if valid data exists alongside it
-                valid_data_messages = [m for m in messages if not any(kw in m.lower() for kw in ['subscription is over', 'trial period lasted', '/shop', '/referral', '/mirrors'])]
+                # Filter out pure paywall notices only if message contains NO leak data
+                def is_pure_paywall_notice(m_txt):
+                    low = m_txt.lower()
+                    has_leak_indicators = any(kw in m_txt for kw in [
+                        '💾', '📞', 'Telephone:', 'Document number:', 'Passport number:',
+                        'Adres:', 'Full name:', 'Region:', 'BigBasket', 'HiTeckGroop',
+                        'Password:', 'Phone:', 'Email:', 'Name:', 'Operator:', 'Address:',
+                        'Телефон:', 'ФИО:', 'Паспорт:', 'Адрес:'
+                    ])
+                    if has_leak_indicators:
+                        return False
+                    return any(kw in low for kw in ['subscription is over', 'trial period lasted', 'buy subscription', 'tariff'])
+
+                valid_data_messages = [m for m in messages if not is_pure_paywall_notice(m)]
                 if valid_data_messages:
                     messages = valid_data_messages
-                else:
-                    # Only paywall/subscription notices captured - fall back to demo_info
+                elif messages:
+                    messages = [m for m in messages if len(m.strip()) > 40]
+                
+                if not messages:
                     return {'packets': [{'info': demo_info}], 'response': demo_info, 'pagination': {'current': 1, 'total': 1}}
+
+                # --- MULTI-PAGE AUTOMATIC DISCOVERY & INGESTION ---
+                # Check whether the Telegram bot returned pagination buttons (e.g. 1\3, 1/3)
+                try:
+                    bot_entity = await client.get_entity(bot_username)
+                    target_msg, cur, tot = await get_message_with_keyboard_and_page(bot_entity)
+                    update_pagination_state(target_msg, cur, tot)
+
+                    if target_msg and tot and tot > 1:
+                        print(f"[Multi-Page Discovery] Detected {tot} total pages of breach intelligence. Auto-fetching all pages...", flush=True)
+                        max_pages_to_fetch = min(tot, 10)
+                        current_p = cur or 1
+
+                        for page_num in range(current_p + 1, max_pages_to_fetch + 1):
+                            try:
+                                rows = getattr(target_msg.reply_markup, 'rows', []) or []
+                                next_btn = None
+                                for r_idx, row in enumerate(rows):
+                                    buttons = getattr(row, 'buttons', []) or []
+                                    for b in buttons:
+                                        t = getattr(b, 'text', '') or ''
+                                        if any(x in t for x in ['▶', '➡', '➜', '→', 'Next', 'next', '>']) and not any(p in t for p in ['⬅', '◀', 'Prev', '<']):
+                                            next_btn = b
+                                            break
+                                    if next_btn:
+                                        break
+
+                                if next_btn:
+                                    # Set up queue for this specific page click
+                                    p_queue = asyncio.Queue()
+                                    async def _on_page_update(ev):
+                                        txt = getattr(ev, 'text', None) or (getattr(ev.message, 'message', '') if hasattr(ev, 'message') else '')
+                                        if txt:
+                                            await p_queue.put(txt)
+
+                                    h_new = _on_page_update
+                                    h_edit = _on_page_update
+                                    client.add_event_handler(h_new, events.NewMessage(from_users=bot_username))
+                                    client.add_event_handler(h_edit, events.MessageEdited(from_users=bot_username))
+
+                                    try:
+                                        await next_btn.click()
+                                        page_content = None
+
+                                        # Wait for new message or edited message
+                                        try:
+                                            page_content = await asyncio.wait_for(p_queue.get(), timeout=4.0)
+                                        except asyncio.TimeoutError:
+                                            pass
+
+                                        if not page_content:
+                                            await asyncio.sleep(1.0)
+                                            try:
+                                                refreshed = await client.get_messages(bot_entity, ids=target_msg.id)
+                                                if refreshed and refreshed.text and refreshed.text not in messages:
+                                                    page_content = refreshed.text
+                                                    target_msg = refreshed
+                                            except Exception:
+                                                pass
+
+                                        if not page_content:
+                                            msg_after, _, _ = await get_message_with_keyboard_and_page(bot_entity)
+                                            if msg_after and msg_after.text and msg_after.text not in messages:
+                                                page_content = msg_after.text
+                                                target_msg = msg_after
+
+                                        if page_content and page_content not in messages:
+                                            messages.append(page_content)
+                                            print(f"[Multi-Page Ingestion] Successfully ingested page {page_num}/{tot} ({len(page_content)} bytes)", flush=True)
+                                        else:
+                                            # No updated page received; stop pagination
+                                            break
+                                    finally:
+                                        try:
+                                            client.remove_event_handler(h_new)
+                                            client.remove_event_handler(h_edit)
+                                        except Exception:
+                                            pass
+                                else:
+                                    break
+                            except Exception as page_fetch_err:
+                                print(f"[Multi-Page Ingestion Warning] Failed on page {page_num}: {page_fetch_err}", flush=True)
+                                break
+                except Exception as pag_err:
+                    print(f"[Pagination check notice] {pag_err}", flush=True)
 
                 full_text = "\n\n".join(messages)
 
-                # Try quick pagination update
-                try:
-                    bot_entity = await client.get_entity(bot_username)
-                    msg, cur, tot = await get_message_with_keyboard_and_page(bot_entity)
-                    update_pagination_state(msg, cur, tot)
-                except Exception:
-                    pass
+                # Format distinct packets with page telemetry
+                packets = []
+                for p_idx, m in enumerate(messages):
+                    packets.append({
+                        'info': m,
+                        'page': p_idx + 1,
+                        'totalPages': len(messages)
+                    })
 
-                packets = [{'info': m} for m in messages]
                 ai_data = None
                 if AI_MODULE_ACTIVE:
                     try:
@@ -482,10 +602,16 @@ async def send_query(q: Query):
                     except Exception as ai_err:
                         print(f"[AI Analysis Error] {ai_err}")
 
+                tot_count = pagination_state.get('total') or len(messages)
                 return {
                     'packets': packets,
                     'response': full_text,
-                    'pagination': public_pagination(),
+                    'pagination': {
+                        'current': tot_count,
+                        'total': tot_count,
+                        'all_pages_loaded': True,
+                        'page_count': len(messages)
+                    },
                     'ai_analysis': ai_data
                 }
         finally:

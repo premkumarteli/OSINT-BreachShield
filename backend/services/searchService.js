@@ -131,6 +131,29 @@ async function executeSearch(query, verifiedTarget, options = {}) {
     }
   }
 
+  // If specific databases/leaks were detected in the timeline across pages,
+  // enrich records with dedicated incident cards for each discovered database
+  if (Array.isArray(timeline) && timeline.length > 0) {
+    const existingTitles = new Set(records.map(r => (r.title || '').toLowerCase()));
+    timeline.forEach((evt, idx) => {
+      const cardTitle = evt.source ? `${evt.source} Leak Incident` : `Threat Incident #${records.length + idx + 1}`;
+      if (!existingTitles.has(cardTitle.toLowerCase()) && !existingTitles.has((evt.source || '').toLowerCase())) {
+        existingTitles.add(cardTitle.toLowerCase());
+        records.push({
+          id: records.length + 1,
+          source: evt.source || 'Telegram OSINT Feed',
+          title: cardTitle,
+          year: String(evt.year || new Date().getFullYear()),
+          category: evt.category || 'Compromised Database',
+          sourceType: 'LIVE_SCRAPER',
+          isSimulated: liveHits.some(h => h.isSimulated),
+          dataClasses: ['IDENTITY', 'CREDENTIALS'],
+          details: evt.description || `Exposed records identified in ${evt.source} breach archive.`
+        });
+      }
+    });
+  }
+
   return {
     packets: sanitizedPackets,
     records,
