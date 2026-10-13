@@ -514,18 +514,22 @@ async def send_query(q: Query):
                         for page_num in range(current_p + 1, max_pages_to_fetch + 1):
                             try:
                                 rows = getattr(target_msg.reply_markup, 'rows', []) or []
-                                next_btn = None
+                                next_row = None
+                                next_col = None
+                                next_text = None
                                 for r_idx, row in enumerate(rows):
                                     buttons = getattr(row, 'buttons', []) or []
-                                    for b in buttons:
+                                    for c_idx, b in enumerate(buttons):
                                         t = getattr(b, 'text', '') or ''
                                         if any(x in t for x in ['▶', '➡', '➜', '→', 'Next', 'next', '>']) and not any(p in t for p in ['⬅', '◀', 'Prev', '<']):
-                                            next_btn = b
+                                            next_row = r_idx
+                                            next_col = c_idx
+                                            next_text = t
                                             break
-                                    if next_btn:
+                                    if next_row is not None:
                                         break
 
-                                if next_btn:
+                                if next_row is not None and next_col is not None:
                                     # Set up queue for this specific page click
                                     p_queue = asyncio.Queue()
                                     async def _on_page_update(ev):
@@ -539,7 +543,14 @@ async def send_query(q: Query):
                                     client.add_event_handler(h_edit, events.MessageEdited(from_users=bot_username))
 
                                     try:
-                                        await next_btn.click()
+                                        # Click the inline button via the message object in Telethon
+                                        try:
+                                            await target_msg.click(next_row, next_col)
+                                        except Exception as c_err:
+                                            if next_text:
+                                                await target_msg.click(text=next_text)
+                                            else:
+                                                raise c_err
                                         page_content = None
 
                                         # Wait for new message or edited message
