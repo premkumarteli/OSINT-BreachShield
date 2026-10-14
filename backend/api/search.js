@@ -52,7 +52,7 @@ router.post('/search', verifyOtpToken, async (req, res) => {
 router.post('/telegram-page', verifyOtpToken, async (req, res) => {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
     const resp = await fetch(`${getPythonBaseUrl()}/next-page`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -84,7 +84,7 @@ router.post('/telegram-page', verifyOtpToken, async (req, res) => {
 router.post('/telegram-prev-page', verifyOtpToken, async (req, res) => {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
     const resp = await fetch(`${getPythonBaseUrl()}/prev-page`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

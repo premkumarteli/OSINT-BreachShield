@@ -29,7 +29,7 @@ class TelegramScraperSource extends BreachSource {
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 35000);
+      const timeout = setTimeout(() => controller.abort(), 75000);
       const resp = await fetch(this.pythonServiceUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
