@@ -119,10 +119,12 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
 
   const videoRef = useRef(null);
   const isDockingRef = useRef(false);
+  const [isDocking, setIsDocking] = useState(false);
 
   const dockIntoNavbar = useCallback(async () => {
     if (isDockingRef.current || isSkippedRef.current) return;
     isDockingRef.current = true;
+    setIsDocking(true);
     setStep('docking');
     if (onDockStart) onDockStart();
 
@@ -156,21 +158,24 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
       scaleWord = navWordRect.width / introWordRect.width;
     }
 
+    const durationSec = 1.15 * slowFactor;
+    const smoothEase = [0.22, 1, 0.36, 1];
+
     const animations = [
       animate(
         '.intro-overlay-bg',
         { opacity: [1, 0] },
-        { duration: 0.85 * slowFactor, ease: [0.16, 1, 0.3, 1] }
+        { duration: durationSec, ease: smoothEase }
       ),
       animate(
         '.intro-video-wrapper',
         {
           x: [0, deltaIconX],
           y: [0, deltaIconY],
-          scale: [1, scaleIcon * 1.5],
-          opacity: [1, 0.8, 0]
+          scale: [1, scaleIcon * 1.4],
+          opacity: [1, 1, 0.75, 0]
         },
-        { duration: 0.85 * slowFactor, ease: [0.16, 1, 0.3, 1] }
+        { duration: durationSec, ease: smoothEase }
       )
     ];
 
@@ -399,7 +404,7 @@ export default function IntroLogoAnimation({ onComplete, onDockStart }) {
         <div className="intro-overlay-bg" />
 
         {/* Layer 1.5: High-Definition Zero-Gravity Logo Animation Video */}
-        <div className="intro-video-wrapper">
+        <div className={`intro-video-wrapper ${isDocking ? 'is-docking' : ''}`}>
           <video
             ref={videoRef}
             className="intro-video-element"

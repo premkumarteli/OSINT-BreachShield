@@ -35,7 +35,9 @@ export default function Navbar({ isIntroActive = false }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            visibility: isIntroActive ? 'hidden' : 'visible'
+            visibility: isIntroActive ? 'hidden' : 'visible',
+            opacity: isIntroActive ? 0 : 1,
+            transition: 'opacity 0.6s ease'
           }}
         >
           <img
@@ -50,7 +52,9 @@ export default function Navbar({ isIntroActive = false }) {
           id="navbar-brand-text"
           className="brand-text-wrap"
           style={{
-            visibility: isIntroActive ? 'hidden' : 'visible'
+            visibility: isIntroActive ? 'hidden' : 'visible',
+            opacity: isIntroActive ? 0 : 1,
+            transition: 'opacity 0.6s ease'
           }}
         >
           <span className="brand-name">
