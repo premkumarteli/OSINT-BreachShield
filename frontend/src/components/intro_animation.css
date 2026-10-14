@@ -16,12 +16,12 @@
   pointer-events: none;
 }
 
-/* Layer 1: Clean Dark Navy Background without decorative grid */
+/* Layer 1: Seamless Pitch-Black Void Background without decorative grid */
 .intro-overlay-bg {
   position: fixed;
   inset: 0;
   z-index: 1;
-  background-color: #04121F;
+  background-color: #000000;
   pointer-events: auto;
 }
 
@@ -233,27 +233,41 @@
 }
 
 /* ==========================================================================
-   Cinematic Logo Animation Video Layer
+   Cinematic Logo Animation Video Layer (Option A: Seamless Fullscreen Void)
    ========================================================================== */
 .intro-video-wrapper {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
+  background-color: #000000;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .intro-video-element {
-  max-width: 960px;
-  width: 90vw;
-  height: auto;
-  aspect-ratio: 16 / 9;
-  mix-blend-mode: screen;
-  border-radius: 12px;
-  filter: drop-shadow(0 0 35px rgba(0, 240, 255, 0.40));
-  mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 70%, rgba(0, 0, 0, 0) 98%);
-  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 70%, rgba(0, 0, 0, 0) 98%);
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  object-fit: contain;
+  background-color: #000000;
   pointer-events: none;
+}
+
+.intro-watermark-mask {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 15vw;
+  height: 15vh;
+  min-width: 140px;
+  min-height: 110px;
+  background-color: #000000;
+  pointer-events: none;
+  z-index: 11;
 }
