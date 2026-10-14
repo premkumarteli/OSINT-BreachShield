@@ -178,17 +178,10 @@ async function queueSmsJob(phoneNumber, message, deviceId = null, customRequestI
     }
   }
 
-  if (!targetDeviceId) {
-    return {
-      success: false,
-      error: 'No active Android SMS Gateway devices currently available'
-    };
-  }
-
   const requestId = customRequestId || `sms_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   const jobRecord = {
     requestId,
-    deviceId: targetDeviceId,
+    deviceId: targetDeviceId || null,
     phoneNumber,
     message,
     status: 'PENDING',
@@ -200,22 +193,35 @@ async function queueSmsJob(phoneNumber, message, deviceId = null, customRequestI
       INSERT INTO sms_jobs (request_id, device_id, phone_number, message, status, created_at)
       VALUES (?, ?, ?, ?, 'PENDING', NOW());
     `;
-    await db.query(insertSql, [requestId, targetDeviceId, phoneNumber, message]);
+    await db.query(insertSql, [requestId, targetDeviceId || null, phoneNumber, message]);
   } catch (dbErr) {
     memoryJobs.set(requestId, jobRecord);
   }
 
-  // Attempt real-time WebSocket dispatch if phone is currently connected
+  // Attempt real-time WebSocket dispatch if target or any phone is currently connected
+  let dispatched = false;
   try {
-    const { sendSmsToGateway } = require('../gatewayWs');
-    sendSmsToGateway(targetDeviceId, requestId, phoneNumber, message);
+    const { sendSmsToGateway, activeSockets } = require('../gatewayWs');
+    if (targetDeviceId) {
+      dispatched = sendSmsToGateway(targetDeviceId, requestId, phoneNumber, message);
+    }
+    if (!dispatched && activeSockets && activeSockets.size > 0) {
+      for (const [sockDevId] of activeSockets.entries()) {
+        dispatched = sendSmsToGateway(sockDevId, requestId, phoneNumber, message);
+        if (dispatched) {
+          targetDeviceId = sockDevId;
+          jobRecord.deviceId = sockDevId;
+          break;
+        }
+      }
+    }
   } catch (_) {}
 
   return {
     success: true,
     requestId,
-    deviceId: targetDeviceId,
-    status: 'PENDING'
+    deviceId: targetDeviceId || 'PENDING_GATEWAY',
+    status: dispatched ? 'DISPATCHED' : 'PENDING'
   };
 }
 

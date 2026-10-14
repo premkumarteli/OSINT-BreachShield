@@ -29,7 +29,7 @@ fun SettingsScreen(
     val pingResult by viewModel.pingResult.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
 
-    var serverUrlInput by remember(settings?.serverUrl) { mutableStateOf(settings?.serverUrl ?: "http://10.18.86.96:5000") }
+    var serverUrlInput by remember(settings?.serverUrl) { mutableStateOf(settings?.serverUrl ?: "http://10.159.169.96:5000") }
     var smsTemplateInput by remember(settings?.smsOtpTemplate) { mutableStateOf(settings?.smsOtpTemplate ?: "Your BreachShield OTP is {OTP}. Valid for 5 minutes.") }
 
     Scaffold(
