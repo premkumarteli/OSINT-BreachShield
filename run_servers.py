@@ -88,6 +88,14 @@ def find_npm():
 def find_node():
     return 'node'
 
+def kill_port(port):
+    if sys.platform == 'win32':
+        try:
+            cmd = f'powershell -NoProfile -Command "Get-Process -Id (Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"'
+            subprocess.call(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
 def is_port_open(host, port, timeout=1.0):
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -181,6 +189,7 @@ def main():
 
     # 1. Start Python FastAPI Live Threat Feed Service (Port 8001)
     if start_telegram:
+        kill_port(8001)
         fastapi_cmd = [python_bin, "-m", "uvicorn", "osint_service:app", "--host", "127.0.0.1", "--port", "8001"]
         print(f"{MAGENTA}[1/3] Starting Python Live Threat Feed Scraper on port 8001...{RESET}")
         p_fastapi = subprocess.Popen(
@@ -198,6 +207,7 @@ def main():
         print(f"{CYAN}[INFO] Live Scraper is OFF (using Local k-Anonymity & 1,027-Breach Store).{RESET}")
 
     # 2. Start Node.js Express Backend (Port 5000)
+    kill_port(5000)
     node_cmd = [node_bin, "index.js"]
     print(f"{CYAN}[2/3] Starting Node.js Express Backend on port 5000...{RESET}")
     p_node = subprocess.Popen(

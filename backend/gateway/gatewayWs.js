@@ -211,10 +211,10 @@ function setupGatewayWebSocket(server) {
       }
     });
 
-    ws.on('close', async () => {
+    ws.on('close', async (code, reason) => {
       if (currentDeviceId && isAuthenticated) {
         activeSockets.delete(currentDeviceId);
-        console.log(`[Gateway WS] Device ${currentDeviceId} disconnected`);
+        console.log(`[Gateway WS] Device ${currentDeviceId} disconnected (code: ${code}, reason: "${reason ? reason.toString() : ''}")`);
         try {
           await db.query(`UPDATE gateway_devices SET status = 'OFFLINE', last_seen = NOW() WHERE device_id = ?`, [currentDeviceId]);
         } catch (_) {}

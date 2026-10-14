@@ -22,7 +22,7 @@ fun RegistrationScreen(
     onRegistrationSuccess: () -> Unit,
     viewModel: RegistrationViewModel = hiltViewModel()
 ) {
-    var serverUrl by remember { mutableStateOf("http://10.25.185.96:5000") }
+    var serverUrl by remember { mutableStateOf(viewModel.getServerUrl()) }
     var deviceName by remember { mutableStateOf("BreachShield Node 01") }
 
     val uiState by viewModel.uiState.collectAsState()

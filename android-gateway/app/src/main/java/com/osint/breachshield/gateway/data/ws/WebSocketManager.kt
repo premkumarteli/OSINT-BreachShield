@@ -40,8 +40,14 @@ class WebSocketManager @Inject constructor(
 
     fun connect() {
         val serverUrl = preferenceManager.getServerUrl() ?: return
-        val gatewayToken = preferenceManager.getGatewayToken() ?: return
         val deviceId = preferenceManager.getDeviceId()
+        val gatewayToken = preferenceManager.getGatewayToken()
+            ?: preferenceManager.getAdminToken()
+            ?: "gw_${deviceId.replace("-", "").take(16)}"
+
+        if (preferenceManager.getGatewayToken().isNullOrBlank()) {
+            preferenceManager.saveRegistrationData(serverUrl, gatewayToken)
+        }
 
         if (_connectionStatus.value == ConnectionStatus.CONNECTED || _connectionStatus.value == ConnectionStatus.CONNECTING) return
 
@@ -142,6 +148,7 @@ class WebSocketManager @Inject constructor(
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 _connectionStatus.value = ConnectionStatus.DISCONNECTED
                 stopHeartbeat()
+                scheduleReconnect()
             }
         })
     }

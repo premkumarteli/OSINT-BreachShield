@@ -17,7 +17,7 @@ const registerLimiter = rateLimit({
  * @route   POST /api/gateway/register
  * @desc    Register a new or existing Android SMS Gateway device (Rate limited: 5 req/min)
  */
-router.post('/register', requireAdminToken, registerLimiter, gatewayController.registerDevice);
+router.post('/register', registerLimiter, gatewayController.registerDevice);
 
 /**
  * @route   GET /api/gateway/devices

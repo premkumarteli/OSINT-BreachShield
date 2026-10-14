@@ -36,6 +36,10 @@ fun DashboardScreen(
     val sentToday by viewModel.sentCountToday.collectAsState()
     val failedToday by viewModel.failedCountToday.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.reconnect()
+    }
+
     var showResetDialog by remember { mutableStateOf(false) }
 
     if (showResetDialog) {
@@ -143,7 +147,12 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                StatusCard(connectionStatus, viewModel.deviceId, viewModel.serverUrl)
+                StatusCard(
+                    status = connectionStatus,
+                    deviceId = viewModel.deviceId,
+                    serverUrl = viewModel.serverUrl,
+                    onReconnect = { viewModel.reconnect() }
+                )
             }
 
             item {
@@ -218,7 +227,12 @@ fun DashboardScreen(
 }
 
 @Composable
-fun StatusCard(status: ConnectionStatus, deviceId: String, serverUrl: String) {
+fun StatusCard(
+    status: ConnectionStatus,
+    deviceId: String,
+    serverUrl: String,
+    onReconnect: () -> Unit = {}
+) {
     val statusText = when (status) {
         ConnectionStatus.CONNECTED -> "ONLINE"
         ConnectionStatus.CONNECTING -> "STANDBY"
@@ -257,6 +271,27 @@ fun StatusCard(status: ConnectionStatus, deviceId: String, serverUrl: String) {
         TelemetryRow("NODE ID", deviceId)
         Spacer(modifier = Modifier.height(6.dp))
         TelemetryRow("SERVER", serverUrl)
+
+        if (status != ConnectionStatus.CONNECTED) {
+            Spacer(modifier = Modifier.height(14.dp))
+            Button(
+                onClick = onReconnect,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AccentCyan.copy(alpha = 0.15f),
+                    contentColor = AccentCyan
+                ),
+                border = BorderStroke(1.dp, AccentCyan.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "⚡ TAP TO CONNECT / RETRY LINK",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+            }
+        }
     }
 }
 

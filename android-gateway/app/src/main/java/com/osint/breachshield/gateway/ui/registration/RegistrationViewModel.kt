@@ -23,6 +23,8 @@ class RegistrationViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<RegistrationUiState>(RegistrationUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
+    fun getServerUrl(): String = preferenceManager.getServerUrl()
+
     fun register(serverUrlInput: String, deviceName: String) {
         viewModelScope.launch {
             _uiState.value = RegistrationUiState.Loading

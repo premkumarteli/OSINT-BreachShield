@@ -24,6 +24,14 @@ class DashboardViewModel @Inject constructor(
     
     val connectionStatus = webSocketManager.connectionStatus
     
+    init {
+        reconnect()
+    }
+
+    fun reconnect() {
+        webSocketManager.connect()
+    }
+    
     val recentSmsLogs = gatewayDao.getRecentSmsLogs()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
