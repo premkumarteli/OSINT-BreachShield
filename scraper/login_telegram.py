@@ -38,13 +38,15 @@ print("==================================================")
 print(f"Phone number: {phone}")
 print(f"Session path: {session_name}.session\n")
 
-try:
-    client = TelegramClient(session_name, api_id=api_id, api_hash=api_hash)
-except TypeError:
-    # Fallback for older Telethon versions
-    client = TelegramClient(session_name, api_id, api_hash)
+def create_client():
+    try:
+        return TelegramClient(session_name, api_id=api_id, api_hash=api_hash)
+    except TypeError:
+        # Fallback for older Telethon versions
+        return TelegramClient(session_name, api_id, api_hash)
 
 async def main():
+    client = create_client()
     print(f"Connecting to Telegram for phone {phone}...")
     await client.connect()
     
@@ -57,7 +59,22 @@ async def main():
             if clean_target and clean_current and not clean_current.endswith(clean_target[-10:]):
                 print(f"\n[NOTICE] Existing session belongs to phone +{me.phone}.")
                 print(f"[NOTICE] Logging out old account to switch to new phone: {phone}...\n")
-                await client.log_out()
+                try:
+                    await client.log_out()
+                except Exception as logout_err:
+                    print(f"[WARNING] Logout notice: {logout_err}")
+                
+                # Delete old session files to ensure a clean slate
+                for ext in ['.session', '.session-journal']:
+                    target_file = f"{session_name}{ext}"
+                    if os.path.exists(target_file):
+                        try:
+                            os.remove(target_file)
+                        except Exception:
+                            pass
+                
+                # TelegramClient instance cannot be reused after logging out; create fresh instance
+                client = create_client()
         except Exception as e:
             print(f"[WARNING] Could not verify existing session account: {e}")
 
