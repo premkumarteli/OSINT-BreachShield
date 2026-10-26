@@ -5,6 +5,7 @@ import BreachTimeline from '../components/BreachTimeline';
 import { checkProtectedGuard } from '../lib/authGuards';
 import { maskIdentifier } from '../lib/maskIdentifier';
 import { sanitizeRecordContent } from '../lib/sanitizeRecordContent';
+import { parseTelegramPage, formatCleanTelegramText } from '../lib/parseTelegramData';
 import { CyberShieldIcon, CyberAlertIcon, CyberEmptyShieldIcon } from '../components/CyberShieldIcon';
 import '../App.css';
 import '../auth.css';
@@ -28,6 +29,7 @@ export default function ResultsPage() {
   const [viewMode, setViewMode] = useState('timeline');
   const [copied, setCopied] = useState(false);
   const [selectedPageIndex, setSelectedPageIndex] = useState('all');
+  const [terminalFormat, setTerminalFormat] = useState('structured');
 
   // Explicitly ensure page scrolling is unblocked on mount
   useEffect(() => {
@@ -111,22 +113,51 @@ export default function ResultsPage() {
   } else if (rawRecords.length === 0 && packets.length > 0) {
     const validPackets = packets.filter(p => p.info && !p.info.includes('No threat records detected'));
     if (validPackets.length > 0) {
-      rawRecords = validPackets.map((pkt, idx) => ({
-        id: `derived-pkt-${idx + 1}`,
-        source: 'Telegram OSINT Feed',
-        title: pkt.name ? `Identity Exposure: ${pkt.name}` : `Telegram Leak Record #${idx + 1}`,
-        year: new Date().getFullYear().toString(),
-        category: pkt.mobile ? 'Telecom / Dark Web Spill' : 'Telegram OSINT Spill',
-        sourceType: 'LIVE_FEED',
-        isSimulated: Boolean(pkt.isSimulated),
-        dataClasses: [
-          ...(pkt.mobile ? ['PHONE'] : []),
-          ...(pkt.address ? ['PHYSICAL_ADDRESS'] : []),
-          ...(pkt.name ? ['FULL_NAME'] : []),
-          'CREDENTIALS'
-        ],
-        details: (pkt.info || '').split('\n').filter(Boolean).slice(0, 3).join(' • ') || 'Compromised record identified in Telegram packet stream.'
-      }));
+      rawRecords = validPackets
+        .map((pkt, idx) => {
+          const parsed = parseTelegramPage(pkt.info || '');
+          if (parsed.isSummary) return null; // Skip page 1 query overview from card list
+
+          const dataClasses = [];
+          if (parsed.fields.some(f => f.type === 'phone')) dataClasses.push('PHONE');
+          if (parsed.fields.some(f => f.type === 'document')) dataClasses.push('GOVERNMENT_ID');
+          if (parsed.fields.some(f => f.type === 'name')) dataClasses.push('FULL_NAME');
+          if (parsed.fields.some(f => f.type === 'address')) dataClasses.push('PHYSICAL_ADDRESS');
+          if (parsed.fields.some(f => f.type === 'date')) dataClasses.push('REGISTRATION_DATE');
+          if (!dataClasses.length) dataClasses.push('CREDENTIALS');
+
+          const yearMatch = (parsed.description || '').match(/\b(20[12]\d)\b/);
+          const year = yearMatch ? yearMatch[1] : (pkt.year || new Date().getFullYear().toString());
+          const displayTitle = parsed.title || (pkt.name ? `Identity Exposure: ${pkt.name}` : `Telegram Leak Record #${idx + 1}`);
+
+          return {
+            id: `derived-pkt-${idx + 1}`,
+            source: parsed.title ? `Telegram OSINT: ${parsed.title}` : 'Telegram OSINT Feed',
+            title: displayTitle,
+            year,
+            category: parsed.title && parsed.title.toLowerCase().includes('caller') ? 'Caller ID & Contact Leak' : (parsed.title ? 'Compromised Database Spill' : 'Telecom / Dark Web Spill'),
+            sourceType: 'LIVE_FEED',
+            isSimulated: Boolean(pkt.isSimulated),
+            dataClasses,
+            details: parsed.description || (parsed.fields.map(f => `${f.key}: ${f.value}`).slice(0, 3).join(' • ')) || 'Compromised record identified in Telegram packet stream.'
+          };
+        })
+        .filter(Boolean);
+
+      // Fallback if only summary packet existed
+      if (rawRecords.length === 0 && validPackets.length > 0) {
+        rawRecords = [{
+          id: 'derived-pkt-1',
+          source: 'Telegram OSINT Feed',
+          title: 'Telegram Intelligence Stream',
+          year: new Date().getFullYear().toString(),
+          category: 'Dark Web Search Overview',
+          sourceType: 'LIVE_FEED',
+          isSimulated: Boolean(validPackets[0]?.isSimulated),
+          dataClasses: ['PHONE', 'IDENTITY'],
+          details: 'Intelligence results identified across Telegram breach channels.'
+        }];
+      }
     }
   }
 
@@ -156,10 +187,10 @@ export default function ResultsPage() {
   const handleCopyTerminal = () => {
     let textToCopy = '';
     if (selectedPageIndex === 'all') {
-      textToCopy = packets.map((p, idx) => `=== [ PAGE ${p.page || idx + 1} OF ${p.totalPages || packets.length} ] ===\n${p.info || ''}`).join('\n\n');
+      textToCopy = packets.map((p, idx) => `=== [ PAGE ${p.page || idx + 1} OF ${p.totalPages || packets.length} ] ===\n${formatCleanTelegramText(p.info || '')}`).join('\n\n');
     } else {
       const pkt = packets[selectedPageIndex];
-      textToCopy = pkt ? pkt.info || '' : '';
+      textToCopy = pkt ? formatCleanTelegramText(pkt.info || '') : '';
     }
     const text = sanitizeRecordContent(textToCopy, verifiedTarget, maskedTarget);
     navigator.clipboard?.writeText(text);
@@ -569,6 +600,22 @@ export default function ResultsPage() {
                   <span className="terminal-title">
                     breach_intel@osint ~ $ {packets.length > 1 ? `[ALL ${packets.length} PAGES CAPTURED]` : '[STREAM OK]'}
                   </span>
+                  <div className="terminal-mode-toggle">
+                    <button
+                      type="button"
+                      className={`terminal-mode-btn ${terminalFormat === 'structured' ? 'active' : ''}`}
+                      onClick={() => setTerminalFormat('structured')}
+                    >
+                      Cards View
+                    </button>
+                    <button
+                      type="button"
+                      className={`terminal-mode-btn ${terminalFormat === 'clean_text' ? 'active' : ''}`}
+                      onClick={() => setTerminalFormat('clean_text')}
+                    >
+                      Aligned Text
+                    </button>
+                  </div>
                   <button className="copy-btn" onClick={handleCopyTerminal}>
                     {copied ? 'Copied' : (selectedPageIndex === 'all' ? 'Copy All' : 'Copy Page')}
                   </button>
@@ -604,29 +651,92 @@ export default function ResultsPage() {
 
                 <div className="terminal-body">
                   {selectedPageIndex === 'all' ? (
-                    packets.map((pkt, pIdx) => (
-                      <div key={pIdx} className="terminal-page-block">
-                        {packets.length > 1 && (
-                          <div className="terminal-page-divider">
-                            <span>--- PAGE {pkt.page || pIdx + 1} OF {pkt.totalPages || packets.length} ---</span>
-                          </div>
-                        )}
-                        <pre className="terminal-output">
-                          {pkt.isSimulated && <span className="simulated-badge">SIMULATED</span>}
-                          {pkt.info || 'No breach details available for this page.'}
-                        </pre>
-                      </div>
-                    ))
+                    packets.map((pkt, pIdx) => {
+                      const parsed = parseTelegramPage(pkt.info || '');
+                      return (
+                        <div key={pIdx} className="terminal-page-block">
+                          {packets.length > 1 && (
+                            <div className="terminal-page-divider">
+                              <span>--- PAGE {pkt.page || pIdx + 1} OF {pkt.totalPages || packets.length} ---</span>
+                            </div>
+                          )}
+                          {terminalFormat === 'structured' && parsed && (parsed.title || parsed.fields.length > 0) ? (
+                            <div className="terminal-extracted-card">
+                              {parsed.title && (
+                                <div className="extracted-header">
+                                  <div className="extracted-title-wrap">
+                                    <span className="extracted-dot"></span>
+                                    <h3 className="extracted-title">{parsed.title}</h3>
+                                  </div>
+                                  <span className="extracted-badge">{parsed.isSummary ? 'Query Overview' : 'Breach Spill'}</span>
+                                </div>
+                              )}
+                              {parsed.description && (
+                                <p className="extracted-desc">{parsed.description}</p>
+                              )}
+                              {parsed.fields.length > 0 && (
+                                <div className="extracted-fields-table">
+                                  {parsed.fields.map((f, fIdx) => (
+                                    <div key={fIdx} className={`extracted-field-row ${f.type}`}>
+                                      <div className="extracted-key">{f.key}</div>
+                                      <div className="extracted-val">{f.value}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <pre className="terminal-output">
+                              {pkt.isSimulated && <span className="simulated-badge">SIMULATED</span>}
+                              {formatCleanTelegramText(pkt.info || '') || 'No breach details available for this page.'}
+                            </pre>
+                          )}
+                        </div>
+                      );
+                    })
                   ) : (
-                    <div className="terminal-page-block">
-                      <div className="terminal-page-divider">
-                        <span>--- PAGE {(packets[selectedPageIndex]?.page) || (selectedPageIndex + 1)} OF {packets[selectedPageIndex]?.totalPages || packets.length} ---</span>
-                      </div>
-                      <pre className="terminal-output">
-                        {packets[selectedPageIndex]?.isSimulated && <span className="simulated-badge">SIMULATED</span>}
-                        {packets[selectedPageIndex]?.info || 'No breach details available for this page.'}
-                      </pre>
-                    </div>
+                    (() => {
+                      const currentPkt = packets[selectedPageIndex];
+                      const parsed = parseTelegramPage(currentPkt?.info || '');
+                      return (
+                        <div className="terminal-page-block">
+                          <div className="terminal-page-divider">
+                            <span>--- PAGE {(currentPkt?.page) || (selectedPageIndex + 1)} OF {currentPkt?.totalPages || packets.length} ---</span>
+                          </div>
+                          {terminalFormat === 'structured' && parsed && (parsed.title || parsed.fields.length > 0) ? (
+                            <div className="terminal-extracted-card">
+                              {parsed.title && (
+                                <div className="extracted-header">
+                                  <div className="extracted-title-wrap">
+                                    <span className="extracted-dot"></span>
+                                    <h3 className="extracted-title">{parsed.title}</h3>
+                                  </div>
+                                  <span className="extracted-badge">{parsed.isSummary ? 'Query Overview' : 'Breach Spill'}</span>
+                                </div>
+                              )}
+                              {parsed.description && (
+                                <p className="extracted-desc">{parsed.description}</p>
+                              )}
+                              {parsed.fields.length > 0 && (
+                                <div className="extracted-fields-table">
+                                  {parsed.fields.map((f, fIdx) => (
+                                    <div key={fIdx} className={`extracted-field-row ${f.type}`}>
+                                      <div className="extracted-key">{f.key}</div>
+                                      <div className="extracted-val">{f.value}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <pre className="terminal-output">
+                              {currentPkt?.isSimulated && <span className="simulated-badge">SIMULATED</span>}
+                              {formatCleanTelegramText(currentPkt?.info || '') || 'No breach details available for this page.'}
+                            </pre>
+                          )}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               </div>

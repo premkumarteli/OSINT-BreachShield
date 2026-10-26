@@ -9,8 +9,7 @@ const bgVideo1 = '/bg1.mp4';
 const bgVideo2 = '/bg2.mp4';
 const bgVideo3 = '/bg3.mp4';
 
-// Prefer env var, fallback to local backend for dev
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
+const API_BASE = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' && window.location?.hostname ? `http://${window.location.hostname}:5000` : 'http://localhost:5000');
 if (!process.env.REACT_APP_API_BASE) {
   // eslint-disable-next-line no-console
   console.warn('REACT_APP_API_BASE not set; defaulting to', API_BASE);

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import api from '../lib/api';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
+const API_BASE = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' && window.location?.hostname ? `http://${window.location.hostname}:5000` : 'http://localhost:5000');
 
 export default function DarkWebTicker() {
   const [alerts, setAlerts] = useState([]);

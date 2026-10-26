@@ -1,7 +1,7 @@
 /* global globalThis */
 import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
+const API_BASE = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' && window.location?.hostname ? `http://${window.location.hostname}:5000` : 'http://localhost:5000');
 
 /**
  * Canonicalizes an email or phone into the exact string the backend hashes.

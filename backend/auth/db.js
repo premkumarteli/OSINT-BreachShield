@@ -1,5 +1,17 @@
 // MySQL connection helper using mysql2/promise
 // Reads env vars: DB_HOST, DB_USER, DB_PASS, DB_NAME
+const path = require('path');
+const fs = require('fs');
+
+try {
+  const rootEnv = path.resolve(__dirname, '../..', '.env');
+  if (fs.existsSync(rootEnv)) {
+    require('dotenv').config({ path: rootEnv });
+  } else {
+    require('dotenv').config();
+  }
+} catch (_) {}
+
 const mysql = require('mysql2/promise');
 
 let pool;

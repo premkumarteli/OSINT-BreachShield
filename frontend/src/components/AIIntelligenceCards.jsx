@@ -19,7 +19,7 @@ export default function AIIntelligenceCards({ analytics, auditLedger, blockchain
   const urlAnalyses = aiAnalysis?.url_analyses || [];
   const auditData = auditLedger || blockchainAudit || null;
 
-  const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
+  const API_BASE = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' && window.location?.hostname ? `http://${window.location.hostname}:5000` : 'http://localhost:5000');
 
   const handleVerifyEvent = async () => {
     if (!auditData?.eventId) return;

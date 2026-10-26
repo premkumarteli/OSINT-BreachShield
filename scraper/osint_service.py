@@ -70,6 +70,19 @@ llm_analyzer = None
 LLM_ACTIVE = False
 print("[LLM Module] Ollama disabled — LLM endpoints will return 503", flush=True)
 
+def strip_emojis(text: str) -> str:
+    if not text:
+        return ""
+    # Unicode emoji & pictogram regex
+    emoji_pattern = re.compile(
+        r"[\U00010000-\U0010ffff\u2600-\u26ff\u2700-\u27bf\ufe00-\ufe0f\u200d\u20e3\u2b50]",
+        flags=re.UNICODE
+    )
+    cleaned = emoji_pattern.sub("", text)
+    cleaned = re.sub(r"\*\*\s+", "**", cleaned)
+    cleaned = re.sub(r"^[ \t]+", "", cleaned, flags=re.MULTILINE)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    return cleaned
 
 class Query(BaseModel):
     query: str
@@ -595,15 +608,16 @@ async def send_query(q: Query):
                 except Exception as pag_err:
                     print(f"[Pagination check notice] {pag_err}", flush=True)
 
-                full_text = "\n\n".join(messages)
+                messages_cleaned = [strip_emojis(m) for m in messages]
+                full_text = "\n\n".join(messages_cleaned)
 
                 # Format distinct packets with page telemetry
                 packets = []
-                for p_idx, m in enumerate(messages):
+                for p_idx, m in enumerate(messages_cleaned):
                     packets.append({
                         'info': m,
                         'page': p_idx + 1,
-                        'totalPages': len(messages)
+                        'totalPages': len(messages_cleaned)
                     })
 
                 ai_data = None
@@ -762,8 +776,9 @@ async def get_next_page():
                 if total:
                     next_val = min(next_val, total)
                 pagination_state['current'] = next_val
-            packets = [{'info': updated_text}]
-            return {'packets': packets, 'response': updated_text, 'pagination': public_pagination()}
+            clean_updated = strip_emojis(updated_text)
+            packets = [{'info': clean_updated}]
+            return {'packets': packets, 'response': clean_updated, 'pagination': public_pagination()}
         
         except Exception as e:
             # Don't crash the service, just return an error
@@ -890,8 +905,9 @@ async def get_prev_page():
             if not updated_text:
                 return Response(status_code=204)
 
-            packets = [{'info': updated_text}]
-            return {'packets': packets, 'response': updated_text, 'pagination': public_pagination()}
+            clean_updated = strip_emojis(updated_text)
+            packets = [{'info': clean_updated}]
+            return {'packets': packets, 'response': clean_updated, 'pagination': public_pagination()}
         
         except Exception as e:
             # Don't crash the service, just return an error

@@ -6,9 +6,18 @@ import { maskIdentifier } from './maskIdentifier';
  * 2. Redacts all @handles.
  * 3. Replaces all forms of the user's identifier (with/without +, with/without 91, digits-only, spaced) with the masked target.
  */
+export function stripEmojis(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{2B50}\u{203C}\u{2049}\u{2122}\u{2139}\u{2194}-\u{2199}\u{21A9}-\u{21AA}\u{231A}-\u{231B}\u{2328}\u{23CF}\u{23E9}-\u{23F3}\u{23F8}-\u{23FA}\u{24C2}\u{25AA}-\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}]/gu, '')
+    .replace(/\*\*\s+/g, '**')
+    .replace(/^[ \t]+/gm, '')
+    .replace(/[ \t]{2,}/g, ' ');
+}
+
 export function sanitizeBreachText(text, target = '', maskedTarget = '') {
   if (!text || typeof text !== 'string') return '';
-  let out = text;
+  let out = stripEmojis(text);
 
   // 1. Remove third-party bot promo / handle / metadata lines
   const lines = out.split('\n');

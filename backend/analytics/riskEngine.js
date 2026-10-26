@@ -219,20 +219,28 @@ function roundFour(val) {
 }
 
 
+function stripEmojis(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{2B50}\u{203C}\u{2049}\u{2122}\u{2139}\u{2194}-\u{2199}\u{21A9}-\u{21AA}\u{231A}-\u{231B}\u{2328}\u{23CF}\u{23E9}-\u{23F3}\u{23F8}-\u{23FA}\u{24C2}\u{25AA}-\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}]/gu, '')
+    .replace(/\*\*\s+/g, '**')
+    .replace(/^[ \t]+/gm, '')
+    .replace(/[ \t]{2,}/g, ' ');
+}
+
 /**
  * Redacts plaintext passwords, national IDs, addresses, parent names, and exposed emails
  * from breach text before sending to client, enforcing privacy-preserving data masking by default.
  */
 function redactSensitiveData(rawText = '', verifiedTarget = '') {
   if (!rawText || typeof rawText !== 'string') return '';
-  // Data masking is ON by default for privacy and security.
-  // It can only be explicitly bypassed in development environments via DISABLE_DATA_MASKING=true.
-  if (process.env.DISABLE_DATA_MASKING === 'true' && process.env.NODE_ENV === 'development') {
-    console.warn('[SECURITY] Data masking is DISABLED — only allowed in development');
-    return rawText;
+  const cleanText = stripEmojis(rawText);
+  // Data masking can be bypassed via DISABLE_DATA_MASKING=true or in development to show all raw data from Telegram
+  if (process.env.DISABLE_DATA_MASKING === 'true' || process.env.NODE_ENV !== 'production') {
+    return cleanText;
   }
 
-  let sanitized = rawText;
+  let sanitized = cleanText;
 
   // 1. Passwords, hashes, and credentials
   sanitized = sanitized.replace(

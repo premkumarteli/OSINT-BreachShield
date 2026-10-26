@@ -1872,3 +1872,159 @@ html:has(.results-page-wrapper) {
     filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.7));
   }
 }
+
+/* --------------------------------------------------------------------------
+   Structured Extracted Breach Data Cards (Clean Alignment, Zero Asterisks)
+   -------------------------------------------------------------------------- */
+.terminal-extracted-card {
+  background: rgba(10, 25, 55, 0.55);
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s ease;
+}
+
+.terminal-extracted-card:hover {
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 6px 24px rgba(0, 240, 255, 0.12);
+}
+
+.extracted-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.14);
+  padding-bottom: 10px;
+}
+
+.extracted-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.extracted-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
+}
+
+.extracted-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  margin: 0;
+}
+
+.extracted-badge {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  color: #38bdf8;
+  text-transform: uppercase;
+}
+
+.extracted-desc {
+  font-size: 0.84rem;
+  color: #cbd5e1;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 3px solid #00f0ff;
+}
+
+.extracted-fields-table {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.extracted-field-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: baseline;
+  gap: 16px;
+  padding: 9px 14px;
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.extracted-field-row:hover {
+  background: rgba(0, 240, 255, 0.06);
+  border-color: rgba(0, 240, 255, 0.25);
+}
+
+.extracted-key {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: #7dd3fc;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  word-break: break-word;
+}
+
+.extracted-val {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.86rem;
+  color: #f8fafc;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.extracted-field-row.phone .extracted-val,
+.extracted-field-row.document .extracted-val {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.terminal-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  margin-right: 12px;
+}
+
+.terminal-mode-btn {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.terminal-mode-btn.active {
+  background: rgba(0, 240, 255, 0.18);
+  border-color: #00f0ff;
+  color: #00f0ff;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .extracted-field-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
