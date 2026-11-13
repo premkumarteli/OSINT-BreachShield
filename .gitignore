@@ -93,6 +93,8 @@ android-gateway/app/build/
 !docs/reports/*.docx
 
 # Temporary & Debug Files
+B05_BreachShield_Submission/
+submission_B05/
 *.tmp
 *.bak
 *.swp

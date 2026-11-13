@@ -208,8 +208,8 @@ def main():
 
     # 2. Start Node.js Express Backend (Port 5000)
     kill_port(5000)
-    node_cmd = [node_bin, "index.js"]
-    print(f"{CYAN}[2/3] Starting Node.js Express Backend on port 5000...{RESET}")
+    node_cmd = [node_bin, "--watch", "index.js"]
+    print(f"{CYAN}[2/3] Starting Node.js Express Backend on port 5000 (with auto-watch)...{RESET}")
     p_node = subprocess.Popen(
         node_cmd,
         cwd=BACKEND_DIR,

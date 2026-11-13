@@ -49,6 +49,49 @@ async function compareSecret(plain, hashed) {
   }
 }
 
+// Convert Date or timestamp to local SQL DATETIME string: YYYY-MM-DD HH:MM:SS
+function toSqlDatetime(date) {
+  const d = new Date(date);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+// Resiliently parse expiry timestamp handling Date objects, ISO UTC strings, and MySQL local DATETIME strings
+function parseExpiryTime(raw) {
+  if (!raw) return 0;
+  if (typeof raw === 'number') return raw;
+  if (raw instanceof Date) {
+    const t = raw.getTime();
+    if (isNaN(t)) return 0;
+    const offsetMs = new Date().getTimezoneOffset() * 60 * 1000;
+    if (t < Date.now() && (t - offsetMs) > Date.now()) {
+      return t - offsetMs;
+    }
+    return t;
+  }
+  const str = String(raw).trim();
+  const direct = new Date(str).getTime();
+  if (!isNaN(direct) && direct > Date.now()) return direct;
+
+  if (!str.includes('Z') && !str.includes('+') && str.includes(' ')) {
+    const isoLocal = str.replace(' ', 'T');
+    const localMs = new Date(isoLocal).getTime();
+    if (!isNaN(localMs) && localMs > Date.now()) return localMs;
+
+    const utcMs = new Date(isoLocal + 'Z').getTime();
+    if (!isNaN(utcMs) && utcMs > Date.now()) return utcMs;
+  }
+
+  if (!isNaN(direct)) {
+    const offsetMs = new Date().getTimezoneOffset() * 60 * 1000;
+    if (direct < Date.now() && (direct - offsetMs) > Date.now()) {
+      return direct - offsetMs;
+    }
+    return direct;
+  }
+  return 0;
+}
+
 // ---------------- Nodemailer Gmail Configuration ----------------
 let cachedTransporter = null;
 function getEmailTransporter() {
@@ -194,7 +237,7 @@ router.post('/send-otp', async (req, res) => {
       await query('DELETE FROM email_otps WHERE email = ?', [targetKey]);
       await query(
         'INSERT INTO email_otps (email, otp, expires_at, verified, attempts) VALUES (?, ?, ?, FALSE, 0)',
-        [targetKey, hashedOtp, expiresAt.toISOString().slice(0, 19).replace('T', ' ')]
+        [targetKey, hashedOtp, toSqlDatetime(expiresAt)]
       );
     } catch (dbErr) {
       const otps = readJsonFile(OTPS_JSON).filter(o => String(o.email).toLowerCase() !== targetKey);
@@ -288,8 +331,9 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     // 1. Check Expiry
-    const expireTime = new Date(record.expires_at).getTime();
-    if (expireTime < Date.now()) {
+    const expireTime = parseExpiryTime(record.expires_at);
+    if (!expireTime || expireTime < Date.now()) {
+      console.warn(`[OTP EXPIRED] Target: ${targetKey} | DB Expiry: ${record.expires_at} | Evaluated: ${new Date(expireTime).toISOString()} | Now: ${new Date().toISOString()}`);
       return res.status(400).json({ success: false, error: 'OTP has expired. Please request a new one.' });
     }
 

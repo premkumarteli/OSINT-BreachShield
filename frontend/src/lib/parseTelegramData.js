@@ -56,10 +56,10 @@ export function parseTelegramPage(rawText) {
     // 1. **Key: **Value or **Key:** Value
     const boldKvMatch = line.match(/^\*\*([^*:]+)(?::\s*|\s*:\s*)\*\*\s*(.*)$/);
     // 2. **Key Value (missing second colon like **Mobile 917795005788)
-    const boldLooseMatch = !boldKvMatch ? line.match(/^\*\*([A-Za-z]+)\s+([0-9\+]+.*)$/) : null;
+    const boldLooseMatch = !boldKvMatch ? line.match(/^\*\*([A-Za-z]+)\s+([0-9+]+.*)$/) : null;
     // 3. Plain Key: Value (like "Request: +91...", "Number of results: 4")
     const plainKvMatch = (!boldKvMatch && !boldLooseMatch && line.includes(':'))
-      ? line.match(/^([A-Za-z0-9\s'\/]+?):\s*(.*)$/)
+      ? line.match(/^([A-Za-z0-9\s'/]+?):\s*(.*)$/)
       : null;
 
     if (boldKvMatch || boldLooseMatch || (plainKvMatch && (inFields || plainKvMatch[1].length < 28))) {
