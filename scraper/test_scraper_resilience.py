@@ -3,7 +3,14 @@ import sys
 import os
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
-from telethon.errors import FloodWaitError, RPCError
+try:
+    from telethon.errors import FloodWaitError, RPCError
+except ImportError:
+    class FloodWaitError(Exception):
+        pass
+
+    class RPCError(Exception):
+        pass
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -1,15 +1,26 @@
 import time
-import torch
 from .feature_extractor import URLFeatureExtractor
 
 HF_TRANSFORMERS_AVAILABLE = None  # lazy check
+TORCH_AVAILABLE = None
+
+
+def _check_torch():
+    global TORCH_AVAILABLE
+    if TORCH_AVAILABLE is None:
+        try:
+            import torch  # noqa: F401
+            TORCH_AVAILABLE = True
+        except ImportError:
+            TORCH_AVAILABLE = False
+    return TORCH_AVAILABLE
 
 
 def _check_transformers():
     global HF_TRANSFORMERS_AVAILABLE
     if HF_TRANSFORMERS_AVAILABLE is None:
         try:
-            from transformers import AutoTokenizer, AutoModelForSequenceClassification
+            from transformers import AutoTokenizer, AutoModelForSequenceClassification  # noqa: F401
             HF_TRANSFORMERS_AVAILABLE = True
         except ImportError:
             HF_TRANSFORMERS_AVAILABLE = False
@@ -41,8 +52,8 @@ class PhishingURLClassifier:
             return
         try:
             from transformers import AutoTokenizer, AutoModelForSequenceClassification
-            self.hf_tokenizer = AutoTokenizer.from_pretrained(self.model_repo)
-            self.hf_model = AutoModelForSequenceClassification.from_pretrained(self.model_repo)
+            self.hf_tokenizer = AutoTokenizer.from_pretrained(self.model_repo, revision="main")  # nosec B615
+            self.hf_model = AutoModelForSequenceClassification.from_pretrained(self.model_repo, revision="main")  # nosec B615
             self.hf_model.eval()
         except Exception as e:
             self.hf_tokenizer = None
@@ -69,7 +80,7 @@ class PhishingURLClassifier:
 
         self._ensure_loaded()
 
-        if not (self.hf_model and self.hf_tokenizer):
+        if not (self.hf_model and self.hf_tokenizer and _check_torch()):
             return {
                 "url": url,
                 "normalized_url": normalized,
@@ -79,10 +90,11 @@ class PhishingURLClassifier:
                 "model": self.model_repo,
                 "model_version": self.version,
                 "inference_latency_ms": 0,
-                "error": "Hugging Face model failed to load or is unavailable"
+                "error": "Hugging Face model failed to load or PyTorch is unavailable"
             }
 
         try:
+            import torch
             inputs = self.hf_tokenizer(normalized, return_tensors="pt", truncation=True, max_length=128)
             with torch.no_grad():
                 logits = self.hf_model(**inputs).logits

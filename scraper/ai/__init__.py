@@ -35,6 +35,7 @@ CNNPhishingClassifier = _LazyImport('.cnn_model', 'CNNPhishingClassifier')
 RNNPhishingClassifier = _LazyImport('.rnn_model', 'RNNPhishingClassifier')
 TransformerPhishingClassifier = _LazyImport('.transformer_model', 'TransformerPhishingClassifier')
 XGBoostPhishingClassifier = _LazyImport('.xgboost_model', 'XGBoostPhishingClassifier')
+SeverityClassifier = _LazyImport('.severity_classifier', 'SeverityClassifier')
 ModelManager = _LazyImport('.model_manager', 'ModelManager')
 
 # Ollama LLM (lightweight — import immediately)
@@ -53,6 +54,7 @@ __all__ = [
     "RNNPhishingClassifier",
     "TransformerPhishingClassifier",
     "XGBoostPhishingClassifier",
+    "SeverityClassifier",
     "ModelManager",
     "OllamaClient",
     "LLMThreatAnalyzer",

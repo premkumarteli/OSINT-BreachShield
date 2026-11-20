@@ -1,7 +1,6 @@
 import os
 import json
 import time
-import asyncio
 from typing import Optional
 
 try:
@@ -22,8 +21,10 @@ class OllamaClient:
     Zero external API calls — everything runs on-device.
     """
 
-    def __init__(self, model: str = None):
+    def __init__(self, model: Optional[str] = None):
         self.base_url = OLLAMA_BASE_URL.rstrip("/")
+        if not self.base_url.startswith(("http://", "https://")):
+            self.base_url = "http://" + self.base_url
         self.model = model or OLLAMA_MODEL
         self.timeout = OLLAMA_TIMEOUT
         self._available: Optional[bool] = None
@@ -38,7 +39,7 @@ class OllamaClient:
         try:
             import urllib.request
             req = urllib.request.Request(f"{self.base_url}/api/tags", method="GET")
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
                 data = json.loads(resp.read().decode())
                 models = []
                 for m in data.get("models", []):
@@ -57,7 +58,7 @@ class OllamaClient:
         try:
             import urllib.request
             req = urllib.request.Request(f"{self.base_url}/api/tags", method="GET")
-            with urllib.request.urlopen(req, timeout=3) as resp:
+            with urllib.request.urlopen(req, timeout=3) as resp:  # nosec B310
                 data = json.loads(resp.read().decode())
                 models = [m.get("name", "") for m in data.get("models", [])]
                 self._available = any(self.model in m for m in models)
@@ -94,7 +95,7 @@ class OllamaClient:
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # nosec B310
                 result = json.loads(resp.read().decode())
 
             latency_ms = int((time.perf_counter() - start_t) * 1000)

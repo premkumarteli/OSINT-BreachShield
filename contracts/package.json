@@ -5,6 +5,7 @@
   "description": "Hardhat configuration for AnchorRegistry.sol",
   "scripts": {
     "node": "hardhat node",
+    "test": "hardhat test",
     "deploy": "hardhat run scripts/deploy.js --network local",
     "compile": "hardhat compile"
   },

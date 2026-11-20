@@ -235,8 +235,8 @@ function stripEmojis(str) {
 function redactSensitiveData(rawText = '', verifiedTarget = '') {
   if (!rawText || typeof rawText !== 'string') return '';
   const cleanText = stripEmojis(rawText);
-  // Data masking can be bypassed via DISABLE_DATA_MASKING=true or in development to show all raw data from Telegram
-  if (process.env.DISABLE_DATA_MASKING === 'true' || process.env.NODE_ENV !== 'production') {
+  // Data masking can be bypassed explicitly via DISABLE_DATA_MASKING=true
+  if (process.env.DISABLE_DATA_MASKING === 'true') {
     return cleanText;
   }
 

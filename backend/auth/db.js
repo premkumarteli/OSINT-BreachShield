@@ -37,4 +37,13 @@ async function query(sql, params) {
   return rows;
 }
 
-module.exports = { getPool, query };
+async function closePool() {
+  if (pool) {
+    try {
+      await pool.end();
+    } catch (_) {}
+    pool = null;
+  }
+}
+
+module.exports = { getPool, query, closePool };

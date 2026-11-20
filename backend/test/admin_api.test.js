@@ -18,6 +18,7 @@ const { app } = require('../server');
 const { JWT_SECRET } = require('../config/env');
 const { registerOrTouchSession, touchHeartbeat, getActiveSessions, getSessionHistory } = require('../services/sessionTracker');
 const { logActivity, addAlert } = require('../services/auditService');
+const { closePool } = require('../auth/db');
 
 const configuredAdminEmail = (process.env.ADMIN_EMAIL || 'admin@breachshield.io').trim().toLowerCase();
 
@@ -47,6 +48,7 @@ before(async () => {
 
 after(async () => {
   if (server) await new Promise((resolve) => server.close(resolve));
+  await closePool();
 });
 
 describe('BreachShield Admin Control API Test Suite', () => {

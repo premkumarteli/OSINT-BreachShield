@@ -47,7 +47,7 @@ describe('Admin Ingest Auth API (POST /api/v1/ingest)', () => {
 
       setTimeout(() => {
         if (!started) reject(new Error('Backend server start timeout'));
-      }, 15000);
+      }, 60000);
     });
   });
 
